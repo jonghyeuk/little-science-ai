@@ -1,11 +1,15 @@
- # utils/explain_topic.py
+# utils/explain_topic.py
 
-import openai
+from openai import OpenAI
 import streamlit as st
 
 def explain_topic(topic: str) -> str:
     """주제에 대해 과학적 개념, 원리, 응용, 논문 출처 등 설명"""
-    openai.api_key = st.secrets["api"]["openai_key"]
+    try:
+        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
+    except KeyError:
+        st.error("❌ OpenAI API 키가 설정되지 않았습니다. Streamlit Secrets를 확인해주세요.")
+        st.stop()
 
     system_prompt = """
     너는 'LittleScienceAI 도우미'라는 AI로,
@@ -31,13 +35,17 @@ def explain_topic(topic: str) -> str:
 
     user_prompt = f"주제: {topic}"
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        temperature=0.7
-    )
+    try:
+        chat_response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7
+        )
+        return chat_response.choices[0].message.content
 
-    return response['choices'][0]['message']['content']
+    except Exception as e:
+        st.error(f"❌ AI 응답 생성 중 오류 발생: {e}")
+        return "AI 응답 생성에 실패했습니다."
