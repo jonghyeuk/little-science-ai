@@ -2,6 +2,14 @@
 
 import streamlit as st
 
+def load_css():
+    """커스텀 CSS 불러오기"""
+    try:
+        with open("assets/styles.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.warning("❗ CSS 파일을 찾을 수 없습니다.")
+
 def render_title(title: str):
     st.markdown(f"""
     <div style='margin: 40px 60px; font-family: "Nanum Gothic", sans-serif;'>
