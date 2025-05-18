@@ -1,50 +1,54 @@
-/* 🎨 전체 다크 테마 */
+/* 🎨 다크 테마 + 기본 글자 */
 body {
   background-color: #0f1117;
   color: #e6e6e6;
   font-family: 'Nanum Gothic', sans-serif;
-  font-weight: 500;  /* ✅ 글자 두께 강화 */
+  font-weight: 500;
+  font-size: 16.5px;
   line-height: 1.8;
   margin: 0;
   padding: 0;
+  overflow-wrap: break-word;
 }
 
-/* ✅ 중앙 정렬 A4 폭 스타일 */
-section.main > div.block-container {
-  max-width: 800px;
+/* ✅ A4 폭 중앙 정렬 */
+main .block-container {
+  max-width: 860px;
   margin: auto;
   padding: 3rem 2rem;
   background-color: transparent;
 }
 
-/* ✅ 부드러운 전체 트랜지션 */
+/* ✅ 부드러운 전환 */
 * {
   transition: all 0.2s ease-in-out;
 }
 
-/* ✅ 제목 스타일 */
+/* ✅ 제목 */
 h1, h2, h3 {
   font-weight: 700;
   color: #00ffd5;
   margin-top: 2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.6rem;
 }
 
-/* ✅ 문단 및 리스트 */
+/* ✅ 문단과 리스트 */
 p, li {
   font-size: 16.5px;
   font-weight: 500;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  line-height: 1.75;
   text-align: justify;
 }
 
-/* ✅ 리스트 간격 줄이기 */
+/* ✅ 리스트 간격 */
 ul, ol {
-  margin-left: 1.2rem;
-  padding-left: 1rem;
+  padding-left: 1.2rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
 }
 
-/* ✅ 카드형 박스 */
+/* ✅ 카드 */
 .card {
   background-color: #1a1d23;
   border-radius: 10px;
@@ -58,7 +62,9 @@ ul, ol {
 .typing-effect {
   font-family: 'Courier New', monospace;
   white-space: pre-wrap;
-  overflow: hidden;
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.8;
   border-right: 2px solid #00ffd5;
   animation: blink 1s step-end infinite;
 }
@@ -68,7 +74,7 @@ ul, ol {
   50% { border-color: #00ffd5 }
 }
 
-/* ✅ 코드 블럭 */
+/* ✅ 코드 */
 code {
   background-color: #1a1d23;
   color: #00ffd5;
@@ -78,7 +84,7 @@ code {
   font-size: 14px;
 }
 
-/* ✅ 링크 강조 */
+/* ✅ 링크 */
 a {
   color: #00ffd5;
   text-decoration: underline;
