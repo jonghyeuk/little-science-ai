@@ -4,3 +4,4 @@ fpdf
 pandas
 scikit-learn
 feedparser
+openpyxl
