@@ -3,8 +3,8 @@
 from openai import OpenAI
 import streamlit as st
 
-def explain_topic(topic: str) -> str:
-    """주제에 대해 과학적 개념, 원리, 응용, 논문 출처 등 설명"""
+def explain_topic(topic: str) -> list:
+    """GPT-4 기반 주제 설명 생성 (줄 단위 반환)"""
     try:
         client = OpenAI(api_key=st.secrets["api"]["openai_key"])
     except KeyError:
@@ -44,8 +44,10 @@ def explain_topic(topic: str) -> str:
             ],
             temperature=0.7
         )
-        return chat_response.choices[0].message.content
+
+        full_text = chat_response.choices[0].message.content
+        return full_text.strip().split('\n')  # 줄 단위로 나눠서 반환
 
     except Exception as e:
         st.error(f"❌ AI 응답 생성 중 오류 발생: {e}")
-        return "AI 응답 생성에 실패했습니다."
+        return ["AI 응답 생성에 실패했습니다."]
