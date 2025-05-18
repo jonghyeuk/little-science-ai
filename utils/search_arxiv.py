@@ -1,12 +1,11 @@
-# utils/search_arxiv.py
-
 import urllib.parse
 import feedparser
 import streamlit as st
 from deep_translator import GoogleTranslator
 
-def translate(text, src="en", tgt="ko"):
-    """번역기 래퍼 함수"""
+# ✅ 캐시된 번역기
+@st.cache_data(show_spinner=False)
+def translate_once(text, src="en", tgt="ko"):
     try:
         return GoogleTranslator(source=src, target=tgt).translate(text)
     except:
@@ -15,9 +14,9 @@ def translate(text, src="en", tgt="ko"):
 def search_arxiv(query, max_results=5):
     base_url = "http://export.arxiv.org/api/query"
 
-    # ✅ Step 1: 한글 주제를 영어로 변환
+    # ✅ Step 1: 입력 쿼리 한영 번역
     try:
-        translated_query = translate(query, src='auto', tgt='en')
+        translated_query = translate_once(query, src='auto', tgt='en')
     except Exception as e:
         st.error(f"❌ 검색어 번역 실패: {e}")
         translated_query = query
@@ -27,8 +26,9 @@ def search_arxiv(query, max_results=5):
 
     try:
         feed = feedparser.parse(query_url)
+        entries = feed.entries
 
-        if not feed.entries:
+        if not entries:
             return [{
                 "title": "검색 결과 없음",
                 "summary": "해당 주제와 관련된 arXiv 논문을 찾을 수 없습니다.",
@@ -36,18 +36,24 @@ def search_arxiv(query, max_results=5):
                 "source": "arXiv"
             }]
 
+        # ✅ 중복 방지 병렬 번역 (제목, 요약)
+        titles = list(set(e.title for e in entries))
+        summaries = list(set(e.get("summary", "") for e in entries))
+
+        title_map = {t: translate_once(t) for t in titles}
+        summary_map = {s: translate_once(s) for s in summaries}
+
         results = []
-        for entry in feed.entries:
+        for entry in entries:
             title_en = entry.title
             summary_en = entry.get("summary", "")
             link = entry.link
 
-            # ✅ Step 2: 결과 병기 처리
-            title_ko = translate(title_en)
-            summary_ko = translate(summary_en)
+            title_ko = title_map.get(title_en, title_en)
+            summary_ko = summary_map.get(summary_en, summary_en)
 
             results.append({
-                "title": f"{title_ko} \n({title_en})",     # 병기
+                "title": f"**{title_ko}**\n`{title_en}`",
                 "summary": summary_ko,
                 "link": link,
                 "source": "arXiv"
@@ -56,7 +62,7 @@ def search_arxiv(query, max_results=5):
         return results
 
     except Exception as e:
-        st.error(f"❌ arXiv 검색 중 오류: {e}")
+        st.error(f"❌ arXiv 검색 중 오류 발생: {e}")
         return [{
             "title": "arXiv 검색 실패",
             "summary": "",
