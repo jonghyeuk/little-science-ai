@@ -53,12 +53,11 @@ if topic:
         placeholder = st.empty()
         typed_text = ""
 
-        # 타이핑 효과 구현
         for line in lines:
             for char in line:
                 typed_text += char
                 placeholder.markdown(
-                    f"<div style='font-size:16px; line-height:1.8; font-family:Nanum Gothic;'>{typed_text}</div>",
+                    f"<div class='typing-effect'>{typed_text}</div>",
                     unsafe_allow_html=True
                 )
                 time.sleep(0.012)
@@ -72,9 +71,14 @@ if topic:
             render_paragraph("❗ 관련 논문이 없습니다.")
         else:
             for paper in internal_results:
+                요약 = (
+                    paper["요약"]
+                    if paper["요약"] != "요약 없음"
+                    else explain_topic(paper["제목"])[0]
+                )
                 render_paragraph(f"""
 - **{paper['제목']}**  
-  {paper['요약']}  
+  {요약}  
   _({paper['연도']} · {paper['분야']})_
 """)
     except Exception as e:
