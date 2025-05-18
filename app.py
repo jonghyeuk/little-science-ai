@@ -1,13 +1,15 @@
 # app.py
 
 import streamlit as st
+st.set_page_config(page_title="LittleScienceAI", layout="wide")  # ✅ 가장 위에 위치 필수
+
 from utils.layout import render_title, render_paragraph, load_css
 from utils.search_db import search_similar_titles
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
 
-# 🎨 커스텀 CSS 적용
+# 🎨 커스텀 CSS
 load_css()
 
 # 🔐 인증
@@ -17,9 +19,7 @@ if user_key not in ACCESS_KEYS:
     st.warning("🚫 올바른 인증 키를 입력하세요.")
     st.stop()
 
-# ✅ 메인 앱 시작
-st.set_page_config(page_title="LittleScienceAI", layout="wide")
-
+# ✅ 사이드 메뉴 & 화면 구성
 st.sidebar.title("🧭 탐색 단계")
 st.sidebar.markdown("""
 1️⃣ 주제 입력  
