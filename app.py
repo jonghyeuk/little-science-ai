@@ -3,8 +3,6 @@
 import streamlit as st
 import time
 
-st.set_page_config(page_title="LittleScienceAI", layout="wide")
-
 from utils.layout import render_title, render_paragraph, load_css
 from utils.search_db import search_similar_titles
 from utils.search_arxiv import search_arxiv
