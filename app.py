@@ -23,7 +23,7 @@ if not st.session_state.authenticated:
     user_key = st.text_input("🔑 인증 키를 입력하세요", type="password")
     if user_key in ACCESS_KEYS:
         st.session_state.authenticated = True
-        st.experimental_rerun()
+        st.rerun()
     else:
         st.warning("🚫 올바른 인증 키를 입력하세요.")
         st.stop()
