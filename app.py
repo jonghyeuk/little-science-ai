@@ -46,7 +46,7 @@ if topic:
     st.subheader("📘 주제 해설")
 
     with st.spinner("🤖 AI가 주제에 대해 고민하고 있습니다..."):
-        lines = explain_topic(topic)  # 줄 단위 리스트
+        lines = explain_topic(topic)
         placeholder = st.empty()
         typed_text = ""
 
@@ -57,14 +57,17 @@ if topic:
                     f"<div style='font-size:16px; line-height:1.8; font-family:Nanum Gothic;'>{typed_text}</div>",
                     unsafe_allow_html=True
                 )
-                time.sleep(0.012)  # 한 글자 타이핑 속도
-            typed_text += "\n\n"  # 문단 간 구분
+                time.sleep(0.012)
+            typed_text += "\n\n"
 
     st.subheader("📄 내부 DB 유사 논문")
     try:
         internal_results = search_similar_titles(topic)
-        for paper in internal_results:
-            render_paragraph(f"""
+        if not internal_results:
+            render_paragraph("❗ 관련 논문이 없습니다.")
+        else:
+            for paper in internal_results:
+                render_paragraph(f"""
 - **{paper['제목']}**  
   {paper['요약']}  
   _({paper['연도']} · {paper['분야']})_
@@ -75,8 +78,15 @@ if topic:
     st.subheader("🌐 arXiv 유사 논문")
     try:
         arxiv_results = search_arxiv(topic)
-        for paper in arxiv_results:
-            render_paragraph(f"- [{paper['title']}]({paper['link']})")
+        if not arxiv_results:
+            render_paragraph("❗ arXiv 결과가 없습니다.")
+        else:
+            for paper in arxiv_results:
+                render_paragraph(f"""
+- **{paper['title']}**  
+{paper['summary']}  
+🔗 [논문 링크 바로가기]({paper['link']})
+""")
     except Exception as e:
         st.error(f"❗ arXiv 논문 검색 중 오류가 발생했습니다: {e}")
 
