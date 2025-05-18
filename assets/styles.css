@@ -70,3 +70,12 @@ code {
   font-family: 'Courier New', monospace;
   font-size: 14px;
 }
+
+/* ✅ 링크 강조 (논문 URL 강조용) */
+a {
+  color: #00ffd5;
+  text-decoration: underline;
+}
+a:hover {
+  color: #00ffa1;
+}
