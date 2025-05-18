@@ -46,16 +46,19 @@ if topic:
     st.subheader("📘 주제 해설")
 
     with st.spinner("🤖 AI가 주제에 대해 고민하고 있습니다..."):
-        lines = explain_topic(topic)
+        lines = explain_topic(topic)  # 줄 단위 리스트
         placeholder = st.empty()
-        full_text = ""
+        typed_text = ""
+
         for line in lines:
-            full_text += line + "\n\n"  # ✅ 가독성 위해 한 줄 띄우기
-            placeholder.markdown(
-                f"<div style='font-size:16px; line-height:1.8; font-family:Nanum Gothic;'>{full_text}</div>",
-                unsafe_allow_html=True
-            )
-            time.sleep(0.25)  # ✅ 타이핑 속도 느리게
+            for char in line:
+                typed_text += char
+                placeholder.markdown(
+                    f"<div style='font-size:16px; line-height:1.8; font-family:Nanum Gothic;'>{typed_text}</div>",
+                    unsafe_allow_html=True
+                )
+                time.sleep(0.012)  # 한 글자 타이핑 속도
+            typed_text += "\n\n"  # 문단 간 구분
 
     st.subheader("📄 내부 DB 유사 논문")
     try:
@@ -78,6 +81,6 @@ if topic:
         st.error(f"❗ arXiv 논문 검색 중 오류가 발생했습니다: {e}")
 
     if st.button("📥 이 내용 PDF로 저장하기"):
-        path = generate_pdf(full_text)
+        path = generate_pdf(typed_text)
         with open(path, "rb") as f:
             st.download_button("PDF 다운로드", f, file_name="little_science_ai.pdf")
