@@ -3,17 +3,17 @@
 import streamlit as st
 import time
 
-# ✅ 페이지 설정 (가장 위에 반드시 위치)
+# ✅ 페이지 설정
 st.set_page_config(page_title="LittleScienceAI", layout="wide")
 
-# ✅ 커스텀 유틸리티 불러오기
+# ✅ 유틸리티 모듈 불러오기
 from utils.layout import render_title, render_paragraph, load_css
 from utils.search_db import search_similar_titles
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
 
-# ✅ 커스텀 CSS 스타일 적용
+# ✅ CSS 로딩
 load_css()
 
 # 🔐 인증 처리
@@ -30,7 +30,7 @@ if not st.session_state.authenticated:
         st.warning("🚫 올바른 인증 키를 입력하세요.")
         st.stop()
 
-# ✅ 사이드 메뉴 UI
+# ✅ 사이드바 단계 안내
 st.sidebar.title("🧭 탐색 단계")
 st.sidebar.markdown("""
 1️⃣ 주제 입력  
@@ -39,20 +39,17 @@ st.sidebar.markdown("""
 4️⃣ PDF 저장  
 """)
 
-# ✅ 제목 출력
+# ✅ 메인 타이틀
 render_title("🧪 과학 소논문 주제 탐색 도우미")
 
-# 🔍 주제 입력창
+# 🔍 주제 입력
 topic = st.text_input("🔬 연구하고 싶은 과학 주제를 입력하세요:")
 
-# -------------------------------
-# ▶ 주제 입력 후 실행 흐름
-# -------------------------------
 if topic:
     st.subheader("📘 주제 해설")
 
     with st.spinner("🤖 AI가 주제에 대해 고민하고 있습니다..."):
-        lines = explain_topic(topic)  # ✅ 리스트형 텍스트 반환
+        lines = explain_topic(topic)  # 리스트형 텍스트 반환
         placeholder = st.empty()
         typed_text = ""
 
@@ -67,9 +64,7 @@ if topic:
                 time.sleep(0.012)
             typed_text += "\n\n"
 
-    # -------------------------------
-    # ▶ 내부 DB 유사 논문
-    # -------------------------------
+    # 📄 내부 DB 유사 논문 검색
     st.subheader("📄 내부 DB 유사 논문")
     try:
         internal_results = search_similar_titles(topic)
@@ -83,11 +78,9 @@ if topic:
   _({paper['연도']} · {paper['분야']})_
 """)
     except Exception as e:
-        st.error(f"❗ 유사 논문 검색 중 오류가 발생했습니다: {e}")
+        st.error(f"❗ 내부 DB 검색 중 오류: {e}")
 
-    # -------------------------------
-    # ▶ arXiv 논문 검색
-    # -------------------------------
+    # 🌐 arXiv 유사 논문 검색
     st.subheader("🌐 arXiv 유사 논문")
     try:
         arxiv_results = search_arxiv(topic)
@@ -101,11 +94,9 @@ if topic:
 🔗 [논문 링크 바로가기]({paper['link']})
 """)
     except Exception as e:
-        st.error(f"❗ arXiv 논문 검색 중 오류가 발생했습니다: {e}")
+        st.error(f"❗ arXiv 논문 검색 중 오류: {e}")
 
-    # -------------------------------
-    # ▶ PDF 저장 버튼
-    # -------------------------------
+    # 📥 PDF 저장
     if st.button("📥 이 내용 PDF로 저장하기"):
         path = generate_pdf(typed_text)
         with open(path, "rb") as f:
