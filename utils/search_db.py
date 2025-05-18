@@ -1,5 +1,3 @@
-# utils/search_db.py
-
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -39,17 +37,18 @@ def translate_to_english(text):
     """한글 주제를 영어로 번역 (arxiv, TF-IDF용)"""
     try:
         return GoogleTranslator(source='auto', target='en').translate(text)
-    except Exception:
-        return text  # 실패 시 원문 그대로 사용
+    except Exception as e:
+        st.warning(f"[⚠️ 번역 실패] → {e}")
+        return text
 
 def search_similar_titles(user_input, max_results=5):
     """입력 주제에 대한 내부 DB 유사 논문 검색"""
     df = load_internal_db()
 
-    # ✅ 한글 입력 → 영어 번역
     translated_input = translate_to_english(user_input)
+    df['제목_번역'] = df['제목'].apply(translate_to_english)
 
-    corpus = df['제목'].tolist() + [translated_input]
+    corpus = df['제목_번역'].tolist() + [translated_input]
 
     try:
         vectorizer = TfidfVectorizer(
