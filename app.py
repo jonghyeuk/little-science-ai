@@ -3,7 +3,7 @@
 import streamlit as st
 import time
 
-st.set_page_config(page_title="LittleScienceAI", layout="wide")  # ✅ 최상단 필수
+st.set_page_config(page_title="LittleScienceAI", layout="wide")
 
 from utils.layout import render_title, render_paragraph, load_css
 from utils.search_db import search_similar_titles
@@ -11,17 +11,24 @@ from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
 
-# 🎨 커스텀 CSS
+# 🎨 스타일 로드
 load_css()
 
-# 🔐 인증
+# 🔐 인증 처리 (입력창 감추기 + rerun 방식)
 ACCESS_KEYS = st.secrets["general"]["access_keys"]
-user_key = st.text_input("🔑 인증 키를 입력하세요", type="password")
-if user_key not in ACCESS_KEYS:
-    st.warning("🚫 올바른 인증 키를 입력하세요.")
-    st.stop()
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
-# ✅ 사이드 메뉴 & 레이아웃 구성
+if not st.session_state.authenticated:
+    user_key = st.text_input("🔑 인증 키를 입력하세요", type="password")
+    if user_key in ACCESS_KEYS:
+        st.session_state.authenticated = True
+        st.experimental_rerun()
+    else:
+        st.warning("🚫 올바른 인증 키를 입력하세요.")
+        st.stop()
+
+# ✅ 사이드 메뉴 구성
 st.sidebar.title("🧭 탐색 단계")
 st.sidebar.markdown("""
 1️⃣ 주제 입력  
@@ -39,13 +46,16 @@ if topic:
     st.subheader("📘 주제 해설")
 
     with st.spinner("🤖 AI가 주제에 대해 고민하고 있습니다..."):
-        lines = explain_topic(topic)  # 이제 리스트 반환됨
+        lines = explain_topic(topic)
         placeholder = st.empty()
         full_text = ""
         for line in lines:
-            full_text += line + "\n"
-            placeholder.markdown(f"<div style='font-size:16px;line-height:1.8;'>{full_text}</div>", unsafe_allow_html=True)
-            time.sleep(0.15)  # 타이핑 효과 속도
+            full_text += line + "\n\n"  # ✅ 가독성 위해 한 줄 띄우기
+            placeholder.markdown(
+                f"<div style='font-size:16px; line-height:1.8; font-family:Nanum Gothic;'>{full_text}</div>",
+                unsafe_allow_html=True
+            )
+            time.sleep(0.25)  # ✅ 타이핑 속도 느리게
 
     st.subheader("📄 내부 DB 유사 논문")
     try:
