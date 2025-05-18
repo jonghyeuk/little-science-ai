@@ -1,0 +1,6 @@
+streamlit
+openai
+fpdf
+pandas
+scikit-learn
+feedparser
