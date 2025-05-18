@@ -33,6 +33,7 @@ def search_arxiv(query, max_results=5):
         for entry in feed.entries:
             title_en = entry.title
             summary_en = entry.get("summary", "")
+            link = entry.link
 
             # ✅ Step 2: 결과 번역 (제목 + 요약)
             try:
@@ -42,12 +43,10 @@ def search_arxiv(query, max_results=5):
                 title_ko = title_en
                 summary_ko = summary_en
 
-            # ✅ Step 3: 한국어 + 영어 병기 표시
             results.append({
-                "title": f"{title_ko}  
-<sub><i>{title_en}</i></sub>",
+                "title": f"{title_ko}",
                 "summary": summary_ko,
-                "link": entry.link,
+                "link": link,
                 "source": "arXiv"
             })
 
@@ -57,7 +56,7 @@ def search_arxiv(query, max_results=5):
         st.error(f"❌ arXiv 검색 중 오류가 발생했습니다: {e}")
         return [{
             "title": "arXiv 검색 실패",
-            "summary": str(e),
+            "summary": "",
             "link": "",
             "source": "arXiv"
         }]
