@@ -1,0 +1,43 @@
+/* assets/styles.css */
+
+body {
+  background-color: #0f1117;
+  color: #e6e6e6;
+  font-family: 'Nanum Gothic', sans-serif;
+  line-height: 1.8;
+}
+
+h1, h2, h3 {
+  font-weight: 700;
+  color: #00ffd5;
+  margin-bottom: 12px;
+}
+
+p {
+  font-size: 16px;
+  margin-bottom: 16px;
+  text-align: justify;
+}
+
+.card {
+  background-color: #1a1d23;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid #30363d;
+  box-shadow: 0 0 10px rgba(0,255,213,0.05);
+}
+
+/* 타이핑 효과 (선택적 사용) */
+.typing-effect {
+  font-family: 'Courier New', monospace;
+  white-space: pre;
+  overflow: hidden;
+  border-right: 2px solid #00ffd5;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  from, to { border-color: transparent }
+  50% { border-color: #00ffd5 }
+}
