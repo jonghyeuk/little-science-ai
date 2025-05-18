@@ -5,11 +5,22 @@ from utils.search_db import search_similar_titles
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
-from utils.layout import render_title, render_paragraph
+from utils.layout import render_title, render_paragraph, load_css
 
+# 🎨 커스텀 CSS 로드
+load_css()
+
+# 🔐 인증키 검증
+ACCESS_KEYS = st.secrets["general"]["access_keys"]
+user_key = st.text_input("🔑 인증 키를 입력하세요", type="password")
+
+if user_key not in ACCESS_KEYS:
+    st.warning("🚫 유효하지 않은 인증 키입니다. 접근이 차단되었습니다.")
+    st.stop()
+
+# ✅ 키 통과 후 메인 기능 시작
 st.set_page_config(page_title="LittleScienceAI", layout="wide")
-
-st.sidebar.title("🔍 탐색 단계")
+st.sidebar.title("🧭 탐색 단계")
 st.sidebar.markdown("""
 1️⃣ 주제 입력  
 2️⃣ 개념 해설 보기  
@@ -17,8 +28,9 @@ st.sidebar.markdown("""
 4️⃣ PDF 저장  
 """)
 
-render_title("과학 소논문 주제 탐색 도우미")
+render_title("🧪 과학 소논문 주제 탐색 도우미")
 
+# 🔍 주제 입력
 topic = st.text_input("🔬 연구하고 싶은 과학 주제를 입력하세요:")
 
 if topic:
