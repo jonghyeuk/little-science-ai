@@ -7,7 +7,7 @@ st.set_page_config(page_title="LittleScienceAI", layout="wide")
 
 from utils.layout import render_title, render_paragraph, load_css
 from utils.search_db import search_similar_titles
-from utils.search_arxiv import search_arxiv  # ✅ ← 이 줄을 다시 정확히 작성!!
+from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
 
