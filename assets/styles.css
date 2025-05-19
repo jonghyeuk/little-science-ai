@@ -132,3 +132,12 @@ a:hover {
 .paper-link a:hover {
   color: #00ffa1;
 }
+
+body::after {
+  content: "✅ CSS 적용됨";
+  position: fixed;
+  bottom: 10px;
+  right: 20px;
+  font-size: 14px;
+  color: #00ffd5;
+}
