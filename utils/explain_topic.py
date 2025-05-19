@@ -1,14 +1,13 @@
-# utils/explain_topic.py
-
 from openai import OpenAI
 import streamlit as st
 
+@st.cache_data(show_spinner="🤖 AI 설명을 생성 중입니다...", ttl=3600)
 def explain_topic(topic: str) -> list:
-    """GPT-4 기반 주제 설명 생성 (줄 단위 반환)"""
+    """GPT-4 기반 주제 설명 생성 (문단 단위 리스트 반환)"""
     try:
         client = OpenAI(api_key=st.secrets["api"]["openai_key"])
     except KeyError:
-        st.error("❌ OpenAI API 키가 설정되지 않았습니다. Streamlit Secrets를 확인해주세요.")
+        st.error("❌ OpenAI API 키가 설정되지 않았습니다.")
         st.stop()
 
     system_prompt = """
@@ -29,25 +28,23 @@ def explain_topic(topic: str) -> list:
     - 문단별로 구분하고, 각 섹션의 제목은 굵은 글씨로
     - 논문 인용은 절대 금지이며, 생성된 내용은 'AI의 추론'임을 명시
     - 설명은 한국어로
-
-    사용자가 입력한 주제는 다음과 같아:
     """
 
     user_prompt = f"주제: {topic}"
 
     try:
-        chat_response = client.chat.completions.create(
-            model="gpt-4",
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.7
         )
-
-        full_text = chat_response.choices[0].message.content
-        return full_text.strip().split('\n')  # 줄 단위로 나눠서 반환
+        full_text = response.choices[0].message.content
+        paragraphs = full_text.strip().split('\n\n')
+        return [p.strip() for p in paragraphs if p.strip()]
 
     except Exception as e:
-        st.error(f"❌ AI 응답 생성 중 오류 발생: {e}")
-        return ["AI 응답 생성에 실패했습니다."]
+        st.error(f"❌ GPT 설명 중 오류 발생: {e}")
+        return ["AI 설명을 생성할 수 없습니다."]
