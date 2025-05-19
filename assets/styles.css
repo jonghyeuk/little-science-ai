@@ -182,3 +182,52 @@ body::before {
   left: 10px;
   z-index: 9999;
 }
+
+/* ✅ 텍스트 강조 스타일 */
+.highlight {
+  font-weight: bold;
+  color: #00ffa1;
+  background-color: #1a1d23;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ✅ 중요 단락 강조 */
+.notice {
+  background-color: rgba(0, 255, 213, 0.08);
+  border-left: 4px solid #00ffd5;
+  padding: 12px 18px;
+  margin: 20px 0;
+  color: #e6e6e6;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+/* ✅ 섹션 라벨 스타일 */
+.section-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00ffd5;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px dashed #00ffd5;
+  padding-bottom: 4px;
+}
+
+/* ✅ 가로 구분선 */
+.divider {
+  border-top: 1px solid #444;
+  margin: 30px 0;
+}
+
+/* ✅ 폰트 사이즈 유틸리티 */
+.text-sm { font-size: 14px; }
+.text-md { font-size: 16px; }
+.text-lg { font-size: 18px; }
+.text-xl { font-size: 20px; }
+.text-xxl { font-size: 24px; }
+
+/* ✅ 정렬 유틸리티 */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
