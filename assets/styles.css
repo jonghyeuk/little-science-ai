@@ -12,10 +12,10 @@ body {
 }
 
 /* ✅ A4 폭 중앙 정렬 */
-main .block-container {
+section.main > div.block-container {
   max-width: 860px;
-  margin: auto;
-  padding: 3rem 2rem;
+  margin: auto !important;
+  padding: 3rem 2rem !important;
   background-color: transparent;
 }
 
