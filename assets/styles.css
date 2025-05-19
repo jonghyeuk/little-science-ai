@@ -141,3 +141,14 @@ body::after {
   font-size: 14px;
   color: #00ffd5;
 }
+
+body::before {
+  content: "✅ CSS 작동 중";
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  color: lime;
+  background: #000;
+  padding: 5px 10px;
+  z-index: 9999;
+}
