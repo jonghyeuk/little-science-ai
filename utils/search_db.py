@@ -5,37 +5,43 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from deep_translator import GoogleTranslator
 
+# 📁 내부 DB 파일 경로
 DB_PATH = os.path.join("data", "ISEF Final DB.xlsx")
+
+# 🔤 열 이름 매핑
 COLUMN_MAP = {
     'project title': '제목',
     'year': '연도',
     'category': '분야'
 }
 
-# ✅ 캐싱된 번역기
+# ✅ 번역 캐싱 함수
 @st.cache_data(show_spinner=False)
 def translate_once(text, src='auto', tgt='en'):
     try:
         return GoogleTranslator(source=src, target=tgt).translate(text)
-    except:
+    except Exception as e:
+        st.warning(f"⚠️ 번역 실패 → {text}")
         return text
 
-# ✅ 요약 추론 생성기
+# ✅ 요약 추론 함수
 def get_summary(title):
     try:
         return GoogleTranslator(source='en', target='ko').translate(
-            f"This paper studies a science fair topic titled: {title}. It may be related to STEM education or science research."
+            f"This paper explores a science fair project titled: {title}. It may involve STEM education or scientific investigation."
         )
     except:
         return "요약 없음"
 
+# ✅ 내부 DB 로드 및 정리
 def load_internal_db():
     try:
         df = pd.read_excel(DB_PATH)
     except Exception as e:
-        st.error(f"❌ 내부 DB 파일 로드 오류: {e}")
+        st.error(f"❌ 내부 DB 로드 오류: {e}")
         st.stop()
 
+    # 열 정리 및 결측 채움
     df.columns = [col.strip().lower() for col in df.columns]
     df.rename(columns=lambda c: COLUMN_MAP.get(c, c), inplace=True)
 
@@ -46,15 +52,19 @@ def load_internal_db():
 
     return df
 
+# ✅ 내부 유사 논문 검색
 def search_similar_titles(user_input, max_results=5):
     df = load_internal_db()
 
-    # ✅ 번역 (입력 + 전체 제목)
+    # 입력 번역
     translated_input = translate_once(user_input)
+
+    # 전체 제목 번역 캐싱
     unique_titles = list(set(df['제목'].tolist()))
     translated_map = {t: translate_once(t) for t in unique_titles}
     df['제목_번역'] = df['제목'].map(translated_map)
 
+    # 유사도 분석용 말뭉치
     corpus = df['제목_번역'].tolist() + [translated_input]
 
     try:
@@ -62,7 +72,7 @@ def search_similar_titles(user_input, max_results=5):
         tfidf_matrix = vectorizer.fit_transform(corpus)
         cosine_sim = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1]).flatten()
     except Exception as e:
-        st.error(f"❌ 유사도 계산 오류: {e}")
+        st.error(f"❌ 유사도 계산 실패: {e}")
         st.stop()
 
     df['score'] = cosine_sim
@@ -70,7 +80,10 @@ def search_similar_titles(user_input, max_results=5):
 
     top = df.sort_values(by='score', ascending=False).head(max_results)
 
-    # ✅ 요약 없는 항목 처리
-    top['요약'] = top.apply(lambda row: row['요약'] if row['요약'] != "" else get_summary(row['제목']), axis=1)
+    # 요약 자동 생성
+    top['요약'] = top.apply(
+        lambda row: row['요약'] if row['요약'].strip() else get_summary(row['제목']),
+        axis=1
+    )
 
     return top[['제목', '요약', '연도', '분야', 'score']].to_dict(orient='records')
