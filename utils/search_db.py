@@ -4,6 +4,7 @@ import streamlit as st
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from deep_translator import GoogleTranslator
+from utils.explain_topic import explain_topic
 
 # 📁 내부 DB 파일 경로
 DB_PATH = os.path.join("data", "ISEF Final DB.xlsx")
@@ -26,10 +27,9 @@ def translate_once(text, src='auto', tgt='en'):
 
 # ✅ 요약 추론 함수
 def get_summary(title):
+    """제목 기반 GPT 요약 추론"""
     try:
-        return GoogleTranslator(source='en', target='ko').translate(
-            f"This paper explores a science fair project titled: {title}. It may involve STEM education or scientific investigation."
-        )
+        return explain_topic(title)[0]  # 첫 문단만 반환
     except:
         return "요약 없음"
 
