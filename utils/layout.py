@@ -3,7 +3,7 @@ import streamlit as st
 def load_css():
     """커스텀 CSS 불러오기"""
     try:
-        with open("assets/styles.css") as f:
+        with open("assets/styles.css", encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except FileNotFoundError:
         st.warning("❗ CSS 파일을 찾을 수 없습니다.")
