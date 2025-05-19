@@ -1,7 +1,12 @@
 import streamlit as st
 import time
 
-from utils.layout import render_title, render_paragraph, load_css
+from utils.layout import (
+    render_title,
+    render_paragraph,
+    render_paper_card,
+    load_css
+)
 from utils.search_db import search_similar_titles
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
@@ -40,6 +45,7 @@ render_title("🧪 과학 소논문 주제 탐색 도우미")
 # 📝 주제 입력
 topic = st.text_input("🔬 연구하고 싶은 과학 주제를 입력하세요:")
 
+# ▶ 실행 흐름
 if topic:
     # 📘 개념 해설 출력
     st.subheader("📘 주제 해설")
@@ -58,10 +64,10 @@ if topic:
                 time.sleep(0.012)
             typed_text += "\n\n"
 
-    # 📎 PDF용 전체 텍스트 저장
+    # 📎 PDF용 텍스트 저장
     full_text = f"# 📘 {topic} - 주제 해설\n\n{typed_text}"
 
-    # 📄 내부 논문
+    # 📄 내부 DB 논문
     st.subheader("📄 내부 DB 유사 논문")
     try:
         internal_results = search_similar_titles(topic)
@@ -70,20 +76,18 @@ if topic:
             full_text += "\n❗ 관련 논문이 없습니다.\n"
         else:
             for paper in internal_results:
-                요약 = (
+                summary = (
                     paper["요약"]
                     if paper["요약"] != "요약 없음"
                     else explain_topic(paper["제목"])[0]
                 )
-                st.markdown(f"""
-<div class="paper-card">
-  <div class="paper-title">📌 {paper['제목']}</div>
-  <div class="paper-summary">{요약}</div>
-  <div class="paper-meta">{paper['연도']} · {paper['분야']}</div>
-</div>
-""", unsafe_allow_html=True)
-
-                full_text += f"\n\n- **{paper['제목']}**\n  {요약}\n  _({paper['연도']} · {paper['분야']})_"
+                render_paper_card(
+                    title=f"📌 {paper['제목']}",
+                    meta=f"{paper['연도']} · {paper['분야']}",
+                    summary=summary,
+                    link=None
+                )
+                full_text += f"\n\n- **{paper['제목']}**\n{summary}\n_({paper['연도']} · {paper['분야']})_"
 
     except Exception as e:
         st.error(f"❗ 내부 논문 오류: {e}")
@@ -97,16 +101,13 @@ if topic:
             full_text += "\n❗ arXiv 결과가 없습니다.\n"
         else:
             for paper in arxiv_results:
-                st.markdown(f"""
-<div class="paper-card">
-  <div class="paper-title">🌐 {paper['title']}</div>
-  <div class="paper-summary">{paper['summary']}</div>
-  <div class="paper-link">🔗 <a href="{paper['link']}" target="_blank">논문 링크 바로가기</a></div>
-</div>
-""", unsafe_allow_html=True)
-
+                render_paper_card(
+                    title=f"🌐 {paper['title']}",
+                    meta="출처: arXiv",
+                    summary=paper["summary"],
+                    link=paper["link"]
+                )
                 full_text += f"\n\n- **{paper['title']}**\n{paper['summary']}\n[링크]({paper['link']})"
-
     except Exception as e:
         st.error(f"❗ arXiv 논문 오류: {e}")
 
