@@ -116,3 +116,5 @@ if topic:
         path = generate_pdf(full_text)
         with open(path, "rb") as f:
             st.download_button("📄 PDF 다운로드", f, file_name="little_science_ai.pdf")
+
+st.markdown("<div style='color: lime;'>✅ Streamlit HTML 정상 렌더링</div>", unsafe_allow_html=True)
