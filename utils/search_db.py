@@ -6,15 +6,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from utils.explain_topic import explain_topic
 from openai import OpenAI
 import re
-import nltk
-from nltk.corpus import stopwords
-
-# NLTK 리소스 다운로드 (처음 실행 시 필요)
-try:
-    nltk.data.find('corpora/stopwords')
-except:
-    nltk.download('stopwords', quiet=True)
-    nltk.download('punkt', quiet=True)
 
 # 📁 내부 DB 경로
 DB_PATH = os.path.join("data", "ISEF Final DB.xlsx")
@@ -26,19 +17,29 @@ COLUMN_MAP = {
     'category': '분야'
 }
 
-# 키워드 추출 함수
+# 키워드 추출 함수 (NLTK 없이 구현)
 def extract_keywords(text, top_n=5):
-    """텍스트에서 중요 키워드 추출"""
+    """텍스트에서 중요 키워드 추출 - 간단한 버전"""
     # 특수문자 제거 및 소문자화
     text = re.sub(r'[^\w\s]', '', text.lower())
     
-    # 불용어 제거 (한국어는 직접 정의)
-    korean_stopwords = ['이', '그', '저', '것', '및', '등', '를', '을', '에', '에서', '의', '으로', '로', '에게', '하다', '있다', '되다']
-    words = [w for w in text.split() if w not in korean_stopwords and w not in stopwords.words('english')]
+    # 한국어 불용어 (직접 정의)
+    stopwords = ['이', '그', '저', '것', '및', '등', '를', '을', '에', '에서', '의', '으로', '로', '에게', '하다', '있다', '되다']
+    
+    # 단어 분리 및 불용어 제거
+    words = []
+    for word in text.split():
+        if word not in stopwords and len(word) > 1:  # 2글자 이상만 포함
+            words.append(word)
     
     # 빈도수 기반 키워드 추출
-    from collections import Counter
-    return [word for word, _ in Counter(words).most_common(top_n)]
+    word_counts = {}
+    for word in words:
+        word_counts[word] = word_counts.get(word, 0) + 1
+    
+    # 빈도순 정렬 및 상위 키워드 반환
+    sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
+    return [word for word, _ in sorted_words[:top_n]]
 
 # ✅ GPT 번역 함수 (키워드만 번역)
 @st.cache_data(show_spinner=False)
