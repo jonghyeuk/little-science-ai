@@ -143,7 +143,12 @@ if topic:
         full_text = all_text
     
     # 내부 DB 검색 결과 부분 수정
+# 내부 DB 검색 결과 부분 수정
 st.subheader("📄 내부 DB 유사 논문")
+
+# 전체 텍스트 변수 초기화 (없는 경우를 대비)
+if 'full_text' not in locals():
+    full_text = f"# 📘 {topic} - 주제 해설\n\n"
 
 try:
     # 검색 시작 전 상태 표시
@@ -163,7 +168,7 @@ try:
             category = paper.get('분야', '분야 없음')
             
             # 요약 처리
-            if paper.get('요약') and paper['요약'] != "요약 없음":
+            if '요약' in paper and paper['요약'] and paper['요약'] != "요약 없음":
                 summary = paper['요약']
             else:
                 # 요약이 없는 경우 기본 텍스트 사용
@@ -179,8 +184,6 @@ try:
             full_text += f"\n\n- **{title}**\n{summary}\n_({year} · {category})_"
 except Exception as e:
     st.error(f"❗ 내부 논문 검색 오류: {str(e)}")
-    import traceback
-    st.expander("상세 오류 정보", expanded=False).code(traceback.format_exc())
     full_text += "\n❗ 내부 논문 검색 중 오류가 발생했습니다.\n"
     
     # arXiv 논문 검색 - 단순화된 버전
