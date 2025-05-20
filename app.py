@@ -142,43 +142,36 @@ if topic:
         # 최종 텍스트 저장
         full_text = all_text
     
-    # 내부 DB 검색 결과 부분 수정
-# 내부 DB 검색 결과 부분 수정
+    # 내부 DB 검색 결과 부분 (app.py)
 st.subheader("📄 내부 DB 유사 논문")
 
-# 전체 텍스트 변수 초기화 (없는 경우를 대비)
-if 'full_text' not in locals():
+# full_text 변수 초기화 (없는 경우)
+if 'full_text' not in locals() and 'full_text' not in globals():
     full_text = f"# 📘 {topic} - 주제 해설\n\n"
 
 try:
-    # 검색 시작 전 상태 표시
+    # 내부 DB 검색
     with st.spinner("🔍 내부 DB에서 유사한 논문을 검색 중..."):
         internal_results = search_similar_titles(topic)
     
-    # 결과가 없는 경우
+    # 결과 표시
     if not internal_results or len(internal_results) == 0:
         st.info("❗ 관련 논문이 없습니다.")
         full_text += "\n❗ 관련 논문이 없습니다.\n"
     else:
-        # 안전하게 결과 표시
+        # 결과 표시
         for paper in internal_results:
-            # 필수 키 확인
+            # 필수 필드 확인 (안전하게)
             title = paper.get('제목', '제목 없음')
             year = paper.get('연도', '연도 없음')
             category = paper.get('분야', '분야 없음')
+            summary = paper.get('요약', '요약 없음')
             
-            # 요약 처리
-            if '요약' in paper and paper['요약'] and paper['요약'] != "요약 없음":
-                summary = paper['요약']
-            else:
-                # 요약이 없는 경우 기본 텍스트 사용
-                summary = "이 논문에 대한 요약 정보가 없습니다."
-            
-            # Streamlit의 기본 컴포넌트로 표시
-            st.markdown(f"### 📌 {title}")
-            st.markdown(f"*{year} · {category}*")
-            st.markdown(summary)
-            st.markdown("---")
+            # 기본 컴포넌트로 표시
+            st.write(f"**📌 {title}**")
+            st.write(f"*{year} · {category}*")
+            st.write(summary)
+            st.write("---")
             
             # PDF용 텍스트 추가
             full_text += f"\n\n- **{title}**\n{summary}\n_({year} · {category})_"
