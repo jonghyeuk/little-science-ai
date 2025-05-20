@@ -5,6 +5,16 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from utils.explain_topic import explain_topic
 from openai import OpenAI
+import re
+import nltk
+from nltk.corpus import stopwords
+
+# NLTK 리소스 다운로드 (처음 실행 시 필요)
+try:
+    nltk.data.find('corpora/stopwords')
+except:
+    nltk.download('stopwords', quiet=True)
+    nltk.download('punkt', quiet=True)
 
 # 📁 내부 DB 경로
 DB_PATH = os.path.join("data", "ISEF Final DB.xlsx")
@@ -16,20 +26,45 @@ COLUMN_MAP = {
     'category': '분야'
 }
 
-# ✅ GPT 번역 함수 (캐시 사용)
+# 키워드 추출 함수
+def extract_keywords(text, top_n=5):
+    """텍스트에서 중요 키워드 추출"""
+    # 특수문자 제거 및 소문자화
+    text = re.sub(r'[^\w\s]', '', text.lower())
+    
+    # 불용어 제거 (한국어는 직접 정의)
+    korean_stopwords = ['이', '그', '저', '것', '및', '등', '를', '을', '에', '에서', '의', '으로', '로', '에게', '하다', '있다', '되다']
+    words = [w for w in text.split() if w not in korean_stopwords and w not in stopwords.words('english')]
+    
+    # 빈도수 기반 키워드 추출
+    from collections import Counter
+    return [word for word, _ in Counter(words).most_common(top_n)]
+
+# ✅ GPT 번역 함수 (키워드만 번역)
 @st.cache_data(show_spinner=False)
-def gpt_translate(text: str, tgt_lang="en") -> str:
+def gpt_translate_keywords(keywords, tgt_lang="en") -> list:
+    """키워드 리스트만 번역 (API 호출 최소화)"""
+    if not keywords:
+        return []
+        
     try:
         client = OpenAI(api_key=st.secrets["api"]["openai_key"])
-        prompt = f"다음 문장을 {tgt_lang} 언어로 자연스럽게 번역해줘: '{text}'"
+        # 키워드를 한 번에 번역 요청
+        keyword_text = ", ".join(keywords)
+        prompt = f"다음 키워드들을 {tgt_lang}로 번역해주세요. 번역된 키워드만 쉼표로 구분하여 알려주세요: {keyword_text}"
+        
         res = client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
-        return res.choices[0].message.content.strip()
-    except Exception:
-        return text
+        
+        # 번역된 키워드 파싱
+        translated = res.choices[0].message.content.strip()
+        return [k.strip() for k in translated.split(',')]
+    except Exception as e:
+        st.warning(f"키워드 번역 중 오류: {e}")
+        return keywords  # 실패 시 원본 반환
 
 # ✅ 요약 생성 함수
 def get_summary(title):
@@ -45,48 +80,62 @@ def load_internal_db():
     except Exception as e:
         st.error(f"❌ 내부 DB 로드 실패: {e}")
         st.stop()
-
+        
     df.columns = [col.strip().lower() for col in df.columns]
     df.rename(columns=lambda c: COLUMN_MAP.get(c, c), inplace=True)
-
     df['제목'] = df.get('제목', pd.Series(["제목 없음"] * len(df))).fillna("제목 없음").astype(str)
     df['요약'] = df.get('요약', pd.Series([""] * len(df))).fillna("").astype(str)
     df['분야'] = df.get('분야', pd.Series(["분야 없음"] * len(df))).fillna("분야 없음").astype(str)
     df['연도'] = df.get('연도', pd.Series(["연도 없음"] * len(df))).fillna("연도 없음").astype(str)
-
+    
     return df
 
-# ✅ 유사 논문 검색
+# ✅ 새로운 유사 논문 검색 함수
 def search_similar_titles(user_input, max_results=5):
     df = load_internal_db()
-
-    # 🔁 입력 주제 GPT 번역
-    translated_input = gpt_translate(user_input)
-
-    # 🔁 DB 제목 리스트 번역
-    unique_titles = list(set(df['제목'].tolist()))
-    translated_map = {t: gpt_translate(t) for t in unique_titles}
-    df['제목_번역'] = df['제목'].map(translated_map)
-
-    # 🔍 TF-IDF 유사도 분석
-    corpus = df['제목_번역'].tolist() + [translated_input]
+    
+    # 1. 사용자 입력에서 키워드 추출
+    keywords = extract_keywords(user_input)
+    
+    # 2. 키워드만 번역 (API 호출 최소화)
+    translated_keywords = gpt_translate_keywords(keywords)
+    
+    # 3. 검색용 쿼리 생성
+    search_query = " ".join(translated_keywords)
+    
+    # 4. 영문 제목에 대해 TF-IDF 유사도 분석
+    # DB에 영문 제목 필드가 있다고 가정 (project title)
+    if 'project title' in df.columns:
+        corpus = df['project title'].fillna('').tolist() + [search_query]
+    else:
+        # 영문 제목 필드가 없는 경우 한글 제목 사용
+        corpus = df['제목'].fillna('').tolist() + [search_query]
+    
     try:
-        vectorizer = TfidfVectorizer(analyzer='char_wb', ngram_range=(3, 5), lowercase=True)
+        # 단어 수준 및 문자 수준 혼합 분석
+        vectorizer = TfidfVectorizer(
+            analyzer='word', 
+            ngram_range=(1, 2),
+            lowercase=True,
+            max_features=5000
+        )
         tfidf_matrix = vectorizer.fit_transform(corpus)
         cosine_sim = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1]).flatten()
     except Exception as e:
         st.error(f"❌ 유사도 분석 오류: {e}")
-        st.stop()
-
+        return []
+    
+    # 5. 유사도 점수 할당 및 필터링
     df['score'] = cosine_sim
-    df = df[df['score'] > 0]
-
+    df = df[df['score'] > 0.1]  # 최소 유사도 임계값 설정
+    
+    # 6. 상위 결과 선택
     top = df.sort_values(by='score', ascending=False).head(max_results)
-
-    # ⛓ 요약 생성 보완
+    
+    # 7. 요약 정보 보완
     top['요약'] = top.apply(
-        lambda row: row['요약'].strip() if row['요약'].strip() else get_summary(row['제목']),
+        lambda row: row['요약'].strip() if row.get('요약') and row['요약'].strip() else get_summary(row['제목']),
         axis=1
     )
-
+    
     return top[['제목', '요약', '연도', '분야', 'score']].to_dict(orient='records')
