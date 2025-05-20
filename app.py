@@ -146,14 +146,25 @@ if topic:
         # Claude 스타일 타이핑 효과 - 개선된 마크다운 처리
         for line in lines:
             # 마크다운 헤더 처리 (###, ##, # 등)
-            if line.strip().startswith('#'):
-                # 마크다운 헤더를 적절한 HTML로 변환
-                header_level = line.count('#', 0, line.find(' '))
-                header_text = line.strip('#').strip()
-                enhanced_line = f"<h{header_level} style='font-weight: 600; margin-top: 20px; color: #333;'>{header_text}</h{header_level}>"
-            else:
-                # 굵은 글씨 처리
-                enhanced_line = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', line)
+# 마크다운 헤더 처리 부분을 수정
+if line.strip().startswith('#'):
+    # 더 안전한 헤더 변환 방법
+    header_match = re.match(r'^(#+)\s+(.*)', line.strip())
+    if header_match:
+        header_level = len(header_match.group(1))
+        header_text = header_match.group(2).strip()
+        # 유효한 헤더 레벨 범위(1-6) 확인
+        if 1 <= header_level <= 6:
+            enhanced_line = f"<div style='font-weight: 600; margin-top: 20px; color: #333; font-size: {24 - (header_level * 2)}px;'>{header_text}</div>"
+        else:
+            # 헤더 레벨이 유효하지 않은 경우 일반 텍스트로 처리
+            enhanced_line = line
+    else:
+        # 올바른 헤더 형식이 아닌 경우
+        enhanced_line = line
+else:
+    # 굵은 글씨 처리
+    enhanced_line = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', line)
             
             # 글자별 타이핑 효과 - 속도 조정
             for char in enhanced_line:
