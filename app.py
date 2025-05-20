@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 import os
-import re
+import html
 from utils.layout import (
     render_title,
     render_paragraph,
@@ -63,6 +63,11 @@ body {
     margin: 0 !important;
     padding: 0 !important;
     text-align: left !important;
+}
+
+@keyframes blink {
+    from, to { border-color: transparent }
+    50% { border-color: #555 }
 }
 
 /* 마크다운 헤더 스타일링 */
@@ -138,45 +143,54 @@ if topic:
     </h3>
     """, unsafe_allow_html=True)
     
-    with st.spinner("🤖 AI가 주제에 대해 분석 중..."):  # 스피너 텍스트 간소화
+    with st.spinner("🤖 AI가 주제에 대해 분석 중..."):
         lines = explain_topic(topic)
+        
+        # 마크다운 처리를 완전히 새로운 방식으로 처리
         typed_text = ""
         placeholder = st.empty()
         
-        # Claude 스타일 타이핑 효과 - 개선된 마크다운 처리
         for line in lines:
-            # 마크다운 헤더 처리 - 수정된 안전한 방식
+            # 제목이나 일반 텍스트 스타일 적용 (안전하게)
             if line.strip().startswith('#'):
-                # 더 안전한 헤더 변환 방법
-                header_match = re.match(r'^(#+)\s+(.*)', line.strip())
-                if header_match:
-                    header_level = len(header_match.group(1))
-                    header_text = header_match.group(2).strip()
-                    # 유효한 헤더 레벨 범위(1-6) 확인
-                    if 1 <= header_level <= 6:
-                        enhanced_line = f"<div style='font-weight: 600; margin-top: 20px; color: #333; font-size: {24 - (header_level * 2)}px;'>{header_text}</div>"
-                    else:
-                        # 헤더 레벨이 유효하지 않은 경우 일반 텍스트로 처리
-                        enhanced_line = line
-                else:
-                    # 올바른 헤더 형식이 아닌 경우
-                    enhanced_line = line
+                # 제목 처리
+                heading_level = len(line.strip()) - len(line.strip().lstrip('#'))
+                title_text = line.strip().lstrip('#').strip()
+                # HTML 특수문자 이스케이프 처리
+                safe_text = html.escape(title_text)
+                font_size = 22 - (heading_level * 2)  # 헤딩 레벨에 따라 폰트 크기 조정
+                enhanced_line = f'<div style="font-weight: 600; font-size: {font_size}px; margin-top: 20px; margin-bottom: 10px; color: #333;">{safe_text}</div>'
             else:
-                # 굵은 글씨 처리
-                enhanced_line = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', line)
+                # 일반 텍스트 처리 (HTML 특수문자 이스케이프)
+                safe_text = html.escape(line)
+                
+                # 마크다운 굵은 글씨 처리를 안전하게 변환
+                parts = []
+                is_bold = False
+                for part in safe_text.split('**'):
+                    if is_bold:
+                        parts.append(f"<strong>{part}</strong>")
+                    else:
+                        parts.append(part)
+                    is_bold = not is_bold
+                
+                processed_text = ''.join(parts)
+                enhanced_line = f'<div style="margin-bottom: 10px;">{processed_text}</div>'
             
-            # 글자별 타이핑 효과 - 속도 조정
+            # 글자별 타이핑 효과 구현
             for char in enhanced_line:
                 typed_text += char
                 placeholder.markdown(
-                    f"<div class='typing-effect'>{typed_text}</div>", 
+                    f'<div class="typing-effect">{typed_text}</div>', 
                     unsafe_allow_html=True
                 )
                 time.sleep(0.008)  # 타이핑 속도 조정
             typed_text += "\n\n"
     
-    # 설명 텍스트 저장
-    full_text = f"# 📘 {topic} - 주제 해설\n\n{typed_text}"
+    # 설명 텍스트 저장 (마크다운으로)
+    full_text = f"# 📘 {topic} - 주제 해설\n\n"
+    for line in lines:
+        full_text += line + "\n\n"
     
     # 내부 DB 검색 결과
     st.markdown("""
@@ -202,17 +216,23 @@ if topic:
                     else explain_topic(paper["제목"])[0]
                 )
                 
+                # 안전한 텍스트 처리
+                safe_title = html.escape(paper['제목'])
+                safe_year = html.escape(paper['연도'])
+                safe_field = html.escape(paper['분야'])
+                safe_summary = html.escape(summary)
+                
                 # Claude 스타일 카드 직접 마크업
                 st.markdown(f"""
                 <div style="background-color: #f8f9fa; border: 1px solid #eaecef; border-radius: 6px; padding: 16px; margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                     <div style="font-weight: 600; font-size: 16px; color: #000; margin-bottom: 4px;">
-                        📌 {paper['제목']}
+                        📌 {safe_title}
                     </div>
                     <div style="font-style: italic; font-size: 14px; color: #666; margin-bottom: 8px;">
-                        {paper['연도']} · {paper['분야']}
+                        {safe_year} · {safe_field}
                     </div>
                     <div style="font-size: 15px; color: #333; margin-bottom: 8px; line-height: 1.5;">
-                        {summary}
+                        {safe_summary}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -239,20 +259,25 @@ if topic:
             full_text += "\n❗ arXiv 결과가 없습니다.\n"
         else:
             for paper in arxiv_results:
+                # 안전한 텍스트 처리
+                safe_title = html.escape(paper['title'])
+                safe_summary = html.escape(paper['summary'])
+                safe_link = html.escape(paper['link'])
+                
                 # Claude 스타일 arXiv 카드
                 st.markdown(f"""
                 <div style="background-color: #f8f9fa; border: 1px solid #eaecef; border-radius: 6px; padding: 16px; margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                     <div style="font-weight: 600; font-size: 16px; color: #000; margin-bottom: 4px;">
-                        🌐 {paper['title']}
+                        🌐 {safe_title}
                     </div>
                     <div style="font-style: italic; font-size: 14px; color: #666; margin-bottom: 8px;">
                         출처: arXiv
                     </div>
                     <div style="font-size: 15px; color: #333; margin-bottom: 8px; line-height: 1.5;">
-                        {paper['summary']}
+                        {safe_summary}
                     </div>
                     <div style="font-size: 14px;">
-                        <a href="{paper['link']}" target="_blank" style="color: #0969da; text-decoration: none;">
+                        <a href="{safe_link}" target="_blank" style="color: #0969da; text-decoration: none;">
                             🔗 논문 링크 보기
                         </a>
                     </div>
