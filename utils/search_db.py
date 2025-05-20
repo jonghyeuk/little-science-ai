@@ -11,11 +11,14 @@ import re
 # 📁 내부 DB 경로
 DB_PATH = os.path.join("data", "ISEF Final DB.xlsx")
 
-# 🔤 열 이름 매핑
+# 🔤 ISEF DB 열 매핑 (수정됨)
 COLUMN_MAP = {
-    'project title': '제목',
-    'year': '연도',
-    'category': '분야'
+    'Project Title': '제목',
+    'Year': '연도',
+    'Category': '분야',
+    'Fair Country': '국가',
+    'Fair State': '지역',
+    'Awards': '수상'
 }
 
 # 키워드 추출 함수 (NLTK 없이 구현)
@@ -24,8 +27,9 @@ def extract_keywords(text, top_n=5):
     # 특수문자 제거 및 소문자화
     text = re.sub(r'[^\w\s]', '', text.lower())
     
-    # 한국어 불용어 (직접 정의)
-    stopwords = ['이', '그', '저', '것', '및', '등', '를', '을', '에', '에서', '의', '으로', '로', '에게', '하다', '있다', '되다']
+    # 한국어 및 영어 불용어 (확장)
+    stopwords = ['이', '그', '저', '것', '및', '등', '를', '을', '에', '에서', '의', '으로', '로', '에게', '하다', '있다', '되다',
+                'the', 'of', 'and', 'a', 'to', 'in', 'is', 'that', 'for', 'on', 'with']
     
     # 단어 분리 및 불용어 제거
     words = []
@@ -68,38 +72,37 @@ def gpt_translate_keywords(keywords, tgt_lang="en") -> list:
         st.warning(f"키워드 번역 중 오류: {e}")
         return keywords  # 실패 시 원본 반환
 
-# ✅ 요약 생성 함수
-def get_summary(title):
+# ✅ 프로젝트 내용 추론 함수 (수정됨)
+def infer_project_content(title, category=None):
+    """프로젝트 제목과 카테고리를 바탕으로 내용 추론"""
     try:
-        return explain_topic(title)[0]
-    except:
-        return "요약 없음"
+        prompt = title
+        if category:
+            prompt = f"{title} (연구 분야: {category})"
+            
+        explanation = explain_topic(prompt)[0]
+        return explanation
+    except Exception as e:
+        return f"이 프로젝트는 '{title}'에 관한 연구입니다."
 
 # ✅ 내부 DB 로드 및 정제
 def load_internal_db():
     try:
         df = pd.read_excel(DB_PATH)
+        
+        # 열 이름 원본 유지 (소문자화 하지 않음)
+        for orig_col, new_col in COLUMN_MAP.items():
+            if orig_col in df.columns:
+                df[new_col] = df[orig_col]
+        
+        # 참가자 이름(Finalist) 열은 사용하지 않음
+        
+        return df
     except Exception as e:
         st.error(f"❌ 내부 DB 로드 실패: {e}")
         return pd.DataFrame()  # 빈 데이터프레임 반환
-        
-    df.columns = [col.strip().lower() for col in df.columns]
-    df = df.rename(columns=lambda c: COLUMN_MAP.get(c, c))
-    
-    # 필수 열 추가 (안전하게)
-    for col in ['제목', '요약', '분야', '연도']:
-        if col not in df.columns:
-            df[col] = "정보 없음"
-    
-    # 누락된 값 처리
-    df['제목'] = df['제목'].fillna("제목 없음").astype(str)
-    df['요약'] = df['요약'].fillna("").astype(str)
-    df['분야'] = df['분야'].fillna("분야 없음").astype(str)
-    df['연도'] = df['연도'].fillna("연도 없음").astype(str)
-    
-    return df
 
-# ✅ 새로운 유사 논문 검색 함수
+# ✅ 새로운 유사 프로젝트 검색 함수
 def search_similar_titles(user_input, max_results=5):
     # DB 로드
     df = load_internal_db()
@@ -121,15 +124,19 @@ def search_similar_titles(user_input, max_results=5):
     translated_keywords = gpt_translate_keywords(keywords)
     
     if not translated_keywords:
-        st.warning("⚠️ 키워드 번역에 실패했습니다.")
         translated_keywords = keywords  # 번역 실패 시 원본 사용
     
     # 3. 검색용 쿼리 생성
     search_query = " ".join(translated_keywords)
     
-    # 4. 영문 제목에 대해 TF-IDF 유사도 분석
-    # DB에 영문 제목 필드가 있다고 가정
-    title_field = 'project title' if 'project title' in df.columns else '제목'
+    # 4. 유사도 분석 준비
+    # 영어 제목 필드 사용 (ISEF DB는 영어 제목)
+    title_field = 'Project Title'
+    
+    # 제목 필드가 없으면 오류 반환
+    if title_field not in df.columns:
+        st.error(f"❌ DB에 '{title_field}' 필드가 없습니다.")
+        return []
     
     # 안전하게 corpus 생성
     corpus = df[title_field].fillna("").astype(str).tolist()
@@ -163,7 +170,7 @@ def search_similar_titles(user_input, max_results=5):
     result_df['score'] = cosine_sim
     
     # 최소 유사도 임계값 적용
-    filtered_df = result_df[result_df['score'] > 0.1].copy()
+    filtered_df = result_df[result_df['score'] > 0.05].copy()  # 임계값 낮춤
     
     # 결과가 없으면 빈 리스트 반환
     if filtered_df.empty:
@@ -172,21 +179,28 @@ def search_similar_titles(user_input, max_results=5):
     # 6. 상위 결과 선택
     top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
     
-    # 7. 요약 정보 생성 (안전하게)
-    def safe_get_summary(row):
-        try:
-            if row['요약'] and str(row['요약']).strip() and str(row['요약']).strip() != "요약 없음":
-                return str(row['요약']).strip()
-            else:
-                return get_summary(row['제목'])
-        except:
-            return "요약을 생성할 수 없습니다."
+    # 7. 결과 리스트 구성 (파이널리스트 정보 제외)
+    results = []
+    for _, row in top_df.iterrows():
+        # 기본 정보 가져오기
+        project_title = row.get('Project Title', '')
+        category = row.get('Category', '')
+        
+        # AI로 프로젝트 내용 추론
+        project_summary = infer_project_content(project_title, category)
+        
+        # 결과 딕셔너리 구성
+        result_item = {
+            '제목': project_title,
+            '요약': project_summary,
+            '연도': str(row.get('Year', '')),
+            '분야': category,
+            '국가': row.get('Fair Country', ''),
+            '지역': row.get('Fair State', ''),
+            '수상': row.get('Awards', ''),
+            'score': float(row.get('score', 0))
+        }
+        
+        results.append(result_item)
     
-    top_df.loc[:, '요약'] = top_df.apply(safe_get_summary, axis=1)
-    
-    # 8. 필요한 열만 선택
-    result_columns = ['제목', '요약', '연도', '분야', 'score']
-    available_columns = [col for col in result_columns if col in top_df.columns]
-    
-    # 딕셔너리 리스트로 변환
-    return top_df[available_columns].to_dict(orient='records')
+    return results
