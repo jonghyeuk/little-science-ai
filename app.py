@@ -47,6 +47,31 @@ body {
     color: #333 !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
 }
+
+/* 타이핑 효과용 스타일 */
+.typing-container {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+    color: #333 !important;
+    white-space: pre-wrap !important;
+    margin-bottom: 20px !important;
+}
+
+.typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    background-color: #555;
+    margin-left: 1px;
+    vertical-align: middle;
+    animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+    from, to { opacity: 0; }
+    50% { opacity: 1; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -83,15 +108,39 @@ topic = st.text_input("🔬 연구하고 싶은 과학 주제를 입력하세요
                      placeholder="예: 양자 컴퓨팅, 유전자 편집, 미생물 연료전지...")
 
 if topic:
-    # 주제 해설 파트 - 단순화된 버전
+    # 주제 해설 파트
     st.subheader("📘 주제 해설")
     
     with st.spinner("🤖 AI가 주제에 대해 분석 중..."):
         lines = explain_topic(topic)
         
-        # 애니메이션 없이 단순하게 텍스트 표시
-        full_text = '\n\n'.join(lines)
-        st.write(full_text)
+        # 안전한 타이핑 효과 구현 - 텍스트만 처리
+        typing_placeholder = st.empty()
+        displayed_text = ""
+        
+        # 모든 줄을 하나의 텍스트로 결합
+        all_text = ""
+        for i, line in enumerate(lines):
+            # 줄이 마크다운 헤더처럼 보이는지 확인
+            if line.strip().startswith("#"):
+                # 헤더 수준에 따라 스타일 추가
+                header_level = min(len(line.strip()) - len(line.strip().lstrip('#')), 6)
+                header_text = line.strip().lstrip('#').strip()
+                
+                # 헤더 스타일을 적용한 텍스트 추가
+                all_text += f"\n\n**{header_text}**\n\n"
+            else:
+                # 일반 텍스트 줄 추가
+                all_text += line + "\n\n"
+        
+        # 글자별 타이핑 효과
+        for char in all_text:
+            displayed_text += char
+            typing_placeholder.markdown(displayed_text, unsafe_allow_html=False)
+            time.sleep(0.01)  # 타이핑 속도 - 약간 더 빠르게
+        
+        # 최종 텍스트 저장
+        full_text = all_text
     
     # 내부 DB 검색 결과 - 단순화된 버전
     st.subheader("📄 내부 DB 유사 논문")
