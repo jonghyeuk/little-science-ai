@@ -1,3 +1,4 @@
+# search_db.py 수정 버전
 import pandas as pd
 import os
 import streamlit as st
@@ -80,63 +81,112 @@ def load_internal_db():
         df = pd.read_excel(DB_PATH)
     except Exception as e:
         st.error(f"❌ 내부 DB 로드 실패: {e}")
-        st.stop()
+        return pd.DataFrame()  # 빈 데이터프레임 반환
         
     df.columns = [col.strip().lower() for col in df.columns]
-    df.rename(columns=lambda c: COLUMN_MAP.get(c, c), inplace=True)
-    df['제목'] = df.get('제목', pd.Series(["제목 없음"] * len(df))).fillna("제목 없음").astype(str)
-    df['요약'] = df.get('요약', pd.Series([""] * len(df))).fillna("").astype(str)
-    df['분야'] = df.get('분야', pd.Series(["분야 없음"] * len(df))).fillna("분야 없음").astype(str)
-    df['연도'] = df.get('연도', pd.Series(["연도 없음"] * len(df))).fillna("연도 없음").astype(str)
+    df = df.rename(columns=lambda c: COLUMN_MAP.get(c, c))
+    
+    # 필수 열 추가 (안전하게)
+    for col in ['제목', '요약', '분야', '연도']:
+        if col not in df.columns:
+            df[col] = "정보 없음"
+    
+    # 누락된 값 처리
+    df['제목'] = df['제목'].fillna("제목 없음").astype(str)
+    df['요약'] = df['요약'].fillna("").astype(str)
+    df['분야'] = df['분야'].fillna("분야 없음").astype(str)
+    df['연도'] = df['연도'].fillna("연도 없음").astype(str)
     
     return df
 
 # ✅ 새로운 유사 논문 검색 함수
 def search_similar_titles(user_input, max_results=5):
+    # DB 로드
     df = load_internal_db()
+    
+    # DB가 비어있으면 빈 결과 반환
+    if df.empty:
+        st.error("❌ 내부 DB가 비어있거나 로드할 수 없습니다.")
+        return []
     
     # 1. 사용자 입력에서 키워드 추출
     keywords = extract_keywords(user_input)
     
+    # 키워드가 없으면 빈 결과 반환
+    if not keywords:
+        st.warning("⚠️ 입력에서 키워드를 추출할 수 없습니다.")
+        return []
+    
     # 2. 키워드만 번역 (API 호출 최소화)
     translated_keywords = gpt_translate_keywords(keywords)
+    
+    if not translated_keywords:
+        st.warning("⚠️ 키워드 번역에 실패했습니다.")
+        translated_keywords = keywords  # 번역 실패 시 원본 사용
     
     # 3. 검색용 쿼리 생성
     search_query = " ".join(translated_keywords)
     
     # 4. 영문 제목에 대해 TF-IDF 유사도 분석
-    # DB에 영문 제목 필드가 있다고 가정 (project title)
-    if 'project title' in df.columns:
-        corpus = df['project title'].fillna('').tolist() + [search_query]
-    else:
-        # 영문 제목 필드가 없는 경우 한글 제목 사용
-        corpus = df['제목'].fillna('').tolist() + [search_query]
+    # DB에 영문 제목 필드가 있다고 가정
+    title_field = 'project title' if 'project title' in df.columns else '제목'
+    
+    # 안전하게 corpus 생성
+    corpus = df[title_field].fillna("").astype(str).tolist()
+    corpus.append(search_query)  # 마지막에 검색어 추가
     
     try:
-        # 단어 수준 및 문자 수준 혼합 분석
+        # 단어 수준 분석
         vectorizer = TfidfVectorizer(
             analyzer='word', 
             ngram_range=(1, 2),
             lowercase=True,
             max_features=5000
         )
+        
         tfidf_matrix = vectorizer.fit_transform(corpus)
-        cosine_sim = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1]).flatten()
+        
+        # 마지막 행(검색어)과 나머지 행(DB) 사이의 유사도 계산
+        cosine_sim = cosine_similarity(tfidf_matrix[-1:], tfidf_matrix[:-1])[0]
+        
+        # 유사도 점수가 올바른 길이인지 확인
+        if len(cosine_sim) != len(df):
+            st.error(f"❌ 유사도 벡터 길이({len(cosine_sim)})와 데이터프레임 길이({len(df)})가 일치하지 않습니다.")
+            return []
+            
     except Exception as e:
-        st.error(f"❌ 유사도 분석 오류: {e}")
+        st.error(f"❌ 유사도 분석 오류: {str(e)}")
         return []
     
-    # 5. 유사도 점수 할당 및 필터링
-    df['score'] = cosine_sim
-    df = df[df['score'] > 0.1]  # 최소 유사도 임계값 설정
+    # 5. 결과 데이터프레임 생성 (원본 수정 방지)
+    result_df = df.copy()
+    result_df['score'] = cosine_sim
+    
+    # 최소 유사도 임계값 적용
+    filtered_df = result_df[result_df['score'] > 0.1].copy()
+    
+    # 결과가 없으면 빈 리스트 반환
+    if filtered_df.empty:
+        return []
     
     # 6. 상위 결과 선택
-    top = df.sort_values(by='score', ascending=False).head(max_results)
+    top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
     
-    # 7. 요약 정보 보완
-    top['요약'] = top.apply(
-        lambda row: row['요약'].strip() if row.get('요약') and row['요약'].strip() else get_summary(row['제목']),
-        axis=1
-    )
+    # 7. 요약 정보 생성 (안전하게)
+    def safe_get_summary(row):
+        try:
+            if row['요약'] and str(row['요약']).strip() and str(row['요약']).strip() != "요약 없음":
+                return str(row['요약']).strip()
+            else:
+                return get_summary(row['제목'])
+        except:
+            return "요약을 생성할 수 없습니다."
     
-    return top[['제목', '요약', '연도', '분야', 'score']].to_dict(orient='records')
+    top_df.loc[:, '요약'] = top_df.apply(safe_get_summary, axis=1)
+    
+    # 8. 필요한 열만 선택
+    result_columns = ['제목', '요약', '연도', '분야', 'score']
+    available_columns = [col for col in result_columns if col in top_df.columns]
+    
+    # 딕셔너리 리스트로 변환
+    return top_df[available_columns].to_dict(orient='records')
