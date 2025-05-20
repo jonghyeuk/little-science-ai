@@ -142,42 +142,70 @@ if topic:
         # 최종 텍스트 저장
         full_text = all_text
     
-    # 내부 DB 검색 결과 부분 (app.py)
+# 내부 DB 검색 결과 부분 (app.py)
 st.subheader("📄 내부 DB 유사 논문")
 
-# full_text 변수 초기화 (없는 경우)
+# 초기화 (없으면)
 if 'full_text' not in locals() and 'full_text' not in globals():
     full_text = f"# 📘 {topic} - 주제 해설\n\n"
 
 try:
-    # 내부 DB 검색
-    with st.spinner("🔍 내부 DB에서 유사한 논문을 검색 중..."):
+    # 검색 시작
+    with st.spinner("🔍 ISEF 관련 프로젝트 검색 중..."):
         internal_results = search_similar_titles(topic)
     
-    # 결과 표시
+    # 결과 없음
     if not internal_results or len(internal_results) == 0:
-        st.info("❗ 관련 논문이 없습니다.")
-        full_text += "\n❗ 관련 논문이 없습니다.\n"
+        st.info("❗ 관련 프로젝트가 없습니다.")
+        full_text += "\n❗ 관련 프로젝트가 없습니다.\n"
     else:
         # 결과 표시
-        for paper in internal_results:
-            # 필수 필드 확인 (안전하게)
-            title = paper.get('제목', '제목 없음')
-            year = paper.get('연도', '연도 없음')
-            category = paper.get('분야', '분야 없음')
-            summary = paper.get('요약', '요약 없음')
+        for project in internal_results:
+            # 기본 정보 가져오기
+            title = project.get('제목', '')
+            summary = project.get('요약', '')
+            year = project.get('연도', '')
+            category = project.get('분야', '')
+            country = project.get('국가', '')
+            region = project.get('지역', '')
+            award = project.get('수상', '')
             
-            # 기본 컴포넌트로 표시
-            st.write(f"**📌 {title}**")
-            st.write(f"*{year} · {category}*")
-            st.write(summary)
-            st.write("---")
+            # 메타 정보 구성
+            meta_parts = []
+            if year:
+                meta_parts.append(f"📅 {year}")
+            if category:
+                meta_parts.append(f"🔬 {category}")
+            
+            # 위치 정보 (국가, 지역)
+            location = ""
+            if country:
+                location = country
+                if region:
+                    location += f", {region}"
+                meta_parts.append(f"🌎 {location}")
+            
+            # 수상 정보
+            if award:
+                meta_parts.append(f"🏆 {award}")
+            
+            meta_info = " · ".join(meta_parts)
+            
+            # 카드 형태로 표시 (HTML)
+            st.markdown(f"""
+            <div style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <h3 style="color: #333; margin-top: 0;">📌 {title}</h3>
+                <p style="color: #666; font-style: italic; margin-bottom: 12px;">{meta_info}</p>
+                <p>{summary}</p>
+            </div>
+            """, unsafe_allow_html=True)
             
             # PDF용 텍스트 추가
-            full_text += f"\n\n- **{title}**\n{summary}\n_({year} · {category})_"
+            full_text += f"\n\n- **{title}**\n{summary}\n_{meta_info}_"
+            
 except Exception as e:
-    st.error(f"❗ 내부 논문 검색 오류: {str(e)}")
-    full_text += "\n❗ 내부 논문 검색 중 오류가 발생했습니다.\n"
+    st.error(f"❗ 프로젝트 검색 오류: {str(e)}")
+    full_text += "\n❗ 프로젝트 검색 중 오류가 발생했습니다.\n"
     
     # arXiv 논문 검색 - 단순화된 버전
     st.subheader("🌐 arXiv 유사 논문")
