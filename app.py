@@ -1,6 +1,7 @@
 import streamlit as st
 import time
 import os
+import re
 from utils.layout import (
     render_title,
     render_paragraph,
@@ -21,17 +22,22 @@ st.markdown("""
 <style>
 /* 중앙 정렬 강제 적용 - 최우선 */
 section.main > div.block-container {
-    max-width: 720px !important; 
+    max-width: 800px !important; 
     margin: 0 auto !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    padding: 2rem 3rem !important;
     background-color: white !important;
+}
+
+/* 오른쪽 구분선 제거 */
+.css-18e3th9 {
+    padding-right: 0 !important;
+    border-right: none !important;
 }
 
 /* 모든 요소 중앙 정렬 */
 .element-container, .stMarkdown {
     width: 100% !important;
-    max-width: 720px !important;
+    max-width: 800px !important;
     margin-left: auto !important;
     margin-right: auto !important;
 }
@@ -41,6 +47,30 @@ body {
     background-color: white !important;
     color: #333 !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+}
+
+/* 타이핑 효과 - Claude 스타일 */
+.typing-effect {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    white-space: pre-wrap !important;
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+    color: #333 !important;
+    border-right: 2px solid #555 !important;
+    animation: blink 0.8s step-end infinite !important;
+    background: transparent !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+}
+
+/* 마크다운 헤더 스타일링 */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600 !important;
+    color: #333 !important;
+    margin-top: 20px !important;
+    margin-bottom: 10px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -108,26 +138,31 @@ if topic:
     </h3>
     """, unsafe_allow_html=True)
     
-    with st.spinner("🤖 AI가 주제에 대해 고민하고 있습니다..."):
+    with st.spinner("🤖 AI가 주제에 대해 분석 중..."):  # 스피너 텍스트 간소화
         lines = explain_topic(topic)
         typed_text = ""
         placeholder = st.empty()
         
-        # Claude 스타일 타이핑 효과
+        # Claude 스타일 타이핑 효과 - 개선된 마크다운 처리
         for line in lines:
-            # 제목과 중요 키워드 강조
-            import re
-            # 굵은 글씨 처리
-            enhanced_line = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', line)
+            # 마크다운 헤더 처리 (###, ##, # 등)
+            if line.strip().startswith('#'):
+                # 마크다운 헤더를 적절한 HTML로 변환
+                header_level = line.count('#', 0, line.find(' '))
+                header_text = line.strip('#').strip()
+                enhanced_line = f"<h{header_level} style='font-weight: 600; margin-top: 20px; color: #333;'>{header_text}</h{header_level}>"
+            else:
+                # 굵은 글씨 처리
+                enhanced_line = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', line)
             
-            # 글자별 타이핑 효과
+            # 글자별 타이핑 효과 - 속도 조정
             for char in enhanced_line:
                 typed_text += char
                 placeholder.markdown(
                     f"<div class='typing-effect'>{typed_text}</div>", 
                     unsafe_allow_html=True
                 )
-                time.sleep(0.004)  # 더 빠른 타이핑 속도
+                time.sleep(0.008)  # 타이핑 속도 조정
             typed_text += "\n\n"
     
     # 설명 텍스트 저장
@@ -269,7 +304,7 @@ with st.expander("🔧 레이아웃 디버깅", expanded=False):
     아래 값을 바꿔서 컨테이너 너비를 조정할 수 있습니다.
     """)
     
-    container_width = st.slider("컨테이너 너비 (px)", 500, 1200, 720)
+    container_width = st.slider("컨테이너 너비 (px)", 500, 1200, 800)
     st.markdown(f"""
     <style>
     section.main > div.block-container {{
@@ -279,29 +314,3 @@ with st.expander("🔧 레이아웃 디버깅", expanded=False):
     """, unsafe_allow_html=True)
     
     st.info("💡 디버깅 완료 후 이 expander 섹션은 제거하세요.")
-
-# config.toml 생성 안내
-if not os.path.exists(".streamlit/config.toml"):
-    with st.expander("⚙️ 설정 파일 생성", expanded=False):
-        st.markdown("""
-        ### config.toml 파일 생성 필요
-        
-        Streamlit 테마 설정을 위해 `.streamlit/config.toml` 파일을 생성하세요:
-        
-        ```toml
-        [theme]
-        primaryColor="#0969da"
-        backgroundColor="#ffffff"
-        secondaryBackgroundColor="#f8f9fa"
-        textColor="#333333"
-        font="sans serif"
-        
-        [server]
-        enableCORS=false
-        
-        [browser]
-        gatherUsageStats=false
-        ```
-        
-        이 파일은 프로젝트 루트 폴더의 `.streamlit` 폴더에 저장하세요.
-        """)
