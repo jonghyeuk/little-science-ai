@@ -23,7 +23,21 @@ section.main > div.block-container {
 </style>
 """, unsafe_allow_html=True)
 
-# 인증 시스템 생략...
+# 인증 시스템
+ACCESS_KEYS = st.secrets["general"]["access_keys"]
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("## LittleScienceAI 로그인")
+    user_key = st.text_input("🔑 인증 키를 입력하세요", type="password")
+    
+    if user_key in ACCESS_KEYS:
+        st.session_state.authenticated = True
+        st.rerun()
+    elif user_key:
+        st.warning("🚫 올바른 인증 키를 입력하세요.")
+    st.stop()
 
 # 사이드바
 st.sidebar.title("🧭 탐색 단계")
