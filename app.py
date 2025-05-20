@@ -142,28 +142,46 @@ if topic:
         # 최종 텍스트 저장
         full_text = all_text
     
-    # 내부 DB 검색 결과 - 단순화된 버전
-    st.subheader("📄 내부 DB 유사 논문")
-    
-    try:
+    # 내부 DB 검색 결과 부분 수정
+st.subheader("📄 내부 DB 유사 논문")
+
+try:
+    # 검색 시작 전 상태 표시
+    with st.spinner("🔍 내부 DB에서 유사한 논문을 검색 중..."):
         internal_results = search_similar_titles(topic)
-        if not internal_results:
-            st.info("❗ 관련 논문이 없습니다.")
-        else:
-            for paper in internal_results:
-                summary = (
-                    paper["요약"]
-                    if paper["요약"] != "요약 없음"
-                    else explain_topic(paper["제목"])[0]
-                )
-                
-                # Streamlit 컴포넌트 사용
-                st.write(f"**📌 {paper['제목']}**")
-                st.write(f"*{paper['연도']} · {paper['분야']}*")
-                st.write(summary)
-                st.write("---")
-    except Exception as e:
-        st.error(f"❗ 내부 논문 오류: {e}")
+    
+    # 결과가 없는 경우
+    if not internal_results or len(internal_results) == 0:
+        st.info("❗ 관련 논문이 없습니다.")
+        full_text += "\n❗ 관련 논문이 없습니다.\n"
+    else:
+        # 안전하게 결과 표시
+        for paper in internal_results:
+            # 필수 키 확인
+            title = paper.get('제목', '제목 없음')
+            year = paper.get('연도', '연도 없음')
+            category = paper.get('분야', '분야 없음')
+            
+            # 요약 처리
+            if paper.get('요약') and paper['요약'] != "요약 없음":
+                summary = paper['요약']
+            else:
+                # 요약이 없는 경우 기본 텍스트 사용
+                summary = "이 논문에 대한 요약 정보가 없습니다."
+            
+            # Streamlit의 기본 컴포넌트로 표시
+            st.markdown(f"### 📌 {title}")
+            st.markdown(f"*{year} · {category}*")
+            st.markdown(summary)
+            st.markdown("---")
+            
+            # PDF용 텍스트 추가
+            full_text += f"\n\n- **{title}**\n{summary}\n_({year} · {category})_"
+except Exception as e:
+    st.error(f"❗ 내부 논문 검색 오류: {str(e)}")
+    import traceback
+    st.expander("상세 오류 정보", expanded=False).code(traceback.format_exc())
+    full_text += "\n❗ 내부 논문 검색 중 오류가 발생했습니다.\n"
     
     # arXiv 논문 검색 - 단순화된 버전
     st.subheader("🌐 arXiv 유사 논문")
