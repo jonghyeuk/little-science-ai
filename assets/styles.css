@@ -1,46 +1,56 @@
-/* Claude 스타일 전체 백색 테마 */
+/* 🎨 Claude 스타일 테마 */
 body {
     background-color: white !important;
     color: #333 !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
 }
 
-/* Streamlit 기본 컨테이너 오버라이드 (가운데 정렬 강제) */
-section.main > div.block-container,
-section[data-testid="stSidebar"] > div.block-container {
-    padding-top: 2rem !important;
-    padding-bottom: 2rem !important;
-}
-
-/* 메인 컨텐츠 가운데 정렬 강제 적용 */
+/* ✅ A4 폭 중앙 정렬 */
 section.main > div.block-container {
-    max-width: 720px !important; 
-    margin: 0 auto !important;
-    padding-left: 40px !important;
-    padding-right: 40px !important;
+    max-width: 800px !important;
+    margin: auto !important;
+    padding: 3rem 2rem !important;
     background-color: white !important;
+    border-right: none !important;
 }
 
-/* 사이드바 스타일 */
-section[data-testid="stSidebar"] {
-    background-color: #f8f9fa !important;
-    border-right: 1px solid #eaecef !important;
+/* 오른쪽 구분선 제거 */
+.css-18e3th9 {
+    padding-right: 0 !important;
+    border-right: none !important;
 }
 
-/* 사이드바 내부 텍스트 */
-section[data-testid="stSidebar"] .block-container {
-    padding-top: 2rem !important;
+/* ✅ 부드러운 전체 트랜지션 */
+* {
+    transition: all 0.15s ease-in-out;
 }
 
-/* 제목 스타일 */
-h1, h2, h3, .title-section h2 {
+/* ✅ 제목 스타일 */
+h1, h2, h3 {
     font-weight: 600 !important;
-    color: #000 !important;
+    color: #333 !important;
     margin-top: 1.5rem !important;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.6rem !important;
 }
 
-/* 타이핑 효과 - Claude 스타일 */
+/* ✅ 일반 문단 및 리스트 항목 */
+p, li {
+    font-size: 16px !important;
+    font-weight: 400 !important;
+    margin-bottom: 12px !important;
+    line-height: 1.6 !important;
+    text-align: left !important;
+    color: #333 !important;
+}
+
+/* ✅ 리스트 간격 */
+ul, ol {
+    padding-left: 1.2rem !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 1rem !important;
+}
+
+/* ✅ 타이핑 효과 유지 */
 .typing-effect {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
     white-space: pre-wrap !important;
@@ -50,10 +60,6 @@ h1, h2, h3, .title-section h2 {
     border-right: 2px solid #555 !important;
     animation: blink 0.8s step-end infinite !important;
     background: transparent !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    text-align: left !important;
 }
 
 @keyframes blink {
@@ -61,28 +67,26 @@ h1, h2, h3, .title-section h2 {
     50% { border-color: #555 }
 }
 
-/* 일반 텍스트 스타일 */
-p, li, .text-block {
-    font-size: 16px !important;
-    line-height: 1.6 !important;
-    color: #333 !important;
-    margin-bottom: 1rem !important;
-    text-align: left !important;
+/* ✅ 코드 블럭 */
+code {
+    background-color: #f6f8fa !important;
+    color: #24292e !important;
+    padding: 3px 6px !important;
+    border-radius: 4px !important;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
+    font-size: 14px !important;
 }
 
-/* 메인 타이틀 */
-.title-section {
-    text-align: center !important;
-    margin: 2rem 0 !important;
+/* ✅ 링크 스타일 */
+a {
+    color: #0969da !important;
+    text-decoration: none !important;
+}
+a:hover {
+    text-decoration: underline !important;
 }
 
-.title-section h2 {
-    font-size: 24px !important;
-    font-weight: 600 !important;
-    color: #333 !important;
-}
-
-/* 논문 카드 스타일 - Claude 스타일로 수정 */
+/* ✅ 논문 전용 카드 스타일 */
 .paper-card {
     background-color: #f8f9fa !important;
     border: 1px solid #eaecef !important;
@@ -122,7 +126,44 @@ p, li, .text-block {
     text-decoration: underline !important;
 }
 
-/* 추가: 인풋 필드 스타일링 */
+.title-section {
+    font-weight: 600 !important;
+    font-size: 24px !important;
+    margin-top: 2rem !important;
+    margin-bottom: 1.5rem !important;
+    text-align: center !important;
+    color: #333 !important;
+}
+
+.text-block {
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+    margin-bottom: 20px !important;
+    font-weight: 400 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    color: #333 !important;
+}
+
+/* ✅ 텍스트 강조 스타일 */
+strong, b {
+    font-weight: 600 !important;
+    color: #000 !important;
+}
+
+/* ✅ streamlit 기본 요소 숨기기 */
+#MainMenu, footer, header {
+    visibility: hidden !important;
+}
+
+/* ✅ 중앙 정렬 강제 적용을 위한 추가 CSS */
+.element-container, .stMarkdown {
+    width: 100% !important;
+    max-width: 800px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* 인풋 필드 스타일링 */
 input[type="text"] {
     border-radius: 4px !important;
     border: 1px solid #dfe1e5 !important;
@@ -149,23 +190,4 @@ button:hover, .stButton>button:hover {
 /* CSS 디버그 마커 숨기기 */
 body::before, body::after {
     display: none !important;
-}
-
-/* 강조 요소 */
-strong, b {
-    font-weight: 600 !important;
-    color: #000 !important;
-}
-
-/* streamlit 기본 요소 숨기기 */
-#MainMenu, footer, header {
-    visibility: hidden !important;
-}
-
-/* 중앙 정렬 강제 적용을 위한 추가 CSS */
-.element-container, .stMarkdown {
-    width: 100% !important;
-    max-width: 720px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
 }
