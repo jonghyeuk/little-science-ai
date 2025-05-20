@@ -12,14 +12,65 @@ from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
 
-# 페이지 설정 - 기본 스타일링
+# 페이지 설정
 st.set_page_config(page_title="LittleScienceAI", layout="wide")
 load_css()
 
-# 중앙 정렬 강제 적용 (CSS 오버라이드)
+# JavaScript 타이핑 효과 구현
 st.markdown("""
 <style>
-/* 중앙 정렬 강제 적용 - 최우선 */
+.js-typing-container {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+    color: #333 !important;
+    white-space: pre-wrap !important;
+}
+</style>
+
+<script>
+function typeWriter(text, elementId, speed = 8) {
+    let container = document.getElementById(elementId);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    let i = 0;
+    let cursorSpan = document.createElement('span');
+    cursorSpan.className = 'typing-cursor';
+    cursorSpan.innerHTML = '|';
+    cursorSpan.style.animation = 'blink 0.8s step-end infinite';
+    container.appendChild(cursorSpan);
+    
+    function type() {
+        if (i < text.length) {
+            if (container.childNodes.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+            
+            container.insertBefore(document.createTextNode(text.charAt(i)), cursorSpan);
+            i++;
+            setTimeout(type, speed);
+        }
+    }
+    
+    type();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 실행될 타이핑 효과 함수들
+    const typingElements = document.querySelectorAll('.js-typing-target');
+    typingElements.forEach(function(element) {
+        const text = element.getAttribute('data-text');
+        const id = element.id;
+        typeWriter(text, id);
+    });
+});
+</script>
+""", unsafe_allow_html=True)
+
+# 중앙 정렬 강제 적용
+st.markdown("""
+<style>
 section.main > div.block-container {
     max-width: 800px !important; 
     margin: 0 auto !important;
@@ -27,50 +78,16 @@ section.main > div.block-container {
     background-color: white !important;
 }
 
-/* 오른쪽 구분선 제거 */
 .css-18e3th9 {
     padding-right: 0 !important;
     border-right: none !important;
 }
 
-/* 모든 요소 중앙 정렬 */
 .element-container, .stMarkdown {
     width: 100% !important;
     max-width: 800px !important;
     margin-left: auto !important;
     margin-right: auto !important;
-}
-
-/* Claude 스타일 테마 */
-body {
-    background-color: white !important;
-    color: #333 !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
-}
-
-/* 타이핑 효과용 스타일 */
-.typing-container {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
-    font-size: 16px !important;
-    line-height: 1.6 !important;
-    color: #333 !important;
-    white-space: pre-wrap !important;
-    margin-bottom: 20px !important;
-}
-
-.typing-cursor {
-    display: inline-block;
-    width: 2px;
-    height: 1.2em;
-    background-color: #555;
-    margin-left: 1px;
-    vertical-align: middle;
-    animation: blink 0.8s step-end infinite;
-}
-
-@keyframes blink {
-    from, to { opacity: 0; }
-    50% { opacity: 1; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -91,7 +108,7 @@ if not st.session_state.authenticated:
         st.warning("🚫 올바른 인증 키를 입력하세요.")
     st.stop()
 
-# 사이드바 - 간단하게 유지
+# 사이드바
 st.sidebar.title("🧭 탐색 단계")
 st.sidebar.markdown("""
 1. 주제 입력
@@ -100,168 +117,53 @@ st.sidebar.markdown("""
 4. PDF 저장
 """)
 
-# 메인 컨텐츠 영역 - 단순하게 유지
+# 타이틀
 st.title("🧪 과학 소논문 주제 탐색 도우미")
 
 # 검색창
 topic = st.text_input("🔬 연구하고 싶은 과학 주제를 입력하세요:", 
                      placeholder="예: 양자 컴퓨팅, 유전자 편집, 미생물 연료전지...")
 
-if topic:
-    # 주제 해설 파트
-    st.subheader("📘 주제 해설")
+# 새로운 검색 처리 - 실제 입력 감지
+if topic and st.session_state.get('_last_topic_', '') != topic:
+    # 입력 상태 저장
+    st.session_state['_last_topic_'] = topic
     
-    with st.spinner("🤖 AI가 주제에 대해 분석 중..."):
-        lines = explain_topic(topic)
-        
-        # 안전한 타이핑 효과 구현 - 텍스트만 처리
-        typing_placeholder = st.empty()
-        displayed_text = ""
-        
-        # 모든 줄을 하나의 텍스트로 결합
-        all_text = ""
-        for i, line in enumerate(lines):
-            # 줄이 마크다운 헤더처럼 보이는지 확인
-            if line.strip().startswith("#"):
-                # 헤더 수준에 따라 스타일 추가
-                header_level = min(len(line.strip()) - len(line.strip().lstrip('#')), 6)
-                header_text = line.strip().lstrip('#').strip()
-                
-                # 헤더 스타일을 적용한 텍스트 추가
-                all_text += f"\n\n**{header_text}**\n\n"
-            else:
-                # 일반 텍스트 줄 추가
-                all_text += line + "\n\n"
-        
-        # 글자별 타이핑 효과
-        for char in all_text:
-            displayed_text += char
-            typing_placeholder.markdown(displayed_text, unsafe_allow_html=False)
-            time.sleep(0.01)  # 타이핑 속도 - 약간 더 빠르게
-        
-        # 최종 텍스트 저장
-        full_text = all_text
+    # 내용 fetch 상태 초기화
+    if 'topic_content' not in st.session_state:
+        st.session_state.topic_content = None
     
-# 내부 DB 검색 결과 부분 (app.py)
-st.subheader("📄 내부 DB 유사 논문")
-
-# 초기화 (없으면)
-if 'full_text' not in locals() and 'full_text' not in globals():
+    if 'db_results' not in st.session_state:
+        st.session_state.db_results = None
+    
+    if 'arxiv_results' not in st.session_state:
+        st.session_state.arxiv_results = None
+    
+    # PDF용 텍스트 초기화
     full_text = f"# 📘 {topic} - 주제 해설\n\n"
-
-try:
-    # 검색 시작
-    with st.spinner("🔍 ISEF 관련 프로젝트 검색 중..."):
-        internal_results = search_similar_titles(topic)
     
-    # 결과 없음
-    if not internal_results or len(internal_results) == 0:
-        st.info("❗ 관련 프로젝트가 없습니다.")
-        full_text += "\n❗ 관련 프로젝트가 없습니다.\n"
-    else:
-        # 결과 표시
-        for project in internal_results:
-            # 기본 정보 가져오기
-            title = project.get('제목', '')
-            summary = project.get('요약', '')
-            year = project.get('연도', '')
-            category = project.get('분야', '')
-            country = project.get('국가', '')
-            region = project.get('지역', '')
-            award = project.get('수상', '')
-            
-            # 메타 정보 구성
-            meta_parts = []
-            if year:
-                meta_parts.append(f"📅 {year}")
-            if category:
-                meta_parts.append(f"🔬 {category}")
-            
-            # 위치 정보 (국가, 지역)
-            location = ""
-            if country:
-                location = country
-                if region:
-                    location += f", {region}"
-                meta_parts.append(f"🌎 {location}")
-            
-            # 수상 정보
-            if award:
-                meta_parts.append(f"🏆 {award}")
-            
-            meta_info = " · ".join(meta_parts)
-            
-            # 카드 형태로 표시 (HTML)
-            st.markdown(f"""
-            <div style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                <h3 style="color: #333; margin-top: 0;">📌 {title}</h3>
-                <p style="color: #666; font-style: italic; margin-bottom: 12px;">{meta_info}</p>
-                <p>{summary}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # PDF용 텍스트 추가
-            full_text += f"\n\n- **{title}**\n{summary}\n_{meta_info}_"
-            
-except Exception as e:
-    st.error(f"❗ 프로젝트 검색 오류: {str(e)}")
-    full_text += "\n❗ 프로젝트 검색 중 오류가 발생했습니다.\n"
-    
-    # arXiv 논문 검색 - 단순화된 버전
-    st.subheader("🌐 arXiv 유사 논문")
-    
-    try:
-        arxiv_results = search_arxiv(topic)
-        if not arxiv_results:
-            st.info("❗ arXiv 결과가 없습니다.")
-        else:
-            for paper in arxiv_results:
-                st.write(f"**🌐 {paper['title']}**")
-                st.write("*출처: arXiv*")
-                st.write(paper['summary'])
-                st.write(f"[🔗 논문 링크 보기]({paper['link']})")
-                st.write("---")
-    except Exception as e:
-        st.error(f"❗ arXiv 논문 오류: {e}")
-    
-    # PDF 저장 버튼 - 단순화된 버전
-    if st.button("📥 이 내용 PDF로 저장하기"):
-        # 마크다운 형식으로 내용 구성
-        pdf_content = f"# 📘 {topic} - 주제 해설\n\n{full_text}\n\n"
+    # 1. 주제 해설 생성 (처음 한 번만)
+    if not st.session_state.topic_content:
+        st.subheader("📘 주제 해설")
         
-        # 내부 DB 결과 추가
-        pdf_content += "## 📄 내부 DB 유사 논문\n\n"
-        try:
+        with st.spinner("🤖 AI가 주제에 대해 분석 중..."):
+            lines = explain_topic(topic)
+            st.session_state.topic_content = lines
+            full_text += "\n\n".join(lines)
+    
+    # 2. 내부 DB 검색 (처음 한 번만)
+    if not st.session_state.db_results:
+        st.subheader("📄 내부 DB 유사 논문")
+        
+        with st.spinner("🔍 ISEF 관련 프로젝트 검색 중..."):
+            internal_results = search_similar_titles(topic)
+            st.session_state.db_results = internal_results
+            
             if not internal_results:
-                pdf_content += "❗ 관련 논문이 없습니다.\n\n"
+                full_text += "\n\n## 📄 내부 DB 유사 논문\n\n❗ 관련 프로젝트가 없습니다.\n"
             else:
-                for paper in internal_results:
-                    summary = (
-                        paper["요약"]
-                        if paper["요약"] != "요약 없음"
-                        else explain_topic(paper["제목"])[0]
-                    )
-                    pdf_content += f"**{paper['제목']}**\n{summary}\n_({paper['연도']} · {paper['분야']})_\n\n"
-        except:
-            pdf_content += "❗ 내부 논문 검색 오류\n\n"
-        
-        # arXiv 결과 추가
-        pdf_content += "## 🌐 arXiv 유사 논문\n\n"
-        try:
-            if not arxiv_results:
-                pdf_content += "❗ arXiv 결과가 없습니다.\n\n"
-            else:
-                for paper in arxiv_results:
-                    pdf_content += f"**{paper['title']}**\n{paper['summary']}\n[링크]({paper['link']})\n\n"
-        except:
-            pdf_content += "❗ arXiv 검색 오류\n\n"
-        
-        # PDF 생성 및 다운로드
-        path = generate_pdf(pdf_content)
-        with open(path, "rb") as f:
-            st.download_button(
-                "📄 PDF 다운로드", 
-                f, 
-                file_name="little_science_ai.pdf",
-                mime="application/pdf"
-            )
+                full_text += "\n\n## 📄 내부 DB 유사 논문\n\n"
+                for project in internal_results:
+                    title = project.get('제목', '')
+                    summary = project.get('요약', '')
+                    meta = []
