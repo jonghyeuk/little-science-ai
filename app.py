@@ -1,12 +1,15 @@
-# app.py 수정본 (정보 설명을 사이드바로 이동)
+# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가)
 import streamlit as st
 import time
 import re
 from utils.layout import load_css
-from utils.search_db import search_similar_titles
+from utils.search_db import search_similar_titles, initialize_db  # initialize_db 추가
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
+
+# 앱 시작 시 DB 초기화 (성능 최적화)
+initialize_db()
 
 # DOI 감지 및 링크 변환 함수
 def convert_doi_to_links(text):
@@ -148,7 +151,8 @@ if topic:
     # 내부 DB 검색 결과 (정보 아이콘 제거)
     st.subheader("📄 ISEF (International Science and Engineering Fair) 출품논문")
     
-    with st.spinner("🔍 ISEF 관련 프로젝트 검색 중..."):
+    # 스피너 메시지 수정 (속도 개선 암시)
+    with st.spinner("🔍 ISEF 관련 프로젝트를 빠르게 검색 중..."):
         try:
             internal_results = search_similar_titles(topic)
             
