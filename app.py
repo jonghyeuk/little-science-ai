@@ -1,4 +1,4 @@
-# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가 + 아이디어 논문화 기능)
+# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가)
 import streamlit as st
 import time
 import re
@@ -7,7 +7,6 @@ from utils.search_db import search_similar_titles, initialize_db  # initialize_d
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
-from utils.generate_paper import generate_research_paper  # 새로 추가할 모듈
 
 # 앱 시작 시 DB 초기화 (성능 최적화)
 initialize_db()
@@ -63,39 +62,6 @@ section.main > div.block-container {
 .sidebar-info-box.arxiv h4 {
     color: #2e7d32;
 }
-
-.idea-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.idea-card:hover {
-    border-color: #4a86e8;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.idea-card.selected {
-    border-color: #4a86e8;
-    background-color: #f0f7ff;
-}
-
-.paper-section {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    border-left: 3px solid #4caf50;
-}
-
-.paper-section h4 {
-    color: #2e7d32;
-    margin-top: 0;
-    margin-bottom: 10px;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -115,22 +81,13 @@ if not st.session_state.authenticated:
         st.warning("🚫 올바른 인증 키를 입력하세요.")
     st.stop()
 
-# 세션 상태 초기화
-if 'extracted_ideas' not in st.session_state:
-    st.session_state.extracted_ideas = []
-if 'selected_idea' not in st.session_state:
-    st.session_state.selected_idea = None
-if 'generated_paper' not in st.session_state:
-    st.session_state.generated_paper = None
-
 # 사이드바
 st.sidebar.title("🧭 탐색 단계")
 st.sidebar.markdown("""
 1. 주제 입력
 2. 개념 해설 보기
 3. 논문 추천 확인
-4. 탐구 아이디어 선택
-5. PDF 저장
+4. PDF 저장
 """)
 
 # 사이드바에 학술 자료 설명 추가
@@ -187,22 +144,6 @@ if topic:
             
             # PDF용 텍스트는 원본 형식으로 저장 (마크다운 형식)
             st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
-            
-            # 아이디어 추출 (6번 섹션에서)
-            ideas = []
-            for line in explanation_lines:
-                if "확장 가능한 탐구 아이디어" in line or "탐구 아이디어" in line:
-                    # 다음 줄부터 아이디어 추출 시작
-                    idea_section_found = True
-                elif line.startswith('•') and '확장 가능한 탐구 아이디어' in st.session_state.full_text:
-                    # 글머리 기호로 시작하는 줄이면 아이디어로 간주
-                    idea_text = line.strip('• ').strip()
-                    if idea_text and len(idea_text) > 10:  # 의미 있는 아이디어만 추가
-                        ideas.append(idea_text)
-            
-            # 추출된 아이디어 저장
-            st.session_state.extracted_ideas = ideas
-            
         except Exception as e:
             st.error(f"주제 해설 생성 중 오류: {str(e)}")
             st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n생성 중 오류 발생\n\n"
@@ -294,146 +235,7 @@ if topic:
             st.error(f"arXiv 검색 중 오류: {str(e)}")
             st.session_state.full_text += "## 🌐 arXiv 유사 논문\n\n검색 중 오류 발생\n\n"
     
-    # 새로 추가: 8번 프로세스 - 확장 아이디어 선택 및 논문화
-    if st.session_state.extracted_ideas:
-        st.subheader("💡 확장 가능한 탐구 아이디어 선택")
-        st.write("위에서 제안된 탐구 아이디어 중 하나를 선택하면 해당 주제로 논문 형식의 연구 계획을 생성합니다.")
-        
-        # 아이디어 선택 UI
-        for i, idea in enumerate(st.session_state.extracted_ideas):
-            # 각 아이디어를 카드 형태로 표시
-            is_selected = st.session_state.selected_idea == idea
-            card_class = "idea-card selected" if is_selected else "idea-card"
-            
-            # 클릭 가능한 카드
-            idea_html = f"""
-            <div class="{card_class}" id="idea-{i}" onclick="
-                document.querySelectorAll('.idea-card').forEach(card => card.classList.remove('selected'));
-                this.classList.add('selected');
-                // Streamlit에게 선택 상태 알림
-                window.parent.postMessage({{
-                    type: 'streamlit:selectIdea',
-                    idea: {i}
-                }}, '*');
-            ">
-                <h4>탐구 아이디어 {i+1}</h4>
-                <p>{idea}</p>
-            </div>
-            """
-            st.markdown(idea_html, unsafe_allow_html=True)
-            
-            # JavaScript 이벤트를 받기 위한 workaround (Streamlit 제한으로 인해)
-            if st.button(f"이 아이디어 선택 #{i}", key=f"idea_btn_{i}"):
-                st.session_state.selected_idea = idea
-                st.rerun()
-        
-        # 선택된 아이디어가 있으면 논문 생성
-        if st.session_state.selected_idea:
-            st.subheader("📝 선택한 아이디어 기반 연구 계획")
-            
-            # 이미 생성된 논문이 있는지 확인
-            if st.session_state.generated_paper is None:
-                with st.spinner("🧠 연구 계획을 작성 중입니다..."):
-                    try:
-                        # 논문 생성 (generate_paper.py 모듈 필요)
-                        paper_data = generate_research_paper(
-                            topic=topic, 
-                            research_idea=st.session_state.selected_idea,
-                            references=st.session_state.full_text
-                        )
-                        st.session_state.generated_paper = paper_data
-                    except Exception as e:
-                        st.error(f"연구 계획 생성 중 오류: {str(e)}")
-                        paper_data = None
-            else:
-                paper_data = st.session_state.generated_paper
-            
-            # 생성된 논문 표시
-            if paper_data:
-                # 초록
-                st.markdown("""
-                <div class="paper-section">
-                    <h4>📑 초록 (Abstract)</h4>
-                    <p>{}</p>
-                </div>
-                """.format(paper_data.get('abstract', '초록을 생성할 수 없습니다.')), unsafe_allow_html=True)
-                
-                # 실험 방법
-                st.markdown("""
-                <div class="paper-section">
-                    <h4>🧪 실험 방법 (Methods)</h4>
-                    <p>{}</p>
-                </div>
-                """.format(paper_data.get('methods', '실험 방법을 생성할 수 없습니다.')), unsafe_allow_html=True)
-                
-                # 예상 결과
-                st.markdown("""
-                <div class="paper-section">
-                    <h4>📊 예상 결과 (Expected Results)</h4>
-                    <p>{}</p>
-                </div>
-                """.format(paper_data.get('results', '예상 결과를 생성할 수 없습니다.')), unsafe_allow_html=True)
-                
-                # 시각자료 설명
-                if 'visuals' in paper_data and paper_data['visuals']:
-                    st.markdown("""
-                    <div class="paper-section">
-                        <h4>📈 제안 시각자료 (Suggested Visualizations)</h4>
-                        <p>{}</p>
-                    </div>
-                    """.format(paper_data.get('visuals', '시각자료 설명을 생성할 수 없습니다.')), unsafe_allow_html=True)
-                
-                # 결론
-                st.markdown("""
-                <div class="paper-section">
-                    <h4>📝 결론 (Conclusion)</h4>
-                    <p>{}</p>
-                </div>
-                """.format(paper_data.get('conclusion', '결론을 생성할 수 없습니다.')), unsafe_allow_html=True)
-                
-                # 레퍼런스
-                st.markdown("""
-                <div class="paper-section">
-                    <h4>📚 참고문헌 (References)</h4>
-                    <p>{}</p>
-                </div>
-                """.format(paper_data.get('references', '참고문헌을 생성할 수 없습니다.')), unsafe_allow_html=True)
-                
-                # 주의사항
-                st.markdown("""
-                <div style="background-color: #ffefef; padding: 10px; border-radius: 5px; margin-top: 20px; border-left: 3px solid #ff6b6b;">
-                    <h4 style="color: #333; margin-top: 0;">⚠️ 주의사항</h4>
-                    <p>이 내용은 AI가 제안하는 연구 계획안으로, 실제 연구를 위해서는 추가 검증이 필요합니다. 이 문서는 참고용이며 실제 인용에는 적합하지 않습니다.</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # PDF에 추가
-                paper_text = f"""
-# 💡 선택한 탐구 아이디어: {st.session_state.selected_idea}
-
-## 📑 초록 (Abstract)
-{paper_data.get('abstract', '초록을 생성할 수 없습니다.')}
-
-## 🧪 실험 방법 (Methods)
-{paper_data.get('methods', '실험 방법을 생성할 수 없습니다.')}
-
-## 📊 예상 결과 (Expected Results)
-{paper_data.get('results', '예상 결과를 생성할 수 없습니다.')}
-
-## 📈 제안 시각자료 (Suggested Visualizations)
-{paper_data.get('visuals', '시각자료 설명을 생성할 수 없습니다.')}
-
-## 📝 결론 (Conclusion)
-{paper_data.get('conclusion', '결론을 생성할 수 없습니다.')}
-
-## 📚 참고문헌 (References)
-{paper_data.get('references', '참고문헌을 생성할 수 없습니다.')}
-
-> ⚠️ 주의사항: 이 내용은 AI가 제안하는 연구 계획안으로, 실제 연구를 위해서는 추가 검증이 필요합니다. 이 문서는 참고용이며 실제 인용에는 적합하지 않습니다.
-"""
-                st.session_state.full_text += paper_text
-    
-    # PDF 저장 버튼 (기존 유지)
+    # PDF 저장 버튼
     if st.session_state.full_text:
         if st.button("📥 이 내용 PDF로 저장하기"):
             path = generate_pdf(st.session_state.full_text)
@@ -444,22 +246,3 @@ if topic:
                     file_name="little_science_ai.pdf",
                     mime="application/pdf"
                 )
-
-# JavaScript 코드 추가 (아이디어 선택을 위한)
-st.markdown("""
-<script>
-window.addEventListener('message', function(e) {
-    if (e.data.type === 'streamlit:selectIdea') {
-        // 서버에 선택된 아이디어 전달
-        const idea = e.data.idea;
-        const inputs = document.querySelectorAll('button');
-        for (let i = 0; i < inputs.length; i++) {
-            if (inputs[i].innerText.includes(`이 아이디어 선택 #${idea}`)) {
-                inputs[i].click();
-                break;
-            }
-        }
-    }
-});
-</script>
-""", unsafe_allow_html=True)
