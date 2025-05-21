@@ -115,7 +115,7 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # 메인 타이틀
-st.title("🧪 과학 소논문 주제 탐색 도우미")
+st.title("🧪 과학논문 주제 탐색 도우미")
 
 # 초기화
 if 'full_text' not in st.session_state:
