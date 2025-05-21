@@ -22,6 +22,30 @@ def translate_to_english(query):
         print(f"번역 오류: {e}")
         return query  # 오류 발생 시 원본 검색어 사용
 
+# 영문 초록을 한국어로 요약하는 함수
+def summarize_in_korean(summary):
+    """영문 초록을 1-2문장의 한국어로 요약"""
+    try:
+        # 초록이 너무 길 경우 앞부분만 사용
+        truncated_summary = summary[:1000] if len(summary) > 1000 else summary
+        
+        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",  # 빠른 모델 사용
+            messages=[
+                {"role": "system", "content": "다음 영문 초록을 1-2문장의 간결한 한국어로 요약해주세요. 전문 용어는 가능한 그대로 유지하되, 고등학생이 이해할 수 있는 수준으로 작성해주세요."},
+                {"role": "user", "content": truncated_summary}
+            ],
+            max_tokens=150,
+            temperature=0.7
+        )
+        
+        korean_summary = response.choices[0].message.content.strip()
+        return korean_summary
+    except Exception as e:
+        print(f"한국어 요약 오류: {e}")
+        return "한국어 요약을 생성할 수 없습니다."
+
 # arXiv 검색 함수 수정
 def search_arxiv(query, max_results=5):
     # 1. 한글 검색어 번역
@@ -71,7 +95,7 @@ def search_arxiv(query, max_results=5):
                 if not entries:
                     return [{
                         "title": "검색 결과 없음",
-                        "summary": f"해당 주제와 관련된 arXiv 논문을 찾을 수 없습니다. (검색어: {english_query})",
+                        "summary": f"해당 주제와 관련된 아카이브(arXiv) 논문을 찾을 수 없습니다. (검색어: {english_query})",
                         "link": "",
                         "source": "arXiv"
                     }]
@@ -80,17 +104,22 @@ def search_arxiv(query, max_results=5):
         results = []
         for entry in entries:
             title = entry.title.replace('\n', ' ').strip()
-            summary = entry.get("summary", "").replace('\n', ' ').strip()
+            original_summary = entry.get("summary", "").replace('\n', ' ').strip()
+            
+            # 영문 초록을 한국어로 요약
+            korean_summary = summarize_in_korean(original_summary)
             
             # 긴 요약은 일부만 표시
-            if len(summary) > 500:
-                summary = summary[:497] + "..."
+            if len(original_summary) > 300:
+                displayed_summary = original_summary[:297] + "..."
+            else:
+                displayed_summary = original_summary
                 
             link = entry.link
             
             results.append({
                 "title": title,
-                "summary": f"[영문 요약] {summary}",
+                "summary": f"[한국어 요약] {korean_summary}\n\n[영문 원본] {displayed_summary}",
                 "link": link,
                 "source": "arXiv"
             })
