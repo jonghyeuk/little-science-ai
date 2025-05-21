@@ -1,4 +1,4 @@
-# app.py 수정본 (DOI 링크 변환 추가)
+# app.py 수정본 (정보 설명을 사이드바로 이동)
 import streamlit as st
 import time
 import re
@@ -38,13 +38,26 @@ section.main > div.block-container {
     background-color: white !important;
 }
 
-.isef-info {
-    margin-top: auto;
-    padding: 10px;
+.sidebar-info-box {
     background-color: #f8f9fa;
+    padding: 10px;
     border-radius: 5px;
-    border-left: 3px solid #ff6b6b;
-    font-size: 0.85em;
+    margin-bottom: 15px;
+    border-left: 3px solid #4a86e8;
+    font-size: 0.9em;
+}
+
+.sidebar-info-box h4 {
+    margin-top: 0;
+    color: #2c5aa0;
+}
+
+.sidebar-info-box.arxiv {
+    border-left-color: #4caf50;
+}
+
+.sidebar-info-box.arxiv h4 {
+    color: #2e7d32;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -74,23 +87,29 @@ st.sidebar.markdown("""
 4. PDF 저장
 """)
 
-# 내부 DB 검색 결과 섹션 (ISEF 설명 추가)
-col1, col2 = st.columns([0.97, 0.03])
-with col1:
-    st.subheader("📄 ISEF (International Science and Engineering Fair) 출품논문")
-with col2:
-    st.markdown("""
-    <div title="ISEF (International Science and Engineering Fair)는 세계 최대 규모의 고등학생 과학 경진대회입니다. 매년 80여 개국에서 1,800명 이상의 학생들이 참가하며, 혁신적인 연구 프로젝트를 발표합니다.">ℹ️</div>
-    """, unsafe_allow_html=True)
+# 사이드바에 학술 자료 설명 추가
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📚 학술 자료 정보")
 
-# arXiv 결과 섹션 (arXiv 설명 추가)
-col1, col2 = st.columns([0.97, 0.03])
-with col1:
-    st.subheader("🌐 arXiv 유사 논문")
-with col2:
-    st.markdown("""
-    <div title="arXiv는 물리학, 수학, 컴퓨터 과학 등의 분야에서 연구자들이 논문을 정식 출판 전에 공유하는 플랫폼입니다. 최신 연구를 빠르게 접할 수 있지만, 일부는 아직 peer review를 거치지 않은 상태일 수 있습니다.">ℹ️</div>
-    """, unsafe_allow_html=True)
+# ISEF 설명 추가
+st.sidebar.markdown("""
+<div class="sidebar-info-box">
+<h4>📊 ISEF</h4>
+<p>
+세계 최대 규모의 고등학생 과학 경진대회로, 80여 개국에서 1,800명 이상의 학생들이 참가하여 혁신적인 연구 프로젝트를 발표합니다. 1950년부터 시작된 이 대회는 과학, 기술, 공학, 수학(STEM) 분야의 차세대 인재를 발굴합니다.
+</p>
+</div>
+""", unsafe_allow_html=True)
+
+# arXiv 설명 추가
+st.sidebar.markdown("""
+<div class="sidebar-info-box arxiv">
+<h4>📑 arXiv</h4>
+<p>
+물리학, 수학, 컴퓨터 과학 등의 분야에서 연구자들이 논문을 정식 출판 전에 공유하는 플랫폼입니다. 코넬 대학에서 운영하며, 최신 연구 동향을 빠르게 접할 수 있지만 일부는 아직 peer review를 거치지 않은 상태일 수 있습니다.
+</p>
+</div>
+""", unsafe_allow_html=True)
 
 # 메인 타이틀
 st.title("🧪 과학 소논문 주제 탐색 도우미")
@@ -126,7 +145,7 @@ if topic:
             st.error(f"주제 해설 생성 중 오류: {str(e)}")
             st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n생성 중 오류 발생\n\n"
     
-    # 내부 DB 검색 결과
+    # 내부 DB 검색 결과 (정보 아이콘 제거)
     st.subheader("📄 ISEF (International Science and Engineering Fair) 출품논문")
     
     with st.spinner("🔍 ISEF 관련 프로젝트 검색 중..."):
@@ -176,7 +195,7 @@ if topic:
             st.error(f"내부 DB 검색 중 오류: {str(e)}")
             st.session_state.full_text += "## 📄 내부 DB 유사 논문\n\n검색 중 오류 발생\n\n"
     
-    # arXiv 결과
+    # arXiv 결과 (정보 아이콘 제거)
     st.subheader("🌐 arXiv 유사 논문")
     
     with st.spinner("🔍 arXiv 논문 검색 중..."):
@@ -197,11 +216,11 @@ if topic:
                     # arXiv 결과에서도 DOI 변환 적용
                     linked_summary = convert_doi_to_links(summary)
                     
-                    # 카드 형태로 표시
+                    # 카드 형태로 표시 (프리프린트 표시 추가)
                     st.markdown(f"""
                     <div style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0;">
                         <h3 style="color: #333; margin-top: 0;">🌐 {title}</h3>
-                        <p style="color: #666; font-style: italic; margin-bottom: 12px;">출처: arXiv</p>
+                        <p style="color: #666; font-style: italic; margin-bottom: 12px;">출처: arXiv (프리프린트 저장소)</p>
                         <p>{linked_summary}</p>
                         <a href="{link}" target="_blank" style="color: #0969da; text-decoration: none;">🔗 논문 링크 보기</a>
                     </div>
