@@ -100,7 +100,7 @@ if topic:
             st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n생성 중 오류 발생\n\n"
     
     # 내부 DB 검색 결과
-    st.subheader("📄 내부 DB 유사 논문")
+    st.subheader("📄 ISEF (International Science and Engineering Fair) 출품논문")
     
     with st.spinner("🔍 ISEF 관련 프로젝트 검색 중..."):
         try:
