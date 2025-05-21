@@ -200,7 +200,7 @@ if topic:
             st.session_state.full_text += "## 📄 내부 DB 유사 논문\n\n검색 중 오류 발생\n\n"
     
     # arXiv 결과 (정보 아이콘 제거)
-    st.subheader("🌐 아카이브 arXiv 유사 논문")
+    st.subheader("🌐 아카이브 arXiv 에서 찾은 관련 논문")
     
     with st.spinner("🔍 arXiv 논문 검색 중..."):
         try:
