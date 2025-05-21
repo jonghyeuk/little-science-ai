@@ -58,18 +58,40 @@ def gpt_translate_keywords(keywords, tgt_lang="en") -> list:
         st.warning(f"키워드 번역 중 오류: {e}")
         return keywords
 
-# 프로젝트 내용 추론 함수 (캐싱 적용)
+# 프로젝트 내용 추론 함수 (캐싱 적용) - 수정된 버전
 @st.cache_data(show_spinner=False, ttl=3600)
 def infer_project_content(title, category=None):
     try:
-        prompt = title
+        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
+        
+        system_prompt = """
+        당신은 과학 논문 제목만으로 내용을 추론하는 도우미입니다. 중요한 규칙:
+        
+        1. 제목만 있고 실제 논문을 보지 못했다는 것을 명확히 언급할 것
+        2. 모든 서술은 "~로 추측됩니다", "~을 다루었을 것으로 예상됩니다" 같은 추측형으로 작성할 것
+        3. 구체적인 방법론과 결과는 완전히 추측이라는 것을 명시할 것
+        4. 제목에서 유추할 수 있는 연구 주제와 예상되는 접근법 중심으로 설명할 것
+        
+        다음 형식으로 답변하세요:
+        "이 연구는 [주제]에 관한 것으로 추정됩니다. 제목에서 유추하면, [예상 목적]을 위해 [예상 방법]을 사용했을 것으로 보입니다. 이 연구는 [예상 분야]에 기여할 가능성이 있으며, [잠재적 의의]를 가질 것으로 예상됩니다. (주의: 이는 제목만을 기반으로 한 추론으로, 실제 연구 내용과 다를 수 있습니다.)"
+        """
+        
+        user_prompt = title
         if category:
-            prompt = f"{title} (연구 분야: {category})"
+            user_prompt = f"{title} (연구 분야: {category})"
             
-        explanation = explain_topic(prompt)[0]
-        return explanation
+        res = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7
+        )
+        
+        return res.choices[0].message.content.strip()
     except Exception as e:
-        return f"이 프로젝트는 '{title}'에 관한 연구입니다."
+        return f"이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (추론 과정에서 오류가 발생했습니다.)"
 
 # 내부 DB 로드 및 정제
 @st.cache_data(ttl=3600)
