@@ -37,6 +37,15 @@ section.main > div.block-container {
     padding: 2rem 3rem !important;
     background-color: white !important;
 }
+
+.isef-info {
+    margin-top: auto;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border-left: 3px solid #ff6b6b;
+    font-size: 0.85em;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -64,6 +73,15 @@ st.sidebar.markdown("""
 3. 논문 추천 확인
 4. PDF 저장
 """)
+
+# ISEF 소개 (사이드바 하단에 추가)
+st.sidebar.markdown("<br>" * 2, unsafe_allow_html=True)  # 여백 추가
+st.sidebar.markdown("""
+<div class="isef-info">
+<h4>ISEF 소개</h4>
+<p><strong>ISEF (International Science and Engineering Fair)</strong>는 세계 최대 규모의 고등학생 과학 경진대회입니다. 매년 80여 개국에서 1,800명 이상의 학생들이 참가하며, 혁신적인 연구 프로젝트를 발표합니다. 1950년부터 시작된 이 대회는 과학, 기술, 공학, 수학(STEM) 분야의 차세대 인재를 발굴하고 육성하는 데 중요한 역할을 하고 있습니다.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # 메인 타이틀
 st.title("🧪 과학 소논문 주제 탐색 도우미")
