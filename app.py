@@ -1,11 +1,28 @@
-# app.py 핵심 부분만 수정
+# app.py 수정본 (DOI 링크 변환 추가)
 import streamlit as st
 import time
+import re
 from utils.layout import load_css
 from utils.search_db import search_similar_titles
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
+
+# DOI 감지 및 링크 변환 함수
+def convert_doi_to_links(text):
+    """DOI 패턴을 감지하여 클릭 가능한 링크로 변환"""
+    # DOI 패턴 정규 표현식: 10.XXXX/YYYY 형식
+    doi_pattern = r'(?<!\w)(?:DOI\s*:\s*)?(\b10\.\d{4,}\/[a-zA-Z0-9./_()-]+\b)'
+    
+    # HTML 링크로 변환
+    def replace_doi(match):
+        doi = match.group(1)
+        return f'<a href="https://doi.org/{doi}" target="_blank" style="color: #0969da; text-decoration: none;">{doi}</a>'
+    
+    # 텍스트 내 DOI 패턴을 링크로 변환
+    linked_text = re.sub(doi_pattern, replace_doi, text)
+    
+    return linked_text
 
 # 기본 설정
 st.set_page_config(page_title="LittleScienceAI", layout="wide")
@@ -64,16 +81,19 @@ if topic:
     # 주제 해설 표시
     st.subheader("📘 주제 해설")
     
-    # 즉시 해설 생성 및 표시 (타이핑 효과 없이)
+    # 즉시 해설 생성 및 표시 (DOI 링크 변환 추가)
     with st.spinner("🤖 AI가 주제 분석 중..."):
         try:
             explanation_lines = explain_topic(topic)
             explanation_text = "\n\n".join(explanation_lines)
             
-            # 직접 마크다운으로 표시
-            st.markdown(explanation_text)
+            # DOI 패턴을 링크로 변환 (화면 표시용)
+            linked_explanation = convert_doi_to_links(explanation_text)
             
-            # PDF용 텍스트 저장
+            # 링크가 포함된 설명 표시
+            st.markdown(linked_explanation, unsafe_allow_html=True)
+            
+            # PDF용 텍스트는 원본 형식으로 저장 (마크다운 형식)
             st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
         except Exception as e:
             st.error(f"주제 해설 생성 중 오류: {str(e)}")
@@ -112,12 +132,15 @@ if topic:
                     
                     meta_text = " · ".join(meta_parts)
                     
+                    # 내부 결과에서도 DOI 변환 적용
+                    linked_summary = convert_doi_to_links(summary)
+                    
                     # 카드 형태로 표시
                     st.markdown(f"""
                     <div style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0;">
                         <h3 style="color: #333; margin-top: 0;">📌 {title}</h3>
                         <p style="color: #666; font-style: italic; margin-bottom: 12px;">{meta_text}</p>
-                        <p>{summary}</p>
+                        <p>{linked_summary}</p>
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -144,12 +167,15 @@ if topic:
                     summary = paper.get('summary', '')
                     link = paper.get('link', '')
                     
+                    # arXiv 결과에서도 DOI 변환 적용
+                    linked_summary = convert_doi_to_links(summary)
+                    
                     # 카드 형태로 표시
                     st.markdown(f"""
                     <div style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0;">
                         <h3 style="color: #333; margin-top: 0;">🌐 {title}</h3>
                         <p style="color: #666; font-style: italic; margin-bottom: 12px;">출처: arXiv</p>
-                        <p>{summary}</p>
+                        <p>{linked_summary}</p>
                         <a href="{link}" target="_blank" style="color: #0969da; text-decoration: none;">🔗 논문 링크 보기</a>
                     </div>
                     """, unsafe_allow_html=True)
