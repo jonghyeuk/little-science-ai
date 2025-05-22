@@ -187,6 +187,15 @@ if topic:
             explanation_text = "\n\n".join(explanation_lines)
             
             # 틈새주제 파싱 및 저장
+            print("=== 디버깅: explanation_lines 구조 ===")
+            for i, line in enumerate(explanation_lines):
+                print(f"라인 {i}: {repr(line[:100])}...")  # 처음 100자만 출력
+                if "확장 가능한 탐구 아이디어" in line:
+                    print(f"*** 찾았다! 라인 {i}에 확장 가능한 탐구 아이디어 있음 ***")
+                    print(f"전체 내용: {repr(line)}")
+                    break
+            print("=== 디버깅 끝 ===")
+
             st.session_state.niche_topics = parse_niche_topics(explanation_lines)
             
             # DOI 패턴을 링크로 변환 (화면 표시용)
