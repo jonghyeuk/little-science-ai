@@ -20,16 +20,22 @@ def parse_niche_topics(explanation_lines):
         # "확장 가능한 탐구 아이디어" 섹션 찾기
         for line in explanation_lines:
             if "확장 가능한 탐구 아이디어" in line:
-                # 해당 라인에서 • 로 시작하는 모든 항목 찾기
-                parts = line.split('•')
-                for part in parts[1:]:  # 첫 번째는 제목이므로 제외
-                    clean_topic = part.strip().split('\n')[0].strip()  # 첫 줄만 가져오기
-                    if clean_topic and len(clean_topic) > 5:  # 너무 짧은 것 제외
-                        topics.append(clean_topic)
+                # 라인을 \n으로 분리해서 • 로 시작하는 모든 항목 찾기
+                parts = line.split('\n')
+                for part in parts:
+                    part = part.strip()
+                    if part.startswith('•'):
+                        # • 제거하고 깨끗하게 정리
+                        topic_text = part[1:].strip()
+                        if topic_text and len(topic_text) > 3:
+                            topics.append(topic_text)
                 break
         
+        print(f"파싱된 주제들: {topics}")  # 디버깅용
         return topics if len(topics) >= 2 else ["기존 연구의 한계점 개선", "실용적 응용 방안 탐구", "다른 분야와의 융합 연구"]
+        
     except Exception as e:
+        print(f"파싱 오류: {e}")  # 디버깅용
         return ["기존 연구의 한계점 개선", "실용적 응용 방안 탐구", "다른 분야와의 융합 연구"]
 
 # DOI 감지 및 링크 변환 함수
