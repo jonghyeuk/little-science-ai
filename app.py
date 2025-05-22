@@ -2,12 +2,12 @@
 import streamlit as st
 import time
 import re
-from openai import OpenAI
 from utils.layout import load_css
 from utils.search_db import search_similar_titles, initialize_db
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
+from utils.generate_paper import generate_research_paper
 
 # 앱 시작 시 DB 초기화 (성능 최적화)
 initialize_db()
@@ -79,154 +79,6 @@ def parse_niche_topics(explanation_lines):
             "실용적 응용 가능성 탐구",
             "다른 분야와의 융합 연구"
         ]
-
-# 논문 형식 생성 함수
-@st.cache_data(ttl=3600)
-def generate_research_paper(selected_topics, original_topic):
-    """선택된 틈새주제들을 기반으로 논문 형식 생성"""
-    try:
-        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
-        
-        topics_text = "\n".join([f"- {topic}" for topic in selected_topics])
-        
-        system_prompt = f"""
-        너는 고등학생을 위한 과학 논문 작성 전문가입니다. 
-        주어진 원본 주제와 선택된 틈새주제들을 기반으로 체계적인 연구 논문을 작성해주세요.
-        
-        **중요한 지침:**
-        1. 이 논문은 고등학생이 실제로 수행할 수 있는 연구여야 합니다
-        2. 서론의 배경은 매우 상세하고 체계적으로 작성해주세요 (최소 4-5개 문단)
-        3. 실험방법은 누구든 따라할 수 있도록 구체적이고 단계별로 작성해주세요
-        4. 모든 내용은 과학적으로 타당하고 현실적이어야 합니다
-        5. 한국어로 작성해주세요
-        
-        **논문 구조:**
-        
-        # 제목
-        [선택된 틈새주제들을 종합한 구체적이고 학술적인 제목]
-        
-        ## 초록
-        **배경:** [연구 배경 1-2문장]
-        **목적:** [연구 목적 1-2문장]
-        **방법:** [연구 방법 1-2문장]
-        **기대결과:** [예상되는 결과 1-2문장]
-        
-        ## 1. 서론
-        ### 1.1 연구 배경
-        [원본 주제에 대한 상세한 배경 설명 - 최소 4-5개 문단으로 구성]
-        - 첫 번째 문단: 주제의 기본 개념과 중요성
-        - 두 번째 문단: 현재까지의 연구 현황
-        - 세 번째 문단: 기존 연구의 한계점
-        - 네 번째 문단: 새로운 접근의 필요성
-        - 다섯 번째 문단: 본 연구의 차별점
-        
-        ### 1.2 문제 정의
-        [현재 해결되지 않은 구체적인 문제점들]
-        
-        ### 1.3 연구 목적 및 가설
-        **연구 목적:**
-        1. [첫 번째 목적]
-        2. [두 번째 목적]
-        3. [세 번째 목적]
-        
-        **연구 가설:**
-        - [가설 1]
-        - [가설 2]
-        
-        ## 2. 실험 방법
-        ### 2.1 실험 설계
-        [전체적인 실험 설계와 접근 방법을 도식화하여 설명]
-        
-        ### 2.2 재료 및 장비
-        **필요한 재료:**
-        - [재료 1]: [구체적인 규격이나 브랜드]
-        - [재료 2]: [구체적인 규격이나 브랜드]
-        - [재료 3]: [구체적인 규격이나 브랜드]
-        
-        **필요한 장비:**
-        - [장비 1]: [모델명이나 사양]
-        - [장비 2]: [모델명이나 사양]
-        
-        ### 2.3 실험 절차
-        **1단계: [준비 단계]**
-        1. [구체적인 준비 과정 1]
-        2. [구체적인 준비 과정 2]
-        3. [구체적인 준비 과정 3]
-        
-        **2단계: [실험 실행]**
-        1. [상세한 실험 과정 1]
-        2. [상세한 실험 과정 2]
-        3. [상세한 실험 과정 3]
-        
-        **3단계: [데이터 수집]**
-        1. [데이터 수집 방법 1]
-        2. [데이터 수집 방법 2]
-        
-        ### 2.4 데이터 분석 방법
-        [통계적 분석 방법과 사용할 소프트웨어 명시]
-        
-        ## 3. 예상 결과
-        ### 3.1 정량적 결과 예측
-        [구체적인 수치나 그래프 형태로 예상되는 결과]
-        
-        ### 3.2 정성적 결과 예측
-        [관찰되거나 확인될 것으로 예상되는 현상들]
-        
-        ### 3.3 가설 검증 방법
-        [각 가설을 어떻게 검증할 것인지]
-        
-        ## 4. 결론
-        ### 4.1 연구의 학술적 의의
-        [이 연구가 해당 분야에 기여할 수 있는 점]
-        
-        ### 4.2 실용적 응용 가능성
-        [실생활이나 산업에 어떻게 적용될 수 있는지]
-        
-        ### 4.3 연구의 한계점
-        [예상되는 한계점과 이를 극복할 수 있는 방안]
-        
-        ### 4.4 향후 연구 방향
-        [이 연구를 바탕으로 발전시킬 수 있는 후속 연구 아이디어 3-4개]
-        
-        ## 참고문헌
-        [관련된 주요 연구 논문이나 자료 3-5개 정도 가상으로 작성]
-        
-        **마지막에 다음 문구를 반드시 포함해주세요:**
-        
-        ---
-        ⚠️ **중요 안내**
-        - 이 내용은 AI가 추론하여 생성한 연구 계획안입니다
-        - 실제 논문이 아니며, 참고용으로만 활용해주세요
-        - 실제 연구 수행 시에는 지도교사와 상의하시기 바랍니다
-        - 이 내용을 그대로 인용하거나 레퍼런스로 사용할 수 없습니다
-        - 모든 실험은 안전 수칙을 준수하여 수행해야 합니다
-        """
-        
-        user_prompt = f"""
-        **원본 주제:** {original_topic}
-        
-        **선택된 틈새주제들:**
-        {topics_text}
-        
-        위 정보를 바탕으로 고등학생이 수행할 수 있는 체계적인 연구 논문을 작성해주세요.
-        특히 서론의 배경 부분과 실험방법 부분을 매우 상세하게 작성해주세요.
-        """
-        
-        response = client.chat.completions.create(
-            model="gpt-4-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.7,
-            max_tokens=4000
-        )
-        
-        return response.choices[0].message.content.strip()
-    
-    except Exception as e:
-        st.error(f"논문 생성 중 오류: {e}")
-        return ""
 
 # DOI 감지 및 링크 변환 함수
 def convert_doi_to_links(text):
@@ -319,6 +171,14 @@ section.main > div.block-container {
     display: inline-block;
     margin: 10px 0;
 }
+
+.paper-subsection {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+    border-left: 3px solid #28a745;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -344,7 +204,7 @@ if 'niche_topics' not in st.session_state:
 if 'selected_niche_topics' not in st.session_state:
     st.session_state.selected_niche_topics = []
 if 'generated_paper' not in st.session_state:
-    st.session_state.generated_paper = ""
+    st.session_state.generated_paper = {}
 
 # 사이드바
 st.sidebar.title("🧭 탐색 단계")
@@ -519,17 +379,17 @@ if topic:
         selected_topics = []
         
         # 각 틈새주제를 체크박스로 표시
-        for i, topic in enumerate(st.session_state.niche_topics):
+        for i, topic_item in enumerate(st.session_state.niche_topics):
             st.markdown('<div class="niche-topic-item">', unsafe_allow_html=True)
             
             is_selected = st.checkbox(
-                f"**주제 {i+1}:** {topic}",
+                f"**주제 {i+1}:** {topic_item}",
                 key=f"niche_topic_{i}",
                 help="이 주제를 선택하여 논문에 포함합니다"
             )
             
             if is_selected:
-                selected_topics.append(topic)
+                selected_topics.append(topic_item)
                 selected_count += 1
             
             st.markdown('</div>', unsafe_allow_html=True)
@@ -544,7 +404,7 @@ if topic:
         elif selected_count == 1:
             st.warning("⚠️ 최소 2개의 주제를 선택해주세요. (현재 1개 선택)")
         elif selected_count > 3:
-            st.warning("⚠️ 최대 3개의 주제만 선택할 수 있습니다. (현재 {selected_count}개 선택)")
+            st.warning(f"⚠️ 최대 3개의 주제만 선택할 수 있습니다. (현재 {selected_count}개 선택)")
         else:
             st.success(f"✅ {selected_count}개 주제가 적절히 선택되었습니다!")
             
@@ -552,9 +412,16 @@ if topic:
             if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary", help="선택한 틈새주제들을 바탕으로 체계적인 논문을 생성합니다"):
                 st.session_state.selected_niche_topics = selected_topics
                 
-                # 논문 생성
+                # 선택된 주제들을 하나의 연구 아이디어로 결합
+                combined_idea = " / ".join(selected_topics)
+                
+                # 논문 생성 (기존 utils 함수 사용)
                 with st.spinner("🤖 AI가 체계적인 논문을 작성 중입니다... (약 30초 소요)"):
-                    st.session_state.generated_paper = generate_research_paper(selected_topics, topic)
+                    st.session_state.generated_paper = generate_research_paper(
+                        topic=topic, 
+                        research_idea=combined_idea, 
+                        references=st.session_state.full_text
+                    )
                 
                 if st.session_state.generated_paper:
                     st.success("📄 논문이 성공적으로 생성되었습니다!")
@@ -563,7 +430,7 @@ if topic:
         st.markdown('</div>', unsafe_allow_html=True)
     
     # ========== 논문 형식 표시 섹션 ==========
-    if st.session_state.generated_paper:
+    if st.session_state.generated_paper and isinstance(st.session_state.generated_paper, dict):
         st.markdown("---")
         st.markdown('<div class="paper-section">', unsafe_allow_html=True)
         st.subheader("📄 생성된 연구 논문")
@@ -572,28 +439,106 @@ if topic:
         # 선택된 주제들 표시
         if st.session_state.selected_niche_topics:
             st.markdown("**선택된 틈새주제들:**")
-            for i, topic in enumerate(st.session_state.selected_niche_topics, 1):
-                st.markdown(f"**{i}.** {topic}")
+            for i, topic_item in enumerate(st.session_state.selected_niche_topics, 1):
+                st.markdown(f"**{i}.** {topic_item}")
             st.markdown("---")
         
-        # 생성된 논문 표시
-        st.markdown(st.session_state.generated_paper)
+        # 생성된 논문 각 섹션별 표시
+        paper_data = st.session_state.generated_paper
+        
+        # 초록
+        if paper_data.get("abstract"):
+            st.markdown('<div class="paper-subsection">', unsafe_allow_html=True)
+            st.markdown("### 📋 초록 (Abstract)")
+            st.markdown(paper_data["abstract"])
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 실험 방법
+        if paper_data.get("methods"):
+            st.markdown('<div class="paper-subsection">', unsafe_allow_html=True)
+            st.markdown("### 🔬 실험 방법 (Methods)")
+            st.markdown(paper_data["methods"])
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 예상 결과
+        if paper_data.get("results"):
+            st.markdown('<div class="paper-subsection">', unsafe_allow_html=True)
+            st.markdown("### 📊 예상 결과 (Expected Results)")
+            st.markdown(paper_data["results"])
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 시각자료 제안
+        if paper_data.get("visuals"):
+            st.markdown('<div class="paper-subsection">', unsafe_allow_html=True)
+            st.markdown("### 📈 시각자료 제안 (Suggested Visualizations)")
+            st.markdown(paper_data["visuals"])
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 결론
+        if paper_data.get("conclusion"):
+            st.markdown('<div class="paper-subsection">', unsafe_allow_html=True)
+            st.markdown("### 🎯 결론 (Conclusion)")
+            st.markdown(paper_data["conclusion"])
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 참고문헌
+        if paper_data.get("references"):
+            st.markdown('<div class="paper-subsection">', unsafe_allow_html=True)
+            st.markdown("### 📚 참고문헌 (References)")
+            st.markdown(paper_data["references"])
+            st.markdown('</div>', unsafe_allow_html=True)
+        
         st.markdown('</div>', unsafe_allow_html=True)
         
         # PDF용 텍스트에 논문 내용 추가
-        st.session_state.full_text += f"\n\n## 📄 생성된 연구 논문\n\n{st.session_state.generated_paper}\n\n"
+        paper_text = f"""
+## 📄 생성된 연구 논문
+
+### 초록
+{paper_data.get("abstract", "")}
+
+### 실험 방법
+{paper_data.get("methods", "")}
+
+### 예상 결과
+{paper_data.get("results", "")}
+
+### 시각자료 제안
+{paper_data.get("visuals", "")}
+
+### 결론
+{paper_data.get("conclusion", "")}
+
+### 참고문헌
+{paper_data.get("references", "")}
+"""
+        st.session_state.full_text += paper_text
         
         # 논문 관리 버튼들
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 다른 주제로 다시 작성하기", help="틈새주제를 다시 선택하여 새로운 논문을 생성합니다"):
-                st.session_state.generated_paper = ""
+                st.session_state.generated_paper = {}
                 st.session_state.selected_niche_topics = []
                 st.rerun()
         
         with col2:
-            if st.button("📋 논문 내용 복사하기", help="생성된 논문 내용을 클립보드에 복사합니다"):
-                st.text_area("논문 내용 (복사용)", st.session_state.generated_paper, height=100)
+            # 논문 전체 텍스트 생성
+            full_paper_text = f"""
+초록: {paper_data.get("abstract", "")}
+
+실험 방법: {paper_data.get("methods", "")}
+
+예상 결과: {paper_data.get("results", "")}
+
+시각자료 제안: {paper_data.get("visuals", "")}
+
+결론: {paper_data.get("conclusion", "")}
+
+참고문헌: {paper_data.get("references", "")}
+"""
+            if st.button("📋 논문 내용 복사하기", help="생성된 논문 내용을 텍스트로 표시합니다"):
+                st.text_area("논문 내용 (복사용)", full_paper_text, height=200)
     
     # ========== PDF 저장 버튼 (기존 위치 유지) ==========
     if st.session_state.full_text:
