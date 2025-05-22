@@ -13,30 +13,125 @@ from utils.generate_paper import generate_research_paper
 initialize_db()
 
 # 틈새주제 파싱 함수
+# app.py에서 교체할 부분들
+
+# 1. 수정된 파싱 함수 (기존 함수 교체)
 def parse_niche_topics(explanation_lines):
     """explain_topic 결과에서 확장 가능한 탐구 아이디어 섹션을 파싱"""
     try:
         topics = []
-        # "확장 가능한 탐구 아이디어" 섹션 찾기
-        for line in explanation_lines:
-            if "확장 가능한 탐구 아이디어" in line:
-                # 라인을 \n으로 분리해서 • 로 시작하는 모든 항목 찾기
-                parts = line.split('\n')
-                for part in parts:
-                    part = part.strip()
-                    if part.startswith('•'):
-                        # • 제거하고 깨끗하게 정리
-                        topic_text = part[1:].strip()
-                        if topic_text and len(topic_text) > 3:
-                            topics.append(topic_text)
-                break
         
-        print(f"파싱된 주제들: {topics}")  # 디버깅용
-        return topics if len(topics) >= 2 else ["기존 연구의 한계점 개선", "실용적 응용 방안 탐구", "다른 분야와의 융합 연구"]
+        # 전체 라인을 하나의 텍스트로 합치기
+        full_text = "\n".join(explanation_lines)
+        print(f"=== 전체 텍스트 확인 ===\n{full_text[:500]}...\n")
+        
+        # "확장 가능한 탐구 아이디어" 섹션 찾기
+        if "확장 가능한 탐구 아이디어" in full_text:
+            # 해당 섹션 이후의 텍스트 추출
+            section_start = full_text.find("확장 가능한 탐구 아이디어")
+            section_text = full_text[section_start:]
+            print(f"=== 섹션 텍스트 ===\n{section_text[:300]}...\n")
+            
+            # 라인별로 분리
+            lines = section_text.split('\n')
+            
+            current_topic = ""
+            current_description = ""
+            
+            for line in lines:
+                line = line.strip()
+                print(f"처리 중인 라인: '{line}'")
+                
+                # • 로 시작하는 제목 찾기
+                if line.startswith('•') and len(line) > 2:
+                    # 이전 주제가 있다면 저장
+                    if current_topic:
+                        full_topic = f"{current_topic}"
+                        if current_description:
+                            full_topic += f" - {current_description}"
+                        topics.append(full_topic)
+                        print(f"주제 저장: {full_topic}")
+                    
+                    # 새 주제 시작
+                    current_topic = line[1:].strip()  # • 제거
+                    current_description = ""
+                    print(f"새 주제 시작: {current_topic}")
+                
+                # · 로 시작하는 설명 찾기  
+                elif line.startswith('·') and current_topic and len(line) > 2:
+                    current_description = line[1:].strip()  # · 제거
+                    print(f"설명 추가: {current_description}")
+            
+            # 마지막 주제 저장
+            if current_topic:
+                full_topic = f"{current_topic}"
+                if current_description:
+                    full_topic += f" - {current_description}"
+                topics.append(full_topic)
+                print(f"마지막 주제 저장: {full_topic}")
+        
+        print(f"=== 최종 파싱된 주제들 ===\n{topics}\n")
+        
+        # 최소 3개 보장
+        if len(topics) >= 3:
+            return topics
+        else:
+            fallback_topics = [
+                "기존 연구의 한계점 개선 - 현재 연구에서 부족한 부분을 찾아 개선방안 제시",
+                "실용적 응용 방안 탐구 - 실생활에 적용할 수 있는 구체적 방법 연구", 
+                "다른 분야와의 융합 연구 - 타 학문 분야와 연결한 새로운 접근법"
+            ]
+            print(f"fallback 주제 사용: {fallback_topics}")
+            return fallback_topics
         
     except Exception as e:
         print(f"파싱 오류: {e}")  # 디버깅용
-        return ["기존 연구의 한계점 개선", "실용적 응용 방안 탐구", "다른 분야와의 융합 연구"]
+        fallback_topics = [
+            "기존 연구의 한계점 개선 - 현재 연구에서 부족한 부분을 찾아 개선방안 제시",
+            "실용적 응용 방안 탐구 - 실생활에 적용할 수 있는 구체적 방법 연구",
+            "다른 분야와의 융합 연구 - 타 학문 분야와 연결한 새로운 접근법"
+        ]
+        return fallback_topics
+
+# 2. 논문 생성 부분에 추가 디버깅 (기존 코드 수정)
+# 기존의 "논문 생성 버튼" 부분을 다음과 같이 교체:
+
+        # 논문 생성 버튼
+        if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary"):
+            selected_idea = st.session_state.niche_topics[selected_topic_index]
+            
+            print(f"=== 논문 생성 시작 ===")
+            print(f"주제: {topic}")
+            print(f"선택된 아이디어: {selected_idea}")
+            print(f"참고자료 길이: {len(st.session_state.full_text)} 문자")
+            
+            # 논문 생성
+            with st.spinner("🤖 AI가 체계적인 논문을 작성 중입니다... (약 30초 소요)"):
+                try:
+                    st.session_state.generated_paper = generate_research_paper(
+                        topic=topic, 
+                        research_idea=selected_idea, 
+                        references=st.session_state.full_text
+                    )
+                    print(f"논문 생성 완료: {type(st.session_state.generated_paper)}")
+                    print(f"논문 키들: {list(st.session_state.generated_paper.keys()) if isinstance(st.session_state.generated_paper, dict) else 'dict가 아님'}")
+                except Exception as e:
+                    print(f"논문 생성 오류: {e}")
+                    st.error(f"논문 생성 중 오류 발생: {str(e)}")
+                    st.session_state.generated_paper = {}
+            
+            if st.session_state.generated_paper:
+                st.success("📄 논문이 성공적으로 생성되었습니다!")
+                st.rerun()
+            else:
+                st.error("논문 생성에 실패했습니다. 다시 시도해주세요.")
+
+# 3. 추가: streamlit 콘솔 로그 확인을 위한 코드 (맨 위에 추가)
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# 그리고 print 대신 logger.info 사용하면 streamlit 콘솔에서 더 잘 보임
 
 # DOI 감지 및 링크 변환 함수
 def convert_doi_to_links(text):
