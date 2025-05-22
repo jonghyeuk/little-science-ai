@@ -1,9 +1,9 @@
-# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가 + 틈새주제 선택 및 논문 생성 기능 추가)
+# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가 + 틈새주제 선택 및 논문 생성 추가)
 import streamlit as st
 import time
 import re
 from utils.layout import load_css
-from utils.search_db import search_similar_titles, initialize_db
+from utils.search_db import search_similar_titles, initialize_db  # initialize_db 추가
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
@@ -12,71 +12,42 @@ from utils.generate_paper import generate_research_paper
 # 앱 시작 시 DB 초기화 (성능 최적화)
 initialize_db()
 
-# 틈새주제 파싱 함수 (explain_topic 리스트 구조에 맞게 수정)
+# 틈새주제 파싱 함수
 def parse_niche_topics(explanation_lines):
     """explain_topic 결과 리스트에서 확장 가능한 탐구 아이디어 섹션을 파싱"""
     try:
         # "확장 가능한 탐구 아이디어" 섹션 찾기
         niche_section_text = ""
-        found_section = False
         
         for line in explanation_lines:
-            if "확장 가능한 탐구 아이디어" in line or "탐구 아이디어" in line:
-                found_section = True
+            if "확장 가능한 탐구 아이디어" in line:
                 niche_section_text = line
                 break
         
-        if not found_section or not niche_section_text:
+        if not niche_section_text:
             return []
         
-        # 개별 아이디어 추출 (• 로 시작하는 라인)
+        # • 로 시작하는 라인들을 찾아서 추출
         topics = []
         lines = niche_section_text.split('\n')
-        
-        current_topic = ""
-        current_description = ""
         
         for line in lines:
             line = line.strip()
             if line.startswith('•'):
-                # 이전 주제가 있으면 저장
-                if current_topic:
-                    full_topic = current_topic
-                    if current_description:
-                        full_topic += f" - {current_description}"
-                    topics.append(full_topic.strip())
-                
-                # 새 주제 시작
-                current_topic = line[1:].strip()  # • 제거
-                current_description = ""
-                
-            elif line.startswith('·') and current_topic:
-                # 설명 부분 추가
-                current_description = line[1:].strip()  # · 제거
+                topic_text = line[1:].strip()  # • 제거
+                if topic_text:  # 빈 문자열이 아닌 경우만 추가
+                    topics.append(topic_text)
         
-        # 마지막 주제 추가
-        if current_topic:
-            full_topic = current_topic
-            if current_description:
-                full_topic += f" - {current_description}"
-            topics.append(full_topic.strip())
-        
-        # 최대 5개까지만 반환, 최소 2개 보장
-        if len(topics) < 2:
-            # 기본 주제들 추가
-            topics.extend([
-                "기존 연구의 한계점 개선 방안 연구",
-                "다른 분야와의 융합 연구 아이디어"
-            ])
-        
-        return topics[:5]
-    
+        return topics if topics else [
+            "기존 연구의 한계점 개선 방안",
+            "실용적 응용 가능성 탐구", 
+            "다른 분야와의 융합 연구"
+        ]
     except Exception as e:
         st.error(f"틈새주제 파싱 중 오류: {e}")
-        # 기본 틈새주제 반환
         return [
             "기존 연구의 한계점 개선 방안",
-            "실용적 응용 가능성 탐구",
+            "실용적 응용 가능성 탐구", 
             "다른 분야와의 융합 연구"
         ]
 
@@ -100,7 +71,7 @@ def convert_doi_to_links(text):
 st.set_page_config(page_title="LittleScienceAI", layout="wide")
 load_css()
 
-# 중앙 정렬 CSS + 틈새주제 선택 UI 스타일
+# 중앙 정렬 CSS + 틈새주제 선택 UI 추가
 st.markdown("""
 <style>
 section.main > div.block-container {
@@ -140,36 +111,12 @@ section.main > div.block-container {
     margin: 20px 0;
 }
 
-.niche-topic-item {
-    background-color: white;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    padding: 12px;
-    margin: 10px 0;
-    transition: all 0.2s;
-}
-
-.niche-topic-item:hover {
-    border-color: #3b82f6;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
 .paper-section {
     background-color: #fafafa;
     border-left: 4px solid #2563eb;
     padding: 25px;
     margin: 25px 0;
     border-radius: 0 8px 8px 0;
-}
-
-.topic-counter {
-    background-color: #dbeafe;
-    color: #1e40af;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-weight: 500;
-    display: inline-block;
-    margin: 10px 0;
 }
 
 .paper-subsection {
@@ -201,8 +148,6 @@ if not st.session_state.authenticated:
 # 세션 상태 초기화
 if 'niche_topics' not in st.session_state:
     st.session_state.niche_topics = []
-if 'selected_niche_topics' not in st.session_state:
-    st.session_state.selected_niche_topics = []
 if 'generated_paper' not in st.session_state:
     st.session_state.generated_paper = {}
 
@@ -365,67 +310,36 @@ if topic:
             st.error(f"arXiv 검색 중 오류: {str(e)}")
             st.session_state.full_text += "## 🌐 arXiv 유사 논문\n\n검색 중 오류 발생\n\n"
     
-    # ========== 새로 추가된 틈새주제 선택 섹션 ==========
+    # ========== 틈새주제 선택 섹션 추가 ==========
     if st.session_state.niche_topics:
         st.markdown("---")
-        
-        # 틈새주제 선택 박스
         st.markdown('<div class="niche-selection-box">', unsafe_allow_html=True)
         st.subheader("🎯 세부 틈새주제 선택")
-        st.markdown("위에서 제안된 탐구 아이디어 중에서 **2-3개**를 선택하여 체계적인 논문 형식으로 작성해보세요.")
+        st.markdown("위에서 제안된 탐구 아이디어 중에서 **1개**를 선택하여 체계적인 논문 형식으로 작성해보세요.")
         
-        # 선택된 주제 개수 표시
-        selected_count = 0
-        selected_topics = []
+        # 라디오 버튼으로 1개만 선택
+        selected_topic_index = st.radio(
+            "연구하고 싶은 틈새주제를 선택하세요:",
+            range(len(st.session_state.niche_topics)),
+            format_func=lambda x: f"주제 {x+1}: {st.session_state.niche_topics[x]}",
+            key="selected_niche_topic"
+        )
         
-        # 각 틈새주제를 체크박스로 표시
-        for i, topic_item in enumerate(st.session_state.niche_topics):
-            st.markdown('<div class="niche-topic-item">', unsafe_allow_html=True)
+        # 논문 생성 버튼
+        if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary", help="선택한 틈새주제를 바탕으로 체계적인 논문을 생성합니다"):
+            selected_idea = st.session_state.niche_topics[selected_topic_index]
             
-            is_selected = st.checkbox(
-                f"**주제 {i+1}:** {topic_item}",
-                key=f"niche_topic_{i}",
-                help="이 주제를 선택하여 논문에 포함합니다"
-            )
+            # 논문 생성 (기존 utils 함수 사용)
+            with st.spinner("🤖 AI가 체계적인 논문을 작성 중입니다... (약 30초 소요)"):
+                st.session_state.generated_paper = generate_research_paper(
+                    topic=topic, 
+                    research_idea=selected_idea, 
+                    references=st.session_state.full_text
+                )
             
-            if is_selected:
-                selected_topics.append(topic_item)
-                selected_count += 1
-            
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        # 선택 상태 표시
-        if selected_count > 0:
-            st.markdown(f'<div class="topic-counter">선택된 주제: {selected_count}개</div>', unsafe_allow_html=True)
-        
-        # 선택된 주제 개수에 따른 피드백
-        if selected_count == 0:
-            st.info("💡 연구하고 싶은 틈새주제를 선택해주세요.")
-        elif selected_count == 1:
-            st.warning("⚠️ 최소 2개의 주제를 선택해주세요. (현재 1개 선택)")
-        elif selected_count > 3:
-            st.warning(f"⚠️ 최대 3개의 주제만 선택할 수 있습니다. (현재 {selected_count}개 선택)")
-        else:
-            st.success(f"✅ {selected_count}개 주제가 적절히 선택되었습니다!")
-            
-            # 논문 생성 버튼
-            if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary", help="선택한 틈새주제들을 바탕으로 체계적인 논문을 생성합니다"):
-                st.session_state.selected_niche_topics = selected_topics
-                
-                # 선택된 주제들을 하나의 연구 아이디어로 결합
-                combined_idea = " / ".join(selected_topics)
-                
-                # 논문 생성 (기존 utils 함수 사용)
-                with st.spinner("🤖 AI가 체계적인 논문을 작성 중입니다... (약 30초 소요)"):
-                    st.session_state.generated_paper = generate_research_paper(
-                        topic=topic, 
-                        research_idea=combined_idea, 
-                        references=st.session_state.full_text
-                    )
-                
-                if st.session_state.generated_paper:
-                    st.success("📄 논문이 성공적으로 생성되었습니다!")
-                    st.rerun()
+            if st.session_state.generated_paper:
+                st.success("📄 논문이 성공적으로 생성되었습니다!")
+                st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
     
@@ -434,14 +348,7 @@ if topic:
         st.markdown("---")
         st.markdown('<div class="paper-section">', unsafe_allow_html=True)
         st.subheader("📄 생성된 연구 논문")
-        st.markdown("선택한 틈새주제들을 바탕으로 체계적인 논문 형식을 생성했습니다.")
-        
-        # 선택된 주제들 표시
-        if st.session_state.selected_niche_topics:
-            st.markdown("**선택된 틈새주제들:**")
-            for i, topic_item in enumerate(st.session_state.selected_niche_topics, 1):
-                st.markdown(f"**{i}.** {topic_item}")
-            st.markdown("---")
+        st.markdown("선택한 틈새주제를 바탕으로 체계적인 논문 형식을 생성했습니다.")
         
         # 생성된 논문 각 섹션별 표시
         paper_data = st.session_state.generated_paper
@@ -514,47 +421,20 @@ if topic:
 """
         st.session_state.full_text += paper_text
         
-        # 논문 관리 버튼들
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🔄 다른 주제로 다시 작성하기", help="틈새주제를 다시 선택하여 새로운 논문을 생성합니다"):
-                st.session_state.generated_paper = {}
-                st.session_state.selected_niche_topics = []
-                st.rerun()
-        
-        with col2:
-            # 논문 전체 텍스트 생성
-            full_paper_text = f"""
-초록: {paper_data.get("abstract", "")}
-
-실험 방법: {paper_data.get("methods", "")}
-
-예상 결과: {paper_data.get("results", "")}
-
-시각자료 제안: {paper_data.get("visuals", "")}
-
-결론: {paper_data.get("conclusion", "")}
-
-참고문헌: {paper_data.get("references", "")}
-"""
-            if st.button("📋 논문 내용 복사하기", help="생성된 논문 내용을 텍스트로 표시합니다"):
-                st.text_area("논문 내용 (복사용)", full_paper_text, height=200)
+        # 논문 관리 버튼
+        if st.button("🔄 다른 주제로 다시 작성하기", help="다른 틈새주제를 선택하여 새로운 논문을 생성합니다"):
+            st.session_state.generated_paper = {}
+            st.rerun()
     
-    # ========== PDF 저장 버튼 (기존 위치 유지) ==========
+    # PDF 저장 버튼 (기존 위치 유지)
     if st.session_state.full_text:
         st.markdown("---")
-        st.subheader("📥 PDF 다운로드")
-        st.markdown("지금까지의 모든 내용을 PDF 파일로 저장할 수 있습니다.")
-        
-        if st.button("📄 PDF로 저장하기", type="secondary", help="모든 내용이 포함된 PDF 파일을 생성합니다"):
-            with st.spinner("📄 PDF 파일을 생성 중입니다..."):
-                path = generate_pdf(st.session_state.full_text)
-                with open(path, "rb") as f:
-                    st.download_button(
-                        "📄 PDF 다운로드", 
-                        f, 
-                        file_name="little_science_ai_research.pdf",
-                        mime="application/pdf",
-                        help="생성된 PDF 파일을 다운로드합니다"
-                    )
-                st.success("✅ PDF 파일이 준비되었습니다!")
+        if st.button("📥 이 내용 PDF로 저장하기"):
+            path = generate_pdf(st.session_state.full_text)
+            with open(path, "rb") as f:
+                st.download_button(
+                    "📄 PDF 다운로드", 
+                    f, 
+                    file_name="little_science_ai_research.pdf",
+                    mime="application/pdf"
+                )
