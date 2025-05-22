@@ -103,14 +103,6 @@ section.main > div.block-container {
     color: #2e7d32;
 }
 
-.niche-selection-box {
-    background-color: #f0f8ff;
-    border: 2px solid #e6f3ff;
-    border-radius: 10px;
-    padding: 20px;
-    margin: 20px 0;
-}
-
 .paper-section {
     background-color: #fafafa;
     border-left: 4px solid #2563eb;
@@ -207,12 +199,12 @@ if topic:
         try:
             explanation_lines = explain_topic(topic)
             explanation_text = "\n\n".join(explanation_lines)
-            
-            # 틈새주제 파싱 및 저장
-            st.session_state.niche_topics = parse_niche_topics(explanation_lines)
-            
+                        
             # DOI 패턴을 링크로 변환 (화면 표시용)
             linked_explanation = convert_doi_to_links(explanation_text)
+
+            # 틈새주제 파싱 및 저장
+            st.session_state.niche_topics = parse_niche_topics(explanation_lines)
             
             # 링크가 포함된 설명 표시
             st.markdown(linked_explanation, unsafe_allow_html=True)
