@@ -1,15 +1,155 @@
-# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가)
+# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가 + 틈새주제 선택 및 논문 생성 기능 추가)
 import streamlit as st
 import time
 import re
+from openai import OpenAI
 from utils.layout import load_css
-from utils.search_db import search_similar_titles, initialize_db  # initialize_db 추가
+from utils.search_db import search_similar_titles, initialize_db
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
 from utils.pdf_generator import generate_pdf
 
 # 앱 시작 시 DB 초기화 (성능 최적화)
 initialize_db()
+
+# 틈새주제 파싱 함수
+def parse_niche_topics(explanation_text):
+    """explain_topic 결과에서 확장 가능한 탐구 아이디어 섹션을 파싱"""
+    try:
+        # "확장 가능한 탐구 아이디어" 섹션 찾기
+        sections = explanation_text.split('\n\n')
+        niche_section = ""
+        
+        for section in sections:
+            if "확장 가능한 탐구 아이디어" in section or "탐구 아이디어" in section:
+                niche_section = section
+                break
+        
+        if not niche_section:
+            return []
+        
+        # 개별 아이디어 추출 (• 또는 - 로 시작하는 라인)
+        topics = []
+        lines = niche_section.split('\n')
+        
+        current_topic = ""
+        for line in lines:
+            line = line.strip()
+            if line.startswith('•') or line.startswith('-'):
+                if current_topic:
+                    topics.append(current_topic.strip())
+                current_topic = line[1:].strip()  # • 또는 - 제거
+            elif current_topic and line.startswith('·'):
+                # 설명 부분 추가
+                current_topic += " " + line[1:].strip()
+        
+        # 마지막 주제 추가
+        if current_topic:
+            topics.append(current_topic.strip())
+        
+        # 최대 5개까지만 반환
+        return topics[:5]
+    
+    except Exception as e:
+        st.error(f"틈새주제 파싱 중 오류: {e}")
+        return []
+
+# 논문 형식 생성 함수
+@st.cache_data(ttl=3600)
+def generate_research_paper(selected_topics, original_topic):
+    """선택된 틈새주제들을 기반으로 논문 형식 생성"""
+    try:
+        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
+        
+        topics_text = "\n".join([f"- {topic}" for topic in selected_topics])
+        
+        system_prompt = f"""
+        너는 고등학생을 위한 과학 논문 작성 전문가입니다. 
+        주어진 원본 주제와 선택된 틈새주제들을 기반으로 체계적인 연구 논문을 작성해주세요.
+        
+        **중요한 지침:**
+        1. 이 논문은 고등학생이 실제로 수행할 수 있는 연구여야 합니다
+        2. 서론의 배경은 매우 상세하고 체계적으로 작성해주세요
+        3. 실험방법은 누구든 따라할 수 있도록 구체적이고 단계별로 작성해주세요
+        4. 모든 내용은 과학적으로 타당하고 현실적이어야 합니다
+        5. 한국어로 작성해주세요
+        
+        **논문 구조:**
+        
+        # 제목
+        [선택된 틈새주제들을 종합한 구체적이고 학술적인 제목]
+        
+        ## 초록
+        [연구 목적, 방법, 기대 결과를 포함한 200-250자 요약]
+        
+        ## 1. 서론
+        ### 1.1 연구 배경
+        [원본 주제에 대한 상세한 배경 설명 - 최소 3-4개 문단]
+        ### 1.2 문제 정의
+        [현재 해결되지 않은 문제점들과 연구의 필요성]
+        ### 1.3 연구 목적
+        [이 연구가 달성하고자 하는 구체적인 목표들]
+        ### 1.4 연구 가설
+        [검증하고자 하는 가설들]
+        
+        ## 2. 실험 방법
+        ### 2.1 실험 설계
+        [전체적인 실험 설계와 접근 방법]
+        ### 2.2 재료 및 장비
+        [필요한 모든 재료와 장비의 구체적인 목록]
+        ### 2.3 실험 절차
+        [단계별로 따라할 수 있는 상세한 실험 과정 - 번호를 매겨서]
+        ### 2.4 데이터 수집 및 분석 방법
+        [어떤 데이터를 어떻게 수집하고 분석할 것인지]
+        
+        ## 3. 예상 결과
+        ### 3.1 예상되는 실험 결과
+        [가설에 따른 예상 결과들]
+        ### 3.2 결과 해석 방법
+        [결과를 어떻게 해석하고 분석할 것인지]
+        
+        ## 4. 결론
+        ### 4.1 연구의 의의
+        [이 연구가 갖는 학술적, 실용적 의의]
+        ### 4.2 예상되는 한계점
+        [연구의 한계와 개선 방향]
+        ### 4.3 향후 연구 방향
+        [이 연구를 발전시킬 수 있는 후속 연구 아이디어]
+        
+        **마지막에 다음 문구를 반드시 포함해주세요:**
+        
+        ---
+        ⚠️ **중요 안내**
+        - 이 내용은 AI가 추론하여 생성한 연구 계획안입니다
+        - 실제 논문이 아니며, 참고용으로만 활용해주세요
+        - 실제 연구 수행 시에는 지도교사와 상의하시기 바랍니다
+        - 이 내용을 그대로 인용하거나 레퍼런스로 사용할 수 없습니다
+        """
+        
+        user_prompt = f"""
+        **원본 주제:** {original_topic}
+        
+        **선택된 틈새주제들:**
+        {topics_text}
+        
+        위 정보를 바탕으로 고등학생이 수행할 수 있는 체계적인 연구 논문을 작성해주세요.
+        """
+        
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=4000
+        )
+        
+        return response.choices[0].message.content.strip()
+    
+    except Exception as e:
+        st.error(f"논문 생성 중 오류: {e}")
+        return ""
 
 # DOI 감지 및 링크 변환 함수
 def convert_doi_to_links(text):
@@ -31,7 +171,7 @@ def convert_doi_to_links(text):
 st.set_page_config(page_title="LittleScienceAI", layout="wide")
 load_css()
 
-# 중앙 정렬 CSS
+# 중앙 정렬 CSS + 틈새주제 선택 UI 스타일
 st.markdown("""
 <style>
 section.main > div.block-container {
@@ -62,6 +202,32 @@ section.main > div.block-container {
 .sidebar-info-box.arxiv h4 {
     color: #2e7d32;
 }
+
+.niche-topic-card {
+    background-color: #f8f9ff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 8px 0;
+    transition: border-color 0.2s;
+}
+
+.niche-topic-card:hover {
+    border-color: #3b82f6;
+}
+
+.niche-topic-card.selected {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+}
+
+.paper-section {
+    background-color: #fafafa;
+    border-left: 4px solid #2563eb;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 0 8px 8px 0;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -81,13 +247,23 @@ if not st.session_state.authenticated:
         st.warning("🚫 올바른 인증 키를 입력하세요.")
     st.stop()
 
+# 세션 상태 초기화
+if 'niche_topics' not in st.session_state:
+    st.session_state.niche_topics = []
+if 'selected_niche_topics' not in st.session_state:
+    st.session_state.selected_niche_topics = []
+if 'generated_paper' not in st.session_state:
+    st.session_state.generated_paper = ""
+
 # 사이드바
 st.sidebar.title("🧭 탐색 단계")
 st.sidebar.markdown("""
 1. 주제 입력
 2. 개념 해설 보기
 3. 논문 추천 확인
-4. PDF 저장
+4. 틈새주제 선택
+5. 논문 형식 작성
+6. PDF 저장
 """)
 
 # 사이드바에 학술 자료 설명 추가
@@ -135,6 +311,9 @@ if topic:
         try:
             explanation_lines = explain_topic(topic)
             explanation_text = "\n\n".join(explanation_lines)
+            
+            # 틈새주제 파싱 및 저장
+            st.session_state.niche_topics = parse_niche_topics(explanation_text)
             
             # DOI 패턴을 링크로 변환 (화면 표시용)
             linked_explanation = convert_doi_to_links(explanation_text)
@@ -235,9 +414,72 @@ if topic:
             st.error(f"arXiv 검색 중 오류: {str(e)}")
             st.session_state.full_text += "## 🌐 arXiv 유사 논문\n\n검색 중 오류 발생\n\n"
     
-    # PDF 저장 버튼
+    # ========== 새로 추가된 틈새주제 선택 섹션 ==========
+    if st.session_state.niche_topics:
+        st.markdown("---")
+        st.subheader("🔍 세부 틈새주제 선택")
+        st.markdown("위 탐구 아이디어 중에서 **2-3개**를 선택하여 체계적인 논문 형식으로 작성해보세요.")
+        
+        # 틈새주제 선택 UI
+        selected_topics = []
+        
+        for i, topic in enumerate(st.session_state.niche_topics):
+            # 각 주제를 체크박스로 표시
+            is_selected = st.checkbox(
+                f"**주제 {i+1}:** {topic}",
+                key=f"niche_topic_{i}",
+                help="이 주제를 선택하여 논문에 포함합니다"
+            )
+            
+            if is_selected:
+                selected_topics.append(topic)
+        
+        # 선택된 주제 개수 확인
+        if selected_topics:
+            if len(selected_topics) < 2:
+                st.warning("⚠️ 최소 2개의 주제를 선택해주세요.")
+            elif len(selected_topics) > 3:
+                st.warning("⚠️ 최대 3개의 주제만 선택할 수 있습니다.")
+            else:
+                st.success(f"✅ {len(selected_topics)}개 주제가 선택되었습니다.")
+                
+                # 논문 생성 버튼
+                if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary"):
+                    st.session_state.selected_niche_topics = selected_topics
+                    
+                    # 논문 생성
+                    with st.spinner("🤖 AI가 체계적인 논문을 작성 중입니다..."):
+                        st.session_state.generated_paper = generate_research_paper(
+                            selected_topics, topic
+                        )
+                    
+                    if st.session_state.generated_paper:
+                        st.rerun()
+    
+    # ========== 논문 형식 표시 섹션 ==========
+    if st.session_state.generated_paper:
+        st.markdown("---")
+        st.markdown('<div class="paper-section">', unsafe_allow_html=True)
+        st.subheader("📄 생성된 연구 논문")
+        st.markdown("선택한 틈새주제들을 바탕으로 체계적인 논문 형식을 생성했습니다.")
+        
+        # 생성된 논문 표시
+        st.markdown(st.session_state.generated_paper)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # PDF용 텍스트에 논문 내용 추가
+        st.session_state.full_text += f"\n\n## 📄 생성된 연구 논문\n\n{st.session_state.generated_paper}\n\n"
+        
+        # 다시 선택 버튼
+        if st.button("🔄 다른 주제로 다시 작성하기"):
+            st.session_state.generated_paper = ""
+            st.session_state.selected_niche_topics = []
+            st.rerun()
+    
+    # ========== PDF 저장 버튼 (기존 위치 유지) ==========
     if st.session_state.full_text:
-        if st.button("📥 이 내용 PDF로 저장하기"):
+        st.markdown("---")
+        if st.button("📥 이 내용 PDF로 저장하기", type="secondary"):
             path = generate_pdf(st.session_state.full_text)
             with open(path, "rb") as f:
                 st.download_button(
