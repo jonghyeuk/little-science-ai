@@ -91,6 +91,13 @@ section.main > div.block-container {
     margin: 15px 0;
     border-left: 3px solid #28a745;
 }
+
+.stButton > button {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 </style>
 """, unsafe_allow_html=True)
 
