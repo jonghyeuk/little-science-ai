@@ -186,31 +186,17 @@ if topic:
             explanation_lines = explain_topic(topic)
             explanation_text = "\n\n".join(explanation_lines)
             
-            # 틈새주제 파싱 및 저장 - 디버깅
-            st.write("🔍 디버깅: explanation_lines 내용 확인")
+            # 틈새주제 파싱 및 저장
+            print("=== 디버깅: explanation_lines 구조 ===")
             for i, line in enumerate(explanation_lines):
-            if "확장 가능한 탐구 아이디어" in line:
-                st.write(f"**라인 {i} 찾음!**")
-                st.text_area(f"라인 {i} 전체 내용", line, height=200)
-        
-             # 수동으로 • 문자 찾기
-             bullet_count = line.count('•')
-             st.write(f"• 문자 개수: {bullet_count}")
-        
-             # 줄바꿈으로 분리해서 각 줄 보기
-             lines_split = line.split('\n')
-             st.write(f"총 {len(lines_split)}개 줄로 분리됨:")
-             for j, sub_line in enumerate(lines_split):
-                 if '•' in sub_line:
-                 st.write(f"  줄 {j}: {repr(sub_line)}")
-             break
+                print(f"라인 {i}: {repr(line[:100])}...")  # 처음 100자만 출력
+                if "확장 가능한 탐구 아이디어" in line:
+                    print(f"*** 찾았다! 라인 {i}에 확장 가능한 탐구 아이디어 있음 ***")
+                    print(f"전체 내용: {repr(line)}")
+                    break
+            print("=== 디버깅 끝 ===")
 
-             # 임시로 수동 설정
-             st.session_state.niche_topics = [
-             "태기압 플라즈마의 실온 효률에 영향을 미치는 인자 분석",
-             "다양한 미생물에 대한 플라즈마 살균 반응 비교", 
-             "플라즈마 처리 후 미생물의 회복 능력 조사"
-             ]
+            st.session_state.niche_topics = parse_niche_topics(explanation_lines)
             
             # DOI 패턴을 링크로 변환 (화면 표시용)
             linked_explanation = convert_doi_to_links(explanation_text)
