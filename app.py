@@ -1,4 +1,4 @@
-# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가 + 틈새주제 선택 및 논문 생성 추가)
+# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가 + 틈새주제 선택 기능 추가)
 import streamlit as st
 import time
 import re
@@ -14,42 +14,27 @@ initialize_db()
 
 # 틈새주제 파싱 함수
 def parse_niche_topics(explanation_lines):
-    """explain_topic 결과 리스트에서 확장 가능한 탐구 아이디어 섹션을 파싱"""
+    """explain_topic 결과에서 확장 가능한 탐구 아이디어 섹션을 파싱"""
     try:
         # "확장 가능한 탐구 아이디어" 섹션 찾기
-        niche_section_text = ""
-        
         for line in explanation_lines:
             if "확장 가능한 탐구 아이디어" in line:
-                niche_section_text = line
-                break
+                # • 로 시작하는 라인들을 찾아서 추출
+                topics = []
+                lines = line.split('\n')
+                
+                for line_item in lines:
+                    line_item = line_item.strip()
+                    if line_item.startswith('•'):
+                        topic_text = line_item[1:].strip()  # • 제거
+                        if topic_text:
+                            topics.append(topic_text)
+                
+                return topics if topics else ["기존 연구의 한계점 개선", "실용적 응용 방안 탐구", "다른 분야와의 융합 연구"]
         
-        if not niche_section_text:
-            return []
-        
-        # • 로 시작하는 라인들을 찾아서 추출
-        topics = []
-        lines = niche_section_text.split('\n')
-        
-        for line in lines:
-            line = line.strip()
-            if line.startswith('•'):
-                topic_text = line[1:].strip()  # • 제거
-                if topic_text:  # 빈 문자열이 아닌 경우만 추가
-                    topics.append(topic_text)
-        
-        return topics if topics else [
-            "기존 연구의 한계점 개선 방안",
-            "실용적 응용 가능성 탐구", 
-            "다른 분야와의 융합 연구"
-        ]
+        return []
     except Exception as e:
-        st.error(f"틈새주제 파싱 중 오류: {e}")
-        return [
-            "기존 연구의 한계점 개선 방안",
-            "실용적 응용 가능성 탐구", 
-            "다른 분야와의 융합 연구"
-        ]
+        return ["기존 연구의 한계점 개선", "실용적 응용 방안 탐구", "다른 분야와의 융합 연구"]
 
 # DOI 감지 및 링크 변환 함수
 def convert_doi_to_links(text):
@@ -71,7 +56,7 @@ def convert_doi_to_links(text):
 st.set_page_config(page_title="LittleScienceAI", layout="wide")
 load_css()
 
-# 중앙 정렬 CSS + 틈새주제 선택 UI 추가
+# 중앙 정렬 CSS
 st.markdown("""
 <style>
 section.main > div.block-container {
@@ -101,14 +86,6 @@ section.main > div.block-container {
 
 .sidebar-info-box.arxiv h4 {
     color: #2e7d32;
-}
-
-.paper-section {
-    background-color: #fafafa;
-    border-left: 4px solid #2563eb;
-    padding: 25px;
-    margin: 25px 0;
-    border-radius: 0 8px 8px 0;
 }
 
 .paper-subsection {
@@ -199,12 +176,12 @@ if topic:
         try:
             explanation_lines = explain_topic(topic)
             explanation_text = "\n\n".join(explanation_lines)
-                        
-            # DOI 패턴을 링크로 변환 (화면 표시용)
-            linked_explanation = convert_doi_to_links(explanation_text)
-
+            
             # 틈새주제 파싱 및 저장
             st.session_state.niche_topics = parse_niche_topics(explanation_lines)
+            
+            # DOI 패턴을 링크로 변환 (화면 표시용)
+            linked_explanation = convert_doi_to_links(explanation_text)
             
             # 링크가 포함된 설명 표시
             st.markdown(linked_explanation, unsafe_allow_html=True)
@@ -305,7 +282,6 @@ if topic:
     # ========== 틈새주제 선택 섹션 추가 ==========
     if st.session_state.niche_topics:
         st.markdown("---")
-        st.markdown('<div class="niche-selection-box">', unsafe_allow_html=True)
         st.subheader("🎯 세부 틈새주제 선택")
         st.markdown("위에서 제안된 탐구 아이디어 중에서 **1개**를 선택하여 체계적인 논문 형식으로 작성해보세요.")
         
@@ -318,10 +294,10 @@ if topic:
         )
         
         # 논문 생성 버튼
-        if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary", help="선택한 틈새주제를 바탕으로 체계적인 논문을 생성합니다"):
+        if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary"):
             selected_idea = st.session_state.niche_topics[selected_topic_index]
             
-            # 논문 생성 (기존 utils 함수 사용)
+            # 논문 생성
             with st.spinner("🤖 AI가 체계적인 논문을 작성 중입니다... (약 30초 소요)"):
                 st.session_state.generated_paper = generate_research_paper(
                     topic=topic, 
@@ -332,17 +308,12 @@ if topic:
             if st.session_state.generated_paper:
                 st.success("📄 논문이 성공적으로 생성되었습니다!")
                 st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
     
-    # ========== 논문 형식 표시 섹션 ==========
+    # ========== 논문 표시 섹션 ==========
     if st.session_state.generated_paper and isinstance(st.session_state.generated_paper, dict):
         st.markdown("---")
-        st.markdown('<div class="paper-section">', unsafe_allow_html=True)
         st.subheader("📄 생성된 연구 논문")
-        st.markdown("선택한 틈새주제를 바탕으로 체계적인 논문 형식을 생성했습니다.")
         
-        # 생성된 논문 각 섹션별 표시
         paper_data = st.session_state.generated_paper
         
         # 초록
@@ -387,8 +358,6 @@ if topic:
             st.markdown(paper_data["references"])
             st.markdown('</div>', unsafe_allow_html=True)
         
-        st.markdown('</div>', unsafe_allow_html=True)
-        
         # PDF용 텍스트에 논문 내용 추가
         paper_text = f"""
 ## 📄 생성된 연구 논문
@@ -413,8 +382,8 @@ if topic:
 """
         st.session_state.full_text += paper_text
         
-        # 논문 관리 버튼
-        if st.button("🔄 다른 주제로 다시 작성하기", help="다른 틈새주제를 선택하여 새로운 논문을 생성합니다"):
+        # 다시 작성 버튼
+        if st.button("🔄 다른 주제로 다시 작성하기"):
             st.session_state.generated_paper = {}
             st.rerun()
     
