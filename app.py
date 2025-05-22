@@ -16,23 +16,19 @@ initialize_db()
 def parse_niche_topics(explanation_lines):
     """explain_topic 결과에서 확장 가능한 탐구 아이디어 섹션을 파싱"""
     try:
+        topics = []
         # "확장 가능한 탐구 아이디어" 섹션 찾기
         for line in explanation_lines:
             if "확장 가능한 탐구 아이디어" in line:
-                # • 로 시작하는 라인들을 찾아서 추출
-                topics = []
-                lines = line.split('\n')
-                
-                for line_item in lines:
-                    line_item = line_item.strip()
-                    if line_item.startswith('•'):
-                        topic_text = line_item[1:].strip()  # • 제거
-                        if topic_text:
-                            topics.append(topic_text)
-                
-                return topics if topics else ["기존 연구의 한계점 개선", "실용적 응용 방안 탐구", "다른 분야와의 융합 연구"]
+                # 해당 라인에서 • 로 시작하는 모든 항목 찾기
+                parts = line.split('•')
+                for part in parts[1:]:  # 첫 번째는 제목이므로 제외
+                    clean_topic = part.strip().split('\n')[0].strip()  # 첫 줄만 가져오기
+                    if clean_topic and len(clean_topic) > 5:  # 너무 짧은 것 제외
+                        topics.append(clean_topic)
+                break
         
-        return []
+        return topics if len(topics) >= 2 else ["기존 연구의 한계점 개선", "실용적 응용 방안 탐구", "다른 분야와의 융합 연구"]
     except Exception as e:
         return ["기존 연구의 한계점 개선", "실용적 응용 방안 탐구", "다른 분야와의 융합 연구"]
 
