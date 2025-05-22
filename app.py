@@ -189,7 +189,7 @@ if topic:
             # 틈새주제 파싱 및 저장 - 디버깅
             st.write("🔍 디버깅: explanation_lines 내용 확인")
             for i, line in enumerate(explanation_lines):
-                if "확장 가능한 탐구 아이디어" in line:
+            if "확장 가능한 탐구 아이디어" in line:
                 st.write(f"**라인 {i} 찾음!**")
                 st.text_area(f"라인 {i} 전체 내용", line, height=200)
         
