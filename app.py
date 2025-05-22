@@ -12,47 +12,73 @@ from utils.pdf_generator import generate_pdf
 # 앱 시작 시 DB 초기화 (성능 최적화)
 initialize_db()
 
-# 틈새주제 파싱 함수
-def parse_niche_topics(explanation_text):
-    """explain_topic 결과에서 확장 가능한 탐구 아이디어 섹션을 파싱"""
+# 틈새주제 파싱 함수 (explain_topic 리스트 구조에 맞게 수정)
+def parse_niche_topics(explanation_lines):
+    """explain_topic 결과 리스트에서 확장 가능한 탐구 아이디어 섹션을 파싱"""
     try:
         # "확장 가능한 탐구 아이디어" 섹션 찾기
-        sections = explanation_text.split('\n\n')
-        niche_section = ""
+        niche_section_text = ""
+        found_section = False
         
-        for section in sections:
-            if "확장 가능한 탐구 아이디어" in section or "탐구 아이디어" in section:
-                niche_section = section
+        for line in explanation_lines:
+            if "확장 가능한 탐구 아이디어" in line or "탐구 아이디어" in line:
+                found_section = True
+                niche_section_text = line
                 break
         
-        if not niche_section:
+        if not found_section or not niche_section_text:
             return []
         
-        # 개별 아이디어 추출 (• 또는 - 로 시작하는 라인)
+        # 개별 아이디어 추출 (• 로 시작하는 라인)
         topics = []
-        lines = niche_section.split('\n')
+        lines = niche_section_text.split('\n')
         
         current_topic = ""
+        current_description = ""
+        
         for line in lines:
             line = line.strip()
-            if line.startswith('•') or line.startswith('-'):
+            if line.startswith('•'):
+                # 이전 주제가 있으면 저장
                 if current_topic:
-                    topics.append(current_topic.strip())
-                current_topic = line[1:].strip()  # • 또는 - 제거
-            elif current_topic and line.startswith('·'):
+                    full_topic = current_topic
+                    if current_description:
+                        full_topic += f" - {current_description}"
+                    topics.append(full_topic.strip())
+                
+                # 새 주제 시작
+                current_topic = line[1:].strip()  # • 제거
+                current_description = ""
+                
+            elif line.startswith('·') and current_topic:
                 # 설명 부분 추가
-                current_topic += " " + line[1:].strip()
+                current_description = line[1:].strip()  # · 제거
         
         # 마지막 주제 추가
         if current_topic:
-            topics.append(current_topic.strip())
+            full_topic = current_topic
+            if current_description:
+                full_topic += f" - {current_description}"
+            topics.append(full_topic.strip())
         
-        # 최대 5개까지만 반환
+        # 최대 5개까지만 반환, 최소 2개 보장
+        if len(topics) < 2:
+            # 기본 주제들 추가
+            topics.extend([
+                "기존 연구의 한계점 개선 방안 연구",
+                "다른 분야와의 융합 연구 아이디어"
+            ])
+        
         return topics[:5]
     
     except Exception as e:
         st.error(f"틈새주제 파싱 중 오류: {e}")
-        return []
+        # 기본 틈새주제 반환
+        return [
+            "기존 연구의 한계점 개선 방안",
+            "실용적 응용 가능성 탐구",
+            "다른 분야와의 융합 연구"
+        ]
 
 # 논문 형식 생성 함수
 @st.cache_data(ttl=3600)
@@ -69,7 +95,7 @@ def generate_research_paper(selected_topics, original_topic):
         
         **중요한 지침:**
         1. 이 논문은 고등학생이 실제로 수행할 수 있는 연구여야 합니다
-        2. 서론의 배경은 매우 상세하고 체계적으로 작성해주세요
+        2. 서론의 배경은 매우 상세하고 체계적으로 작성해주세요 (최소 4-5개 문단)
         3. 실험방법은 누구든 따라할 수 있도록 구체적이고 단계별로 작성해주세요
         4. 모든 내용은 과학적으로 타당하고 현실적이어야 합니다
         5. 한국어로 작성해주세요
@@ -80,41 +106,90 @@ def generate_research_paper(selected_topics, original_topic):
         [선택된 틈새주제들을 종합한 구체적이고 학술적인 제목]
         
         ## 초록
-        [연구 목적, 방법, 기대 결과를 포함한 200-250자 요약]
+        **배경:** [연구 배경 1-2문장]
+        **목적:** [연구 목적 1-2문장]
+        **방법:** [연구 방법 1-2문장]
+        **기대결과:** [예상되는 결과 1-2문장]
         
         ## 1. 서론
         ### 1.1 연구 배경
-        [원본 주제에 대한 상세한 배경 설명 - 최소 3-4개 문단]
+        [원본 주제에 대한 상세한 배경 설명 - 최소 4-5개 문단으로 구성]
+        - 첫 번째 문단: 주제의 기본 개념과 중요성
+        - 두 번째 문단: 현재까지의 연구 현황
+        - 세 번째 문단: 기존 연구의 한계점
+        - 네 번째 문단: 새로운 접근의 필요성
+        - 다섯 번째 문단: 본 연구의 차별점
+        
         ### 1.2 문제 정의
-        [현재 해결되지 않은 문제점들과 연구의 필요성]
-        ### 1.3 연구 목적
-        [이 연구가 달성하고자 하는 구체적인 목표들]
-        ### 1.4 연구 가설
-        [검증하고자 하는 가설들]
+        [현재 해결되지 않은 구체적인 문제점들]
+        
+        ### 1.3 연구 목적 및 가설
+        **연구 목적:**
+        1. [첫 번째 목적]
+        2. [두 번째 목적]
+        3. [세 번째 목적]
+        
+        **연구 가설:**
+        - [가설 1]
+        - [가설 2]
         
         ## 2. 실험 방법
         ### 2.1 실험 설계
-        [전체적인 실험 설계와 접근 방법]
+        [전체적인 실험 설계와 접근 방법을 도식화하여 설명]
+        
         ### 2.2 재료 및 장비
-        [필요한 모든 재료와 장비의 구체적인 목록]
+        **필요한 재료:**
+        - [재료 1]: [구체적인 규격이나 브랜드]
+        - [재료 2]: [구체적인 규격이나 브랜드]
+        - [재료 3]: [구체적인 규격이나 브랜드]
+        
+        **필요한 장비:**
+        - [장비 1]: [모델명이나 사양]
+        - [장비 2]: [모델명이나 사양]
+        
         ### 2.3 실험 절차
-        [단계별로 따라할 수 있는 상세한 실험 과정 - 번호를 매겨서]
-        ### 2.4 데이터 수집 및 분석 방법
-        [어떤 데이터를 어떻게 수집하고 분석할 것인지]
+        **1단계: [준비 단계]**
+        1. [구체적인 준비 과정 1]
+        2. [구체적인 준비 과정 2]
+        3. [구체적인 준비 과정 3]
+        
+        **2단계: [실험 실행]**
+        1. [상세한 실험 과정 1]
+        2. [상세한 실험 과정 2]
+        3. [상세한 실험 과정 3]
+        
+        **3단계: [데이터 수집]**
+        1. [데이터 수집 방법 1]
+        2. [데이터 수집 방법 2]
+        
+        ### 2.4 데이터 분석 방법
+        [통계적 분석 방법과 사용할 소프트웨어 명시]
         
         ## 3. 예상 결과
-        ### 3.1 예상되는 실험 결과
-        [가설에 따른 예상 결과들]
-        ### 3.2 결과 해석 방법
-        [결과를 어떻게 해석하고 분석할 것인지]
+        ### 3.1 정량적 결과 예측
+        [구체적인 수치나 그래프 형태로 예상되는 결과]
+        
+        ### 3.2 정성적 결과 예측
+        [관찰되거나 확인될 것으로 예상되는 현상들]
+        
+        ### 3.3 가설 검증 방법
+        [각 가설을 어떻게 검증할 것인지]
         
         ## 4. 결론
-        ### 4.1 연구의 의의
-        [이 연구가 갖는 학술적, 실용적 의의]
-        ### 4.2 예상되는 한계점
-        [연구의 한계와 개선 방향]
-        ### 4.3 향후 연구 방향
-        [이 연구를 발전시킬 수 있는 후속 연구 아이디어]
+        ### 4.1 연구의 학술적 의의
+        [이 연구가 해당 분야에 기여할 수 있는 점]
+        
+        ### 4.2 실용적 응용 가능성
+        [실생활이나 산업에 어떻게 적용될 수 있는지]
+        
+        ### 4.3 연구의 한계점
+        [예상되는 한계점과 이를 극복할 수 있는 방안]
+        
+        ### 4.4 향후 연구 방향
+        [이 연구를 바탕으로 발전시킬 수 있는 후속 연구 아이디어 3-4개]
+        
+        ## 참고문헌
+        [관련된 주요 연구 논문이나 자료 3-5개 정도 가상으로 작성]
         
         **마지막에 다음 문구를 반드시 포함해주세요:**
         
@@ -124,6 +199,7 @@ def generate_research_paper(selected_topics, original_topic):
         - 실제 논문이 아니며, 참고용으로만 활용해주세요
         - 실제 연구 수행 시에는 지도교사와 상의하시기 바랍니다
         - 이 내용을 그대로 인용하거나 레퍼런스로 사용할 수 없습니다
+        - 모든 실험은 안전 수칙을 준수하여 수행해야 합니다
         """
         
         user_prompt = f"""
@@ -133,6 +209,7 @@ def generate_research_paper(selected_topics, original_topic):
         {topics_text}
         
         위 정보를 바탕으로 고등학생이 수행할 수 있는 체계적인 연구 논문을 작성해주세요.
+        특히 서론의 배경 부분과 실험방법 부분을 매우 상세하게 작성해주세요.
         """
         
         response = client.chat.completions.create(
@@ -203,30 +280,44 @@ section.main > div.block-container {
     color: #2e7d32;
 }
 
-.niche-topic-card {
-    background-color: #f8f9ff;
+.niche-selection-box {
+    background-color: #f0f8ff;
+    border: 2px solid #e6f3ff;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.niche-topic-item {
+    background-color: white;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     padding: 12px;
-    margin: 8px 0;
-    transition: border-color 0.2s;
+    margin: 10px 0;
+    transition: all 0.2s;
 }
 
-.niche-topic-card:hover {
+.niche-topic-item:hover {
     border-color: #3b82f6;
-}
-
-.niche-topic-card.selected {
-    border-color: #3b82f6;
-    background-color: #eff6ff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .paper-section {
     background-color: #fafafa;
     border-left: 4px solid #2563eb;
-    padding: 20px;
-    margin: 20px 0;
+    padding: 25px;
+    margin: 25px 0;
     border-radius: 0 8px 8px 0;
+}
+
+.topic-counter {
+    background-color: #dbeafe;
+    color: #1e40af;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 500;
+    display: inline-block;
+    margin: 10px 0;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -313,7 +404,7 @@ if topic:
             explanation_text = "\n\n".join(explanation_lines)
             
             # 틈새주제 파싱 및 저장
-            st.session_state.niche_topics = parse_niche_topics(explanation_text)
+            st.session_state.niche_topics = parse_niche_topics(explanation_lines)
             
             # DOI 패턴을 링크로 변환 (화면 표시용)
             linked_explanation = convert_doi_to_links(explanation_text)
@@ -417,14 +508,20 @@ if topic:
     # ========== 새로 추가된 틈새주제 선택 섹션 ==========
     if st.session_state.niche_topics:
         st.markdown("---")
-        st.subheader("🔍 세부 틈새주제 선택")
-        st.markdown("위 탐구 아이디어 중에서 **2-3개**를 선택하여 체계적인 논문 형식으로 작성해보세요.")
         
-        # 틈새주제 선택 UI
+        # 틈새주제 선택 박스
+        st.markdown('<div class="niche-selection-box">', unsafe_allow_html=True)
+        st.subheader("🎯 세부 틈새주제 선택")
+        st.markdown("위에서 제안된 탐구 아이디어 중에서 **2-3개**를 선택하여 체계적인 논문 형식으로 작성해보세요.")
+        
+        # 선택된 주제 개수 표시
+        selected_count = 0
         selected_topics = []
         
+        # 각 틈새주제를 체크박스로 표시
         for i, topic in enumerate(st.session_state.niche_topics):
-            # 각 주제를 체크박스로 표시
+            st.markdown('<div class="niche-topic-item">', unsafe_allow_html=True)
+            
             is_selected = st.checkbox(
                 f"**주제 {i+1}:** {topic}",
                 key=f"niche_topic_{i}",
@@ -433,28 +530,37 @@ if topic:
             
             if is_selected:
                 selected_topics.append(topic)
+                selected_count += 1
+            
+            st.markdown('</div>', unsafe_allow_html=True)
         
-        # 선택된 주제 개수 확인
-        if selected_topics:
-            if len(selected_topics) < 2:
-                st.warning("⚠️ 최소 2개의 주제를 선택해주세요.")
-            elif len(selected_topics) > 3:
-                st.warning("⚠️ 최대 3개의 주제만 선택할 수 있습니다.")
-            else:
-                st.success(f"✅ {len(selected_topics)}개 주제가 선택되었습니다.")
+        # 선택 상태 표시
+        if selected_count > 0:
+            st.markdown(f'<div class="topic-counter">선택된 주제: {selected_count}개</div>', unsafe_allow_html=True)
+        
+        # 선택된 주제 개수에 따른 피드백
+        if selected_count == 0:
+            st.info("💡 연구하고 싶은 틈새주제를 선택해주세요.")
+        elif selected_count == 1:
+            st.warning("⚠️ 최소 2개의 주제를 선택해주세요. (현재 1개 선택)")
+        elif selected_count > 3:
+            st.warning("⚠️ 최대 3개의 주제만 선택할 수 있습니다. (현재 {selected_count}개 선택)")
+        else:
+            st.success(f"✅ {selected_count}개 주제가 적절히 선택되었습니다!")
+            
+            # 논문 생성 버튼
+            if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary", help="선택한 틈새주제들을 바탕으로 체계적인 논문을 생성합니다"):
+                st.session_state.selected_niche_topics = selected_topics
                 
-                # 논문 생성 버튼
-                if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary"):
-                    st.session_state.selected_niche_topics = selected_topics
-                    
-                    # 논문 생성
-                    with st.spinner("🤖 AI가 체계적인 논문을 작성 중입니다..."):
-                        st.session_state.generated_paper = generate_research_paper(
-                            selected_topics, topic
-                        )
-                    
-                    if st.session_state.generated_paper:
-                        st.rerun()
+                # 논문 생성
+                with st.spinner("🤖 AI가 체계적인 논문을 작성 중입니다... (약 30초 소요)"):
+                    st.session_state.generated_paper = generate_research_paper(selected_topics, topic)
+                
+                if st.session_state.generated_paper:
+                    st.success("📄 논문이 성공적으로 생성되었습니다!")
+                    st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     
     # ========== 논문 형식 표시 섹션 ==========
     if st.session_state.generated_paper:
@@ -463,6 +569,13 @@ if topic:
         st.subheader("📄 생성된 연구 논문")
         st.markdown("선택한 틈새주제들을 바탕으로 체계적인 논문 형식을 생성했습니다.")
         
+        # 선택된 주제들 표시
+        if st.session_state.selected_niche_topics:
+            st.markdown("**선택된 틈새주제들:**")
+            for i, topic in enumerate(st.session_state.selected_niche_topics, 1):
+                st.markdown(f"**{i}.** {topic}")
+            st.markdown("---")
+        
         # 생성된 논문 표시
         st.markdown(st.session_state.generated_paper)
         st.markdown('</div>', unsafe_allow_html=True)
@@ -470,21 +583,33 @@ if topic:
         # PDF용 텍스트에 논문 내용 추가
         st.session_state.full_text += f"\n\n## 📄 생성된 연구 논문\n\n{st.session_state.generated_paper}\n\n"
         
-        # 다시 선택 버튼
-        if st.button("🔄 다른 주제로 다시 작성하기"):
-            st.session_state.generated_paper = ""
-            st.session_state.selected_niche_topics = []
-            st.rerun()
+        # 논문 관리 버튼들
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 다른 주제로 다시 작성하기", help="틈새주제를 다시 선택하여 새로운 논문을 생성합니다"):
+                st.session_state.generated_paper = ""
+                st.session_state.selected_niche_topics = []
+                st.rerun()
+        
+        with col2:
+            if st.button("📋 논문 내용 복사하기", help="생성된 논문 내용을 클립보드에 복사합니다"):
+                st.text_area("논문 내용 (복사용)", st.session_state.generated_paper, height=100)
     
     # ========== PDF 저장 버튼 (기존 위치 유지) ==========
     if st.session_state.full_text:
         st.markdown("---")
-        if st.button("📥 이 내용 PDF로 저장하기", type="secondary"):
-            path = generate_pdf(st.session_state.full_text)
-            with open(path, "rb") as f:
-                st.download_button(
-                    "📄 PDF 다운로드", 
-                    f, 
-                    file_name="little_science_ai.pdf",
-                    mime="application/pdf"
-                )
+        st.subheader("📥 PDF 다운로드")
+        st.markdown("지금까지의 모든 내용을 PDF 파일로 저장할 수 있습니다.")
+        
+        if st.button("📄 PDF로 저장하기", type="secondary", help="모든 내용이 포함된 PDF 파일을 생성합니다"):
+            with st.spinner("📄 PDF 파일을 생성 중입니다..."):
+                path = generate_pdf(st.session_state.full_text)
+                with open(path, "rb") as f:
+                    st.download_button(
+                        "📄 PDF 다운로드", 
+                        f, 
+                        file_name="little_science_ai_research.pdf",
+                        mime="application/pdf",
+                        help="생성된 PDF 파일을 다운로드합니다"
+                    )
+                st.success("✅ PDF 파일이 준비되었습니다!")
