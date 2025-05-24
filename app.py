@@ -106,7 +106,7 @@ def parse_niche_topics(explanation_lines):
 # 기존의 "논문 생성 버튼" 부분을 다음과 같이 교체:
 
         # 논문 생성 버튼
-                if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary"):
+        if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary"):
             selected_idea = st.session_state.niche_topics[selected_topic_index]
             
             print(f"=== 논문 생성 시작 ===")
