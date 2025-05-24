@@ -92,12 +92,21 @@ def parse_niche_topics(explanation_lines):
             "다른 분야와의 융합 연구 - 타 학문 분야와 연결한 새로운 접근법"
         ]
         return fallback_topics
+        
+    except Exception as e:
+        print(f"파싱 오류: {e}")  # 디버깅용
+        fallback_topics = [
+            "기존 연구의 한계점 개선 - 현재 연구에서 부족한 부분을 찾아 개선방안 제시",
+            "실용적 응용 방안 탐구 - 실생활에 적용할 수 있는 구체적 방법 연구",
+            "다른 분야와의 융합 연구 - 타 학문 분야와 연결한 새로운 접근법"
+        ]
+        return fallback_topics
 
 # 2. 논문 생성 부분에 추가 디버깅 (기존 코드 수정)
 # 기존의 "논문 생성 버튼" 부분을 다음과 같이 교체:
 
         # 논문 생성 버튼
-        if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary"):
+                if st.button("📝 선택한 주제로 논문 형식 작성하기", type="primary"):
             selected_idea = st.session_state.niche_topics[selected_topic_index]
             
             print(f"=== 논문 생성 시작 ===")
@@ -122,10 +131,9 @@ def parse_niche_topics(explanation_lines):
             
             if st.session_state.generated_paper:
                 st.success("📄 논문이 성공적으로 생성되었습니다!")
-                # st.rerun()
+                st.rerun()
             else:
                 st.error("논문 생성에 실패했습니다. 다시 시도해주세요.")
-
 # 3. 추가: streamlit 콘솔 로그 확인을 위한 코드 (맨 위에 추가)
 import logging
 logging.basicConfig(level=logging.INFO)
