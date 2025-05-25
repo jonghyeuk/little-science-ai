@@ -6,3 +6,4 @@ scikit-learn
 feedparser
 openpyxl
 deep-translator
+anthropic
