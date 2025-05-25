@@ -1,4 +1,4 @@
-from openai import OpenAI
+import anthropic
 import streamlit as st
 import re
 
@@ -20,11 +20,11 @@ def convert_doi_to_links(text):
 
 @st.cache_data(show_spinner="🤖 AI 설명을 생성 중입니다...", ttl=3600)
 def explain_topic(topic: str) -> list:
-    """GPT-4 기반 주제 설명 생성 (문단 단위 리스트 반환)"""
+    """Claude 기반 주제 설명 생성 (문단 단위 리스트 반환)"""
     try:
-        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
     except KeyError:
-        st.error("❌ OpenAI API 키가 설정되지 않았습니다.")
+        st.error("❌ Claude API 키가 설정되지 않았습니다.")
         st.stop()
     
     system_prompt = """
@@ -56,19 +56,21 @@ def explain_topic(topic: str) -> list:
     user_prompt = f"주제: {topic}"
     
     try:
-        response = client.chat.completions.create(
-            model="gpt-4-turbo",
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",  # 최신 Claude 모델
+            max_tokens=4000,  # Claude는 max_tokens 필수
+            system=system_prompt,  # Claude는 system을 별도 파라미터로
             messages=[
-                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.7
+            ]
         )
-        full_text = response.choices[0].message.content
+        
+        full_text = response.content[0].text
         paragraphs = full_text.strip().split('\n\n')
         return [p.strip() for p in paragraphs if p.strip()]
+        
     except Exception as e:
-        st.error(f"❌ GPT 설명 중 오류 발생: {e}")
+        st.error(f"❌ Claude 설명 중 오류 발생: {e}")
         return ["AI 설명을 생성할 수 없습니다."]
 
 # 직접 링크가 포함된 설명 생성 (앱에서 선택적 사용 가능)
