@@ -4,7 +4,7 @@ import streamlit as st
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from utils.explain_topic import explain_topic
-from openai import OpenAI
+import anthropic  # OpenAI 대신 anthropic 사용
 import re
 
 # 📁 내부 DB 경로
@@ -71,38 +71,40 @@ def extract_keywords(text, top_n=5):
     sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
     return [word for word, _ in sorted_words[:top_n]]
 
-# 효율적인 GPT 번역 함수 - 키워드만 번역
+# 효율적인 Claude 번역 함수 - 키워드만 번역
 @st.cache_data(show_spinner=False, ttl=3600)
-def gpt_translate_keywords(keywords, tgt_lang="en") -> list:
+def claude_translate_keywords(keywords, tgt_lang="en") -> list:
     if not keywords:
         return []
         
     try:
-        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
         keyword_text = ", ".join(keywords)
-        prompt = f"다음 키워드들을 {tgt_lang}로 번역해주세요. 번역된 키워드만 쉼표로 구분하여 알려주세요: {keyword_text}"
         
-        res = client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=100,  # 키워드 번역은 짧으니 적은 토큰
+            system=f"다음 키워드들을 {tgt_lang}로 번역해주세요. 번역된 키워드만 쉼표로 구분하여 알려주세요.",
+            messages=[
+                {"role": "user", "content": keyword_text}
+            ]
         )
         
-        translated = res.choices[0].message.content.strip()
+        translated = response.content[0].text.strip()
         return [k.strip() for k in translated.split(',')]
     except Exception as e:
         st.warning(f"키워드 번역 중 오류: {e}")
         return keywords
 
-# 일괄 처리 함수 - 여러 프로젝트 제목 한 번에 처리
+# 일괄 처리 함수 - 여러 프로젝트 제목 한 번에 처리 (Claude 버전)
 @st.cache_data(show_spinner=False, ttl=3600)
 def batch_infer_content(titles, categories=None):
-    """여러 프로젝트 제목을 한 번에 처리하여 GPT API 호출 최소화"""
+    """여러 프로젝트 제목을 한 번에 처리하여 Claude API 호출 최소화"""
     if not titles:
         return []
         
     try:
-        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
         
         # 범주 정보 추가
         prompts = []
@@ -132,17 +134,17 @@ def batch_infer_content(titles, categories=None):
         # 사용자 프롬프트 작성
         user_prompt = "다음 과학 논문 제목들의 내용을 추론해주세요:\n\n" + "\n".join(prompts)
         
-        # API 호출
-        res = client.chat.completions.create(
-            model="gpt-4",
+        # Claude API 호출
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=2000,  # 여러 프로젝트 일괄 처리를 위한 충분한 토큰
+            system=system_prompt,
             messages=[
-                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.7
+            ]
         )
         
-        full_response = res.choices[0].message.content.strip()
+        full_response = response.content[0].text.strip()
         
         # 응답 파싱
         summaries = []
@@ -183,11 +185,11 @@ def batch_infer_content(titles, categories=None):
         # 에러 발생시 기본 요약 반환
         return [f"이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (추론 오류)" for title in titles]
 
-# 개별 프로젝트 내용 추론 함수 (기존 함수 보존)
+# 개별 프로젝트 내용 추론 함수 (Claude 버전)
 @st.cache_data(show_spinner=False, ttl=3600)
 def infer_project_content(title, category=None):
     try:
-        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
         
         system_prompt = """
         당신은 과학 논문 제목만으로 내용을 추론하는 도우미입니다. 중요한 규칙:
@@ -205,16 +207,16 @@ def infer_project_content(title, category=None):
         if category:
             user_prompt = f"{title} (연구 분야: {category})"
             
-        res = client.chat.completions.create(
-            model="gpt-4",
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=300,  # 개별 프로젝트 추론을 위한 적절한 토큰
+            system=system_prompt,
             messages=[
-                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.7
+            ]
         )
         
-        return res.choices[0].message.content.strip()
+        return response.content[0].text.strip()
     except Exception as e:
         return f"이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (추론 과정에서 오류가 발생했습니다.)"
 
@@ -250,8 +252,8 @@ def search_similar_titles(user_input, max_results=5):
     if not keywords:
         return []
     
-    # 2. 키워드 번역 (API 호출 1회)
-    translated_keywords = gpt_translate_keywords(keywords)
+    # 2. 키워드 번역 (Claude API 호출 1회)
+    translated_keywords = claude_translate_keywords(keywords)
     if not translated_keywords:
         translated_keywords = keywords
     
