@@ -56,20 +56,51 @@ def initialize_db():
         print(f"❌ 내부 DB 초기화 실패: {e}")
         return False
 
-# 키워드 추출 함수
+# 키워드 추출 함수 - 개선됨
 def extract_keywords(text, top_n=5):
+    # 텍스트 정제 강화
     text = re.sub(r'[^\w\s]', '', text.lower())
-    stopwords = ['이', '그', '저', '것', '및', '등', '를', '을', '에', '에서', '의', '으로', '로', '에게', '하다', '있다', '되다',
-                'the', 'of', 'and', 'a', 'to', 'in', 'is', 'that', 'for', 'on', 'with']
     
-    words = [word for word in text.split() if word not in stopwords and len(word) > 1]
+    # 한국어 조사/어미 제거 강화
+    stopwords = [
+        # 한국어 조사/어미
+        '이', '가', '을', '를', '에', '에서', '로', '으로', '의', '는', '은', '도', '만', '부터', '까지', '와', '과', '하고',
+        '에게', '한테', '께', '아', '야', '이야', '라', '이라', '에요', '예요', '습니다', '입니다',
+        '하다', '있다', '되다', '같다', '이다', '아니다',
+        # 기타 불용어
+        '그', '저', '것', '및', '등', '들', '때', '곳', '중', '간', '내', '외', '전', '후', '상', '하', '좌', '우',
+        # 영어 불용어
+        'the', 'of', 'and', 'a', 'to', 'in', 'is', 'that', 'for', 'on', 'with', 'as', 'be', 'by', 'from', 'at', 'or'
+    ]
     
+    # 단어 분리 및 필터링
+    words = []
+    for word in text.split():
+        # 길이 2 이상, 불용어 제외, 숫자만으로 구성된 단어 제외
+        if len(word) >= 2 and word not in stopwords and not word.isdigit():
+            # 한국어는 어간 추출 (간단한 방법)
+            if any('\uAC00' <= char <= '\uD7A3' for char in word):  # 한글 포함
+                # 조사 제거 (간단한 규칙)
+                if word.endswith(('이', '가', '을', '를', '에', '로', '의', '는', '은')):
+                    word = word[:-1]
+                elif word.endswith(('에서', '으로', '에게', '한테', '에요', '예요')):
+                    word = word[:-2]
+                elif word.endswith(('습니다', '입니다')):
+                    word = word[:-3]
+            words.append(word)
+    
+    # 단어 빈도 계산
     word_counts = {}
     for word in words:
         word_counts[word] = word_counts.get(word, 0) + 1
     
+    # 빈도순 정렬
     sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
-    return [word for word, _ in sorted_words[:top_n]]
+    
+    # 상위 키워드 반환
+    top_keywords = [word for word, _ in sorted_words[:top_n]]
+    
+    return top_keywords
 
 # 효율적인 Claude 번역 함수 - 키워드만 번역
 @st.cache_data(show_spinner=False, ttl=3600)
@@ -230,7 +261,7 @@ def load_internal_db():
         st.error(f"❌ 내부 DB 로드 실패: {e}")
         return pd.DataFrame()
 
-# 최적화된 유사 프로젝트 검색 함수
+# 최적화된 유사 프로젝트 검색 함수 - 디버깅 강화
 def search_similar_titles(user_input, max_results=5):
     global _DB_INITIALIZED, _PROCESSED_DB, _VECTORIZER, _TFIDF_MATRIX
     
@@ -247,9 +278,10 @@ def search_similar_titles(user_input, max_results=5):
         df = _PROCESSED_DB
     
     if df.empty:
+        print("   ❌ DB가 비어있음")
         return []
     
-    # 1. 키워드 추출 - 디버깅 추가
+    # 1. 키워드 추출 - 디버깅 로그 추가
     print("📝 1단계: 키워드 추출")
     keywords = extract_keywords(user_input)
     print(f"   추출된 키워드: {keywords}")
@@ -258,7 +290,7 @@ def search_similar_titles(user_input, max_results=5):
         print("   ❌ 키워드 추출 실패")
         return []
     
-    # 2. 키워드 번역 (Claude API 호출 1회) - 디버깅 추가
+    # 2. 키워드 번역 (Claude API 호출 1회) - 디버깅 로그 추가
     print("🌐 2단계: 키워드 번역")
     translated_keywords = claude_translate_keywords(keywords)
     print(f"   번역된 키워드: {translated_keywords}")
@@ -270,10 +302,10 @@ def search_similar_titles(user_input, max_results=5):
     search_query = " ".join(translated_keywords)
     print(f"   최종 검색어: '{search_query}'")
     
-    # 3. 영어 제목으로 검색 (초기화된 벡터라이저 사용) - 디버깅 추가
+    # 3. 영어 제목으로 검색 (초기화된 벡터라이저 사용) - 오류 수정
     print("🔢 3단계: 유사도 계산")
     try:
-        if _VECTORIZER and _TFIDF_MATRIX:
+        if _VECTORIZER is not None and _TFIDF_MATRIX is not None:  # 수정: is not None 명시적 비교
             # 사전 처리된 벡터라이저와 매트릭스 사용
             search_vector = _VECTORIZER.transform([search_query])
             cosine_sim = cosine_similarity(search_vector, _TFIDF_MATRIX)[0]
@@ -298,41 +330,42 @@ def search_similar_titles(user_input, max_results=5):
         print(f"   ❌ 검색 벡터화 오류: {e}")
         return []
     
-    # 4. 결과 정렬 - 디버깅 추가
-    print("📊 4단계: 결과 필터링 및 정렬")
+    # 4. 결과 정렬 - 디버깅 로그 추가
+    print("📊 4단계: 결과 분석")
     result_df = df.copy()
     result_df['score'] = cosine_sim
     
-    # 상위 10개 점수 확인
-    top_10_scores = result_df.nlargest(10, 'score')[['Project Title', 'score']]
+    # 상위 10개 점수와 제목 출력
+    top_10_scores = result_df.nlargest(10, 'score')[['Project Title', 'Category', 'score']]
     print("   상위 10개 유사도 점수:")
     for idx, row in top_10_scores.iterrows():
-        print(f"     {row['score']:.4f}: {row['Project Title'][:50]}...")
+        print(f"     {row['score']:.6f}: [{row.get('Category', 'N/A')}] {row['Project Title'][:60]}...")
     
-    # 임계값 필터링
-    threshold = 0.05
-    filtered_df = result_df[result_df['score'] > threshold].copy()
-    print(f"   임계값 {threshold} 이상: {len(filtered_df)}개")
+    # 임계값 테스트
+    thresholds = [0.1, 0.05, 0.01, 0.005]
+    selected_threshold = 0.005  # 기본값
+    for threshold in thresholds:
+        filtered_count = len(result_df[result_df['score'] > threshold])
+        print(f"   임계값 {threshold} 이상: {filtered_count}개")
+        if filtered_count > 0 and filtered_count <= max_results * 3:  # 적당한 수의 결과
+            selected_threshold = threshold
+            break
+    
+    # 선택된 임계값으로 필터링
+    filtered_df = result_df[result_df['score'] > selected_threshold].copy()
+    print(f"   선택된 임계값: {selected_threshold}")
     
     if filtered_df.empty:
-        print("   ❌ 임계값 이상의 결과 없음")
-        # 임계값을 낮춰서 재시도
-        threshold = 0.01
-        filtered_df = result_df[result_df['score'] > threshold].copy()
-        print(f"   임계값 {threshold}로 재시도: {len(filtered_df)}개")
-        
-        if filtered_df.empty:
-            print("   ❌ 관련 프로젝트를 찾을 수 없음")
-            return []
+        print("   ❌ 관련 프로젝트를 찾을 수 없음")
+        return []
     
     # 5. 상위 결과 선택
     top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
     print(f"   최종 선택: {len(top_df)}개")
     
-    # 선택된 논문들 출력
     print("📋 선택된 논문들:")
     for idx, row in top_df.iterrows():
-        print(f"     {row['score']:.4f}: {row['Project Title']}")
+        print(f"     {row['score']:.6f}: [{row.get('Category', 'N/A')}] {row['Project Title']}")
     
     # 6. 결과를 위한 제목과 카테고리 수집
     titles = []
