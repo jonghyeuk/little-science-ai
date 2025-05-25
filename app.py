@@ -485,7 +485,7 @@ if topic:
             
             if st.session_state.generated_paper:
                 st.success("📄 논문이 성공적으로 생성되었습니다!")
-                st.rerun() 
+                # st.rerun() 
             else:
                 st.error("논문 생성에 실패했습니다. 다시 시도해주세요.")
     
