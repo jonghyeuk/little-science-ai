@@ -1,6 +1,7 @@
 # utils/generate_paper.py
 import streamlit as st
-from openai import OpenAI
+import anthropic
+import json
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def generate_research_paper(topic, research_idea, references=""):
@@ -16,7 +17,7 @@ def generate_research_paper(topic, research_idea, references=""):
         각 섹션별 논문 내용이 포함된 딕셔너리
     """
     try:
-        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
         
         # 시스템 프롬프트 작성
         system_prompt = """
@@ -37,8 +38,7 @@ def generate_research_paper(topic, research_idea, references=""):
         - 시각자료는 텍스트로만 설명하고, 실제 이미지를 생성하지 마세요
         - 실험 방법은 실제로 수행 가능한 구체적인 절차를 포함해야 합니다
         
-        응답 형식은 다음과 같이 각 섹션을 명확히 구분하여 제공해주세요:
-        ```
+        응답은 반드시 다음과 같은 JSON 형식으로만 제공해주세요:
         {
           "abstract": "초록 내용...",
           "methods": "실험 방법 내용...",
@@ -47,9 +47,8 @@ def generate_research_paper(topic, research_idea, references=""):
           "conclusion": "결론 내용...",
           "references": "참고문헌 목록..."
         }
-        ```
         
-        JSON 형식으로 응답해야 하며, 각 섹션의 키 이름은 위의 예시와 동일해야 합니다.
+        JSON 형식으로만 응답하고, 다른 텍스트는 포함하지 마세요. 각 섹션의 키 이름은 위의 예시와 정확히 동일해야 합니다.
         """
         
         # 사용자 프롬프트 작성
@@ -61,23 +60,44 @@ def generate_research_paper(topic, research_idea, references=""):
         관련 자료 및 참고문헌:
         {references}
         
-        위 정보를 바탕으로 논문 형식의 연구 계획을 작성해주세요.
+        위 정보를 바탕으로 논문 형식의 연구 계획을 JSON 형식으로 작성해주세요.
         """
         
-        # GPT 호출
-        response = client.chat.completions.create(
-            model="gpt-4-turbo",
+        # Claude 호출
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",  # 최신 Claude 모델
+            max_tokens=4000,  # 논문 생성을 위한 충분한 토큰
+            system=system_prompt,  # Claude는 system을 별도 파라미터로
             messages=[
-                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.7,
-            response_format={"type": "json_object"}
+            ]
         )
         
         # 응답 파싱
-        import json
-        paper_data = json.loads(response.choices[0].message.content)
+        response_text = response.content[0].text.strip()
+        
+        # JSON 파싱 시도
+        try:
+            # 혹시 마크다운 코드 블록으로 감싸져 있다면 제거
+            if response_text.startswith('```json'):
+                response_text = response_text[7:-3].strip()
+            elif response_text.startswith('```'):
+                response_text = response_text[3:-3].strip()
+            
+            paper_data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            print(f"JSON 파싱 오류: {e}")
+            print(f"응답 텍스트: {response_text[:500]}...")
+            
+            # JSON 파싱 실패 시 기본 구조로 파싱 시도
+            paper_data = {
+                "abstract": "JSON 파싱 중 오류가 발생했습니다.",
+                "methods": "실험 방법 생성 중 오류가 발생했습니다.",
+                "results": "예상 결과 생성 중 오류가 발생했습니다.",
+                "visuals": "시각자료 제안 생성 중 오류가 발생했습니다.",
+                "conclusion": "결론 생성 중 오류가 발생했습니다.",
+                "references": "참고문헌 생성 중 오류가 발생했습니다."
+            }
         
         return paper_data
         
@@ -88,6 +108,6 @@ def generate_research_paper(topic, research_idea, references=""):
             "methods": "실험 방법 생성 중 오류가 발생했습니다.",
             "results": "예상 결과 생성 중 오류가 발생했습니다.",
             "visuals": "시각자료 제안 생성 중 오류가 발생했습니다.",
-            "conclusion": "결론 생성 중 오류가 발생했습니다.",
+            "conclusion": "결론 생성 중 오류가 발생했습니다.",  
             "references": "참고문헌 생성 중 오류가 발생했습니다."
         }
