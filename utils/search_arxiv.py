@@ -1,52 +1,52 @@
 import urllib.parse
 import feedparser
 import streamlit as st
-from openai import OpenAI  # 검색어 번역용
+import anthropic  # OpenAI 대신 anthropic 사용
 
-# 검색어 번역 함수 추가
+# 검색어 번역 함수 (Claude 버전)
 def translate_to_english(query):
     """한글 검색어를 영어로 번역"""
     try:
-        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # 빠른 모델 사용
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=100,  # 번역은 짧으니 적은 토큰
+            system="한국어를 영어로 번역해주세요. 번역만 제공하고 다른 설명은 하지 마세요.",
             messages=[
-                {"role": "system", "content": "한국어를 영어로 번역해주세요. 번역만 제공하고 다른 설명은 하지 마세요."},
                 {"role": "user", "content": query}
             ]
         )
-        translated = response.choices[0].message.content.strip()
+        translated = response.content[0].text.strip()
         print(f"번역: '{query}' → '{translated}'")
         return translated
     except Exception as e:
         print(f"번역 오류: {e}")
         return query  # 오류 발생 시 원본 검색어 사용
 
-# 영문 초록을 한국어로 요약하는 함수
+# 영문 초록을 한국어로 요약하는 함수 (Claude 버전)
 def summarize_in_korean(summary):
     """영문 초록을 1-2문장의 한국어로 요약"""
     try:
         # 초록이 너무 길 경우 앞부분만 사용
         truncated_summary = summary[:1000] if len(summary) > 1000 else summary
         
-        client = OpenAI(api_key=st.secrets["api"]["openai_key"])
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # 빠른 모델 사용
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=200,  # 요약을 위한 적절한 토큰 수
+            system="다음 영문 초록을 1-2문장의 간결한 한국어로 요약해주세요. 전문 용어는 가능한 그대로 유지하되, 고등학생이 이해할 수 있는 수준으로 작성해주세요.",
             messages=[
-                {"role": "system", "content": "다음 영문 초록을 1-2문장의 간결한 한국어로 요약해주세요. 전문 용어는 가능한 그대로 유지하되, 고등학생이 이해할 수 있는 수준으로 작성해주세요."},
                 {"role": "user", "content": truncated_summary}
-            ],
-            max_tokens=150,
-            temperature=0.7
+            ]
         )
         
-        korean_summary = response.choices[0].message.content.strip()
+        korean_summary = response.content[0].text.strip()
         return korean_summary
     except Exception as e:
         print(f"한국어 요약 오류: {e}")
         return "한국어 요약을 생성할 수 없습니다."
 
-# arXiv 검색 함수 수정
+# arXiv 검색 함수 (Claude 버전)
 def search_arxiv(query, max_results=5):
     # 1. 한글 검색어 번역
     if any('\uAC00' <= c <= '\uD7A3' for c in query):  # 한글 포함 확인
