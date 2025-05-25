@@ -242,7 +242,7 @@ topic = st.text_input("🔬 연구하고 싶은 과학 주제를 입력하세요
 # 🔥 주제가 입력된 경우 (캐싱 로직 적용)
 if topic:
     # 새 주제일 때만 검색 실행
-    if st.session_state.last_searched_topic != topic:
+    if True:  # st.session_state.last_searched_topic != topic:
         # 새 주제 검색
         st.session_state.last_searched_topic = topic
         st.session_state.generated_paper = {}  # 논문 초기화
