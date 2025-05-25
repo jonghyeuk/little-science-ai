@@ -234,6 +234,8 @@ def load_internal_db():
 def search_similar_titles(user_input, max_results=5):
     global _DB_INITIALIZED, _PROCESSED_DB, _VECTORIZER, _TFIDF_MATRIX
     
+    print(f"🔍 검색 시작: '{user_input}'")
+    
     # DB 초기화 확인 및 수행
     if not _DB_INITIALIZED:
         initialize_db()
@@ -247,26 +249,38 @@ def search_similar_titles(user_input, max_results=5):
     if df.empty:
         return []
     
-    # 1. 키워드 추출
+    # 1. 키워드 추출 - 디버깅 추가
+    print("📝 1단계: 키워드 추출")
     keywords = extract_keywords(user_input)
+    print(f"   추출된 키워드: {keywords}")
+    
     if not keywords:
+        print("   ❌ 키워드 추출 실패")
         return []
     
-    # 2. 키워드 번역 (Claude API 호출 1회)
+    # 2. 키워드 번역 (Claude API 호출 1회) - 디버깅 추가
+    print("🌐 2단계: 키워드 번역")
     translated_keywords = claude_translate_keywords(keywords)
+    print(f"   번역된 키워드: {translated_keywords}")
+    
     if not translated_keywords:
         translated_keywords = keywords
+        print("   ⚠️ 번역 실패, 원본 키워드 사용")
     
     search_query = " ".join(translated_keywords)
+    print(f"   최종 검색어: '{search_query}'")
     
-    # 3. 영어 제목으로 검색 (초기화된 벡터라이저 사용)
+    # 3. 영어 제목으로 검색 (초기화된 벡터라이저 사용) - 디버깅 추가
+    print("🔢 3단계: 유사도 계산")
     try:
         if _VECTORIZER and _TFIDF_MATRIX:
             # 사전 처리된 벡터라이저와 매트릭스 사용
             search_vector = _VECTORIZER.transform([search_query])
             cosine_sim = cosine_similarity(search_vector, _TFIDF_MATRIX)[0]
+            print(f"   벡터화 성공, 총 {len(cosine_sim)}개 문서와 비교")
         else:
             # 초기화 실패 시 기존 방식으로 폴백
+            print("   ⚠️ 사전 처리된 벡터 없음, 새로 계산")
             title_field = 'Project Title'
             corpus = df[title_field].fillna("").astype(str).tolist()
             corpus.append(search_query)
@@ -279,20 +293,46 @@ def search_similar_titles(user_input, max_results=5):
             
             tfidf_matrix = vectorizer.fit_transform(corpus)
             cosine_sim = cosine_similarity(tfidf_matrix[-1:], tfidf_matrix[:-1])[0]
+            print(f"   새로 벡터화 완료, 총 {len(cosine_sim)}개 문서와 비교")
     except Exception as e:
-        print(f"검색 벡터화 오류: {e}")
+        print(f"   ❌ 검색 벡터화 오류: {e}")
         return []
     
-    # 4. 결과 정렬
+    # 4. 결과 정렬 - 디버깅 추가
+    print("📊 4단계: 결과 필터링 및 정렬")
     result_df = df.copy()
     result_df['score'] = cosine_sim
-    filtered_df = result_df[result_df['score'] > 0.05].copy()
+    
+    # 상위 10개 점수 확인
+    top_10_scores = result_df.nlargest(10, 'score')[['Project Title', 'score']]
+    print("   상위 10개 유사도 점수:")
+    for idx, row in top_10_scores.iterrows():
+        print(f"     {row['score']:.4f}: {row['Project Title'][:50]}...")
+    
+    # 임계값 필터링
+    threshold = 0.05
+    filtered_df = result_df[result_df['score'] > threshold].copy()
+    print(f"   임계값 {threshold} 이상: {len(filtered_df)}개")
     
     if filtered_df.empty:
-        return []
+        print("   ❌ 임계값 이상의 결과 없음")
+        # 임계값을 낮춰서 재시도
+        threshold = 0.01
+        filtered_df = result_df[result_df['score'] > threshold].copy()
+        print(f"   임계값 {threshold}로 재시도: {len(filtered_df)}개")
+        
+        if filtered_df.empty:
+            print("   ❌ 관련 프로젝트를 찾을 수 없음")
+            return []
     
     # 5. 상위 결과 선택
     top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
+    print(f"   최종 선택: {len(top_df)}개")
+    
+    # 선택된 논문들 출력
+    print("📋 선택된 논문들:")
+    for idx, row in top_df.iterrows():
+        print(f"     {row['score']:.4f}: {row['Project Title']}")
     
     # 6. 결과를 위한 제목과 카테고리 수집
     titles = []
@@ -303,7 +343,9 @@ def search_similar_titles(user_input, max_results=5):
     
     # 7. 일괄 처리로 모든 요약 한 번에 생성
     if titles:
+        print("🤖 5단계: AI 요약 생성")
         summaries = batch_infer_content(titles, categories)
+        print(f"   생성된 요약: {len(summaries)}개")
     else:
         summaries = []
     
@@ -335,4 +377,5 @@ def search_similar_titles(user_input, max_results=5):
         
         results.append(result_item)
     
+    print(f"✅ 검색 완료: {len(results)}개 결과 반환")
     return results
