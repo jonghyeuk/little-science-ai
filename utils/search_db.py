@@ -551,7 +551,7 @@ def search_similar_titles(user_input: str, max_results: int = 10):
         return []
     
     # 5. 상위 결과 선택
-    top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
+    top_df = apply_enhanced_filtering(result_df, translated_keywords, user_input, max_results)
     print(f"   최종 선택: {len(top_df)}개")
     
     print("📋 선택된 논문들:")
@@ -603,3 +603,42 @@ def search_similar_titles(user_input: str, max_results: int = 10):
     
     print(f"✅ 검색 완료: {len(results)}개 결과 반환")
     return results
+
+# search_db.py에 간단히 추가할 함수 (1개만)
+
+def simple_title_length_filter(result_df, max_results):
+    """간단한 제목 길이 기반 필터링 - 너무 짧은 제목 제외"""
+    
+    print("🔍 간단 제목 길이 필터링 적용...")
+    
+    # 제목 길이 확인 및 필터링
+    filtered_rows = []
+    
+    for _, row in result_df.iterrows():
+        title = row.get('Project Title', '')
+        title_word_count = len(title.split())
+        
+        # 3단어 이하 제목은 유사도가 높을 때만 통과
+        if title_word_count <= 3:
+            if row.get('score', 0) > 0.02:  # 높은 유사도 요구
+                filtered_rows.append(row)
+                print(f"  ✅ 짧은 제목 통과: '{title}' (점수: {row.get('score', 0):.4f})")
+            else:
+                print(f"  ❌ 짧은 제목 제외: '{title}' (점수: {row.get('score', 0):.4f})")
+        else:
+            # 4단어 이상은 기존 임계값 적용
+            if row.get('score', 0) > 0.005:
+                filtered_rows.append(row)
+    
+    if filtered_rows:
+        filtered_df = pd.DataFrame(filtered_rows)
+        result = filtered_df.sort_values(by='score', ascending=False).head(max_results)
+        print(f"✅ 필터링 완료: {len(result)}개 선별")
+        return result
+    else:
+        print("⚠️ 필터링 후 결과 없음, 원본 사용")
+        return result_df.sort_values(by='score', ascending=False).head(max_results)
+
+# search_similar_titles 함수에서 이렇게 교체:
+# 기존: top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
+# 새로: top_df = simple_title_length_filter(result_df, max_results)
