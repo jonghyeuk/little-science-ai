@@ -97,14 +97,14 @@ def parse_niche_topics(explanation_lines):
 
 # DOI 감지 및 링크 변환 함수
 def convert_doi_to_links(text):
-    """DOI 패턴을 감지하여 클릭 가능한 링크로 변환"""
-    # DOI 패턴 정규 표현식: 10.XXXX/YYYY 형식
+    """DOI 패턴을 감지하여 클릭하기 쉬운 링크로 변환"""
+    # DOI 패턴 정규 표현식
     doi_pattern = r'(?<!\w)(?:DOI\s*:\s*)?(\b10\.\d{4,}\/[a-zA-Z0-9./_()-]+\b)'
     
-    # HTML 링크로 변환
+    # 간단한 링크 변환
     def replace_doi(match):
         doi = match.group(1)
-        return f'<a href="https://doi.org/{doi}" target="_blank" style="color: #0969da; text-decoration: none;">{doi}</a>'
+        return f'<a href="https://doi.org/{doi}" target="_blank" style="color: #0969da; text-decoration: none; white-space: nowrap;">📄 논문 링크</a>'
     
     # 텍스트 내 DOI 패턴을 링크로 변환
     linked_text = re.sub(doi_pattern, replace_doi, text)
