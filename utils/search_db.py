@@ -314,6 +314,10 @@ def expand_search_keywords(keywords):
             expanded.update(keyword_expansions[keyword.lower()])
     
     return list(expanded)
+
+# 메인 검색 함수 - 누락되었던 함수 추가
+def search_similar_titles(user_input: str, max_results: int = 10):
+    """메인 검색 함수 - 사용자 입력으로 유사한 논문 제목들을 검색"""
     global _DB_INITIALIZED, _PROCESSED_DB, _VECTORIZER, _TFIDF_MATRIX
     
     print(f"🔍 검색 시작: '{user_input}'")
