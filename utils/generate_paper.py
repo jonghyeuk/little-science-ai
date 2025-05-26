@@ -12,14 +12,23 @@ def generate_research_paper(topic, research_idea, references=""):
     try:
         client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
         
-        # 간소화된 시스템 프롬프트 - JSON 형식 엄격히 요구
+        # 서론 추가된 시스템 프롬프트 - JSON 형식 엄격히 요구
         system_prompt = """
         고등학생을 위한 연구 계획서를 작성해주세요. 반드시 JSON 형식으로만 응답하세요.
         
         응답 형식 (이 형식 외에는 절대 다른 텍스트 포함 금지):
-        {"abstract": "초록", "methods": "방법", "results": "결과", "visuals": "시각자료", "conclusion": "결론", "references": "참고문헌"}
+        {"abstract": "초록", "introduction": "서론", "methods": "방법", "results": "결과", "visuals": "시각자료", "conclusion": "결론", "references": "참고문헌"}
         
-        각 섹션은 고등학생이 이해할 수 있는 수준으로 작성하되, 체계적이고 구체적으로 써주세요.
+        각 섹션 작성 가이드:
+        - abstract: 연구 목적과 예상 결과를 간단히 요약 (150-200단어)
+        - introduction: 연구 배경 → 문제점 → 기존 연구 → 본 연구 목적 순서로 작성 (300-400단어)
+        - methods: 실험 절차와 방법론 (300-400단어)  
+        - results: 예상되는 결과와 의미 (200-300단어)
+        - visuals: 시각자료 제안을 텍스트로 설명 (100-200단어)
+        - conclusion: 연구의 의의와 기대효과 (150-200단어)
+        - references: 참고할 만한 문헌 목록
+        
+        고등학생이 이해할 수 있는 수준으로 작성하되, 체계적이고 구체적으로 써주세요.
         """
         
         # 사용자 프롬프트 단순화
@@ -101,6 +110,7 @@ def parse_text_response(text):
     try:
         sections = {
             "abstract": "",
+            "introduction": "",
             "methods": "",
             "results": "",
             "visuals": "",
@@ -120,6 +130,8 @@ def parse_text_response(text):
             # 섹션 헤더 감지
             if any(keyword in line.lower() for keyword in ['초록', 'abstract']):
                 current_section = 'abstract'
+            elif any(keyword in line.lower() for keyword in ['서론', 'introduction', '배경']):
+                current_section = 'introduction'
             elif any(keyword in line.lower() for keyword in ['방법', 'method']):
                 current_section = 'methods'
             elif any(keyword in line.lower() for keyword in ['결과', 'result']):
@@ -149,6 +161,7 @@ def create_error_response():
     """에러 발생 시 기본 응답"""
     return {
         "abstract": "논문 초록 생성 중 오류가 발생했습니다. 주제를 더 구체적으로 입력하고 다시 시도해주세요.",
+        "introduction": "서론 생성 중 오류가 발생했습니다. 연구 배경을 다시 검토해주세요.",
         "methods": "연구 방법 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
         "results": "예상 결과 생성 중 오류가 발생했습니다. 네트워크 상태를 확인해주세요.",
         "visuals": "시각자료 제안 생성 중 오류가 발생했습니다.",
