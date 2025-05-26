@@ -104,29 +104,165 @@ def extract_keywords(text, top_n=5):
 
 # 효율적인 Claude 번역 함수 - 키워드만 번역
 @st.cache_data(show_spinner=False, ttl=3600)
-def claude_translate_keywords(keywords, tgt_lang="en") -> list:
-    if not keywords:
+def batch_infer_content(titles, categories=None):
+    """여러 프로젝트 제목을 한 번에 처리하여 Claude API 호출 최소화 - 개선된 버전"""
+    if not titles:
         return []
-        
+    
+    print(f"=== 일괄 요약 생성 시작: {len(titles)}개 논문 ===")    
     try:
         client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
-        keyword_text = ", ".join(keywords)
         
+        # 제목이 너무 많으면 5개씩 분할 처리
+        if len(titles) > 5:
+            print(f"⚠️ 제목이 {len(titles)}개로 많음, 5개씩 분할 처리")
+            all_summaries = []
+            for i in range(0, len(titles), 5):
+                batch_titles = titles[i:i+5]
+                batch_categories = categories[i:i+5] if categories else None
+                batch_summaries = batch_infer_content(batch_titles, batch_categories)
+                all_summaries.extend(batch_summaries)
+            return all_summaries
+        
+        # 범주 정보 추가
+        prompts = []
+        for i, title in enumerate(titles):
+            category = categories[i] if categories and i < len(categories) else None
+            if category:
+                prompts.append(f"{i+1}. '{title}' (분야: {category})")
+            else:
+                prompts.append(f"{i+1}. '{title}'")
+        
+        print(f"📝 프롬프트 생성 완료: {len(prompts)}개")
+        
+        # 간소화된 시스템 프롬프트
+        system_prompt = """
+        과학 논문 제목을 보고 내용을 추론해서 설명해주세요.
+        
+        규칙:
+        1. 각 논문마다 번호를 붙여서 설명 (1., 2., 3. ...)
+        2. 제목만 보고 추론하는 것이므로 "~로 추정됩니다", "~일 것으로 보입니다" 표현 사용
+        3. 각 설명은 3-4문장으로 간결하게
+        4. 전문용어는 쉽게 풀어서 설명
+        
+        형식 예시:
+        1. 이 연구는 [주제]에 관한 것으로 추정됩니다. [예상 내용 설명]. 이는 [의의/응용분야]에 도움이 될 것으로 보입니다.
+        2. 이 프로젝트는 [주제]를 다룬 것으로 추정됩니다. [예상 방법/접근]. [기대효과] 등의 결과를 얻었을 것으로 예상됩니다.
+        """
+        
+        # 사용자 프롬프트 작성
+        user_prompt = "다음 과학 논문 제목들을 분석해주세요:\n\n" + "\n".join(prompts)
+        
+        print(f"🤖 Claude API 호출 중...")
+        
+        # Claude API 호출 - 더 안정적인 설정
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=100,  # 키워드 번역은 짧으니 적은 토큰
-            system=f"다음 키워드들을 {tgt_lang}로 번역해주세요. 번역된 키워드만 쉼표로 구분하여 알려주세요.",
+            max_tokens=1500,  # 토큰 수 줄여서 안정성 높임
+            temperature=0.5,  # 안정적인 응답을 위해 조정
+            system=system_prompt,
             messages=[
-                {"role": "user", "content": keyword_text}
+                {"role": "user", "content": user_prompt}
             ]
         )
         
-        translated = response.content[0].text.strip()
-        return [k.strip() for k in translated.split(',')]
+        full_response = response.content[0].text.strip()
+        print(f"✅ Claude 응답 받음: {len(full_response)} 글자")
+        
+        # 응답 파싱 - 더 견고하게
+        summaries = []
+        
+        # 라인별로 분리해서 번호가 있는 라인 찾기
+        lines = full_response.split('\n')
+        current_summary = ""
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # 번호로 시작하는 라인 감지 (1., 2., 3. 등)
+            number_match = re.match(r'^(\d+)\.', line)
+            if number_match:
+                # 이전 요약 저장
+                if current_summary:
+                    summaries.append(current_summary.strip())
+                # 새 요약 시작
+                current_summary = line
+            else:
+                # 현재 요약에 라인 추가
+                if current_summary:
+                    current_summary += " " + line
+        
+        # 마지막 요약 저장
+        if current_summary:
+            summaries.append(current_summary.strip())
+        
+        print(f"📊 파싱 결과: {len(summaries)}개 요약 생성됨")
+        
+        # 부족한 요약 보충
+        while len(summaries) < len(titles):
+            idx = len(summaries)
+            title = titles[idx] if idx < len(titles) else "Unknown"
+            fallback_summary = f"{idx+1}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. 제목만으로는 구체적인 내용을 파악하기 어렵지만, 해당 분야의 흥미로운 연구일 것으로 보입니다."
+            summaries.append(fallback_summary)
+            print(f"⚠️ 부족한 요약 보충: {idx+1}번")
+        
+        # 초과 요약 제거
+        if len(summaries) > len(titles):
+            summaries = summaries[:len(titles)]
+            print(f"✂️ 초과 요약 제거, 최종 {len(summaries)}개")
+        
+        print(f"✅ 일괄 요약 완료: {len(summaries)}개")
+        return summaries
+    
     except Exception as e:
-        st.warning(f"키워드 번역 중 오류: {e}")
-        return keywords
+        print(f"❌ 일괄 추론 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # 에러 발생시 개별 처리로 폴백
+        print("🔄 개별 처리로 폴백 시도...")
+        fallback_summaries = []
+        for i, title in enumerate(titles):
+            try:
+                category = categories[i] if categories and i < len(categories) else None
+                individual_summary = infer_project_content_simple(title, category, i+1)
+                fallback_summaries.append(individual_summary)
+            except:
+                fallback_summaries.append(f"{i+1}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (요약 생성 중 오류 발생)")
+        
+        return fallback_summaries
 
+# 간단한 개별 추론 함수 추가
+def infer_project_content_simple(title, category=None, number=1):
+    """간단한 개별 프로젝트 내용 추론"""
+    try:
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
+        
+        system_prompt = "과학 논문 제목을 보고 간단히 내용을 추론해서 3-4문장으로 설명해주세요. '~로 추정됩니다' 표현을 사용하세요."
+        
+        user_prompt = f"제목: {title}"
+        if category:
+            user_prompt += f" (분야: {category})"
+            
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=300,
+            temperature=0.5,
+            system=system_prompt,
+            messages=[
+                {"role": "user", "content": user_prompt}
+            ]
+        )
+        
+        content = response.content[0].text.strip()
+        return f"{number}. {content}"
+        
+    except Exception as e:
+        print(f"개별 추론 오류: {e}")
+        return f"{number}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (개별 추론 중 오류 발생)"
+        
 # 일괄 처리 함수 - 여러 프로젝트 제목 한 번에 처리 (Claude 버전)
 @st.cache_data(show_spinner=False, ttl=3600)
 def batch_infer_content(titles, categories=None):
