@@ -503,6 +503,13 @@ if topic:
             st.markdown(paper_data["abstract"])
             st.markdown('</div>', unsafe_allow_html=True)
         
+        # 서론 추가 ⭐ 새로 추가된 부분
+        if paper_data.get("introduction"):
+            st.markdown('<div class="paper-subsection">', unsafe_allow_html=True)
+            st.markdown("### 📖 서론 (Introduction)")
+            st.markdown(paper_data["introduction"])
+            st.markdown('</div>', unsafe_allow_html=True)
+        
         # 실험 방법
         if paper_data.get("methods"):
             st.markdown('<div class="paper-subsection">', unsafe_allow_html=True)
@@ -538,12 +545,15 @@ if topic:
             st.markdown(paper_data["references"])
             st.markdown('</div>', unsafe_allow_html=True)
         
-        # PDF용 텍스트에 논문 내용 추가
+        # PDF용 텍스트에 논문 내용 추가 (서론 포함)
         paper_text = f"""
 ## 📄 생성된 연구 논문
 
 ### 초록
 {paper_data.get("abstract", "")}
+
+### 서론
+{paper_data.get("introduction", "")}
 
 ### 실험 방법
 {paper_data.get("methods", "")}
