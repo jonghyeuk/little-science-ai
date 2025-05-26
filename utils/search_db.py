@@ -261,8 +261,59 @@ def load_internal_db():
         st.error(f"❌ 내부 DB 로드 실패: {e}")
         return pd.DataFrame()
 
-# 최적화된 유사 프로젝트 검색 함수 - 디버깅 강화
-def search_similar_titles(user_input, max_results=5):
+# 주제 관련성 검증 함수 추가
+def is_topic_relevant(title, category, search_keywords, min_match_score=0.3):
+    """검색 주제와 논문의 관련성을 검증"""
+    title_lower = title.lower()
+    category_lower = category.lower() if category else ""
+    
+    # 직접 키워드 매칭 점수 계산
+    match_score = 0
+    total_keywords = len(search_keywords)
+    
+    for keyword in search_keywords:
+        keyword_lower = keyword.lower()
+        # 제목에서 키워드 부분 매칭
+        if keyword_lower in title_lower:
+            match_score += 1.0  # 완전 매칭
+        elif any(k in keyword_lower for k in title_lower.split() if len(k) > 2):
+            match_score += 0.5  # 부분 매칭
+        
+        # 카테고리에서 키워드 매칭
+        if keyword_lower in category_lower:
+            match_score += 0.3
+    
+    relevance_score = match_score / total_keywords if total_keywords > 0 else 0
+    
+    print(f"   관련성 검증: '{title[:40]}...' = {relevance_score:.3f}")
+    return relevance_score >= min_match_score
+
+# 키워드 확장 함수 추가
+def expand_search_keywords(keywords):
+    """검색 키워드를 확장하여 관련 용어 추가"""
+    keyword_expansions = {
+        'microplastic': ['microplastic', 'plastic', 'polymer', 'pollution', 'marine', 'ocean'],
+        'plastic': ['plastic', 'polymer', 'microplastic', 'pollution', 'waste'],
+        '미세플라스틱': ['plastic', 'microplastic', 'polymer', 'pollution'],
+        'environment': ['environmental', 'ecology', 'pollution', 'marine', 'ocean'],
+        '환경': ['environmental', 'ecology', 'pollution'],
+        'pollution': ['pollution', 'contamination', 'waste', 'environmental'],
+        '오염': ['pollution', 'contamination', 'environmental'],
+        'marine': ['marine', 'ocean', 'sea', 'water', 'aquatic'],
+        '해양': ['marine', 'ocean', 'sea', 'water'],
+        'health': ['health', 'medical', 'human', 'body', 'toxicity'],
+        '건강': ['health', 'medical', 'human'],
+        'water': ['water', 'aquatic', 'marine', 'ocean', 'sea'],
+        '물': ['water', 'aquatic', 'marine']
+    }
+    
+    expanded = set(keywords)  # 원본 키워드 유지
+    
+    for keyword in keywords:
+        if keyword.lower() in keyword_expansions:
+            expanded.update(keyword_expansions[keyword.lower()])
+    
+    return list(expanded)
     global _DB_INITIALIZED, _PROCESSED_DB, _VECTORIZER, _TFIDF_MATRIX
     
     print(f"🔍 검색 시작: '{user_input}'")
