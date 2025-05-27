@@ -238,11 +238,12 @@ def clean_references(ref_text):
         for old_link, new_link in scholar_replacements.items():
             cleaned = cleaned.replace(old_link, new_link)
         
-        # 일반적인 scholar 검색 링크 교체
+        # 구체적인 패턴별로 다른 링크 적용
         import re
         cleaned = re.sub(r'https://scholar\.google\.com/scholar\?q=[^\s]*electromagnetic[^\s]*', 'https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=20', cleaned)
         cleaned = re.sub(r'https://scholar\.google\.com/scholar\?q=[^\s]*motor[^\s]*', 'https://www.nature.com/subjects/mechanical-engineering', cleaned)
-        cleaned = re.sub(r'https://scholar\.google\.com/scholar\?q=[^\s]*', 'https://www.nsf.gov/discoveries/', cleaned)
+        cleaned = re.sub(r'https://scholar\.google\.com/scholar\?q=[^\s]*energy[^\s]*', 'https://www.nist.gov/pml/div688/grp03/sensors.cfm', cleaned)
+        # ❌ 모든 scholar 링크를 같은 링크로 바꾸는 부분 제거!
         
         return cleaned.strip()
     except:
