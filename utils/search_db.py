@@ -98,18 +98,28 @@ def extract_and_translate_keywords(text):
     text_lower = text.lower()
     matched_keywords = []
     
+    print(f"📝 입력 텍스트 분석: '{text_lower}'")
+    
     for korean, english in keyword_map.items():
         if korean in text_lower:
             matched_keywords.extend(english.split())
+            print(f"   매칭: '{korean}' → {english.split()}")
     
     # 기본 키워드가 없으면 텍스트를 단어별로 분리
     if not matched_keywords:
         # 영어 단어는 그대로 사용
         english_words = re.findall(r'[a-zA-Z]+', text)
         matched_keywords.extend(english_words)
+        print(f"   영어 단어 추출: {english_words}")
+        
+        # 한국어 단어도 그대로 추가 (일부 논문 제목이 한국어일 수 있음)
+        korean_words = re.findall(r'[가-힣]+', text)
+        if korean_words:
+            matched_keywords.extend(korean_words)
+            print(f"   한국어 단어 추가: {korean_words}")
     
-    # 중복 제거 및 최대 5개로 제한
-    unique_keywords = list(set(matched_keywords))[:5]
+    # 중복 제거 및 최대 8개로 확장 (더 많은 키워드로 검색 범위 확대)
+    unique_keywords = list(set(matched_keywords))[:8]
     
     print(f"🔍 키워드 변환: '{text}' → {unique_keywords}")
     return unique_keywords
@@ -191,16 +201,21 @@ def search_similar_titles(user_input: str, max_results: int = 5):
     result_df = df.copy()
     result_df['score'] = cosine_sim
     
-    # 🔥 임계값 높여서 정확성 향상 (0.1 → 더 엄격하게)
-    threshold = 0.15  # 기존 0.005에서 대폭 상향
-    filtered_df = result_df[result_df['score'] > threshold]
+    # 🔥 점진적 임계값 시도 (높은 정확도 → 낮은 정확도)
+    thresholds = [0.08, 0.05, 0.02, 0.01, 0.005]
+    filtered_df = None
     
-    # 필터링된 결과가 없으면 임계값 낮춰서 재시도
-    if filtered_df.empty:
-        threshold = 0.05
+    for threshold in thresholds:
         filtered_df = result_df[result_df['score'] > threshold]
+        result_count = len(filtered_df)
+        print(f"   임계값 {threshold}: {result_count}개 결과")
+        
+        # 적당한 수의 결과가 나오면 중단
+        if 1 <= result_count <= 15:
+            print(f"   ✅ 임계값 {threshold} 선택 ({result_count}개)")
+            break
     
-    if filtered_df.empty:
+    if filtered_df is None or filtered_df.empty:
         print("❌ 관련 프로젝트를 찾을 수 없음")
         return []
     
