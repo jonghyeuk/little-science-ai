@@ -175,28 +175,23 @@ def validate_and_fix_sections(paper_data, topic):
         return paper_data
 
 def get_search_guide_template(topic):
-    """🔥 깔끔한 검색 가이드 템플릿"""
-    return f"""## 📚 관련 논문 검색 가이드
+    """🔥 새로운 검색 가이드 템플릿"""
+    return f"""📚 추가 연구를 위한 검색 가이드
 
----
+아래 링크에서 "{topic}" 관련 키워드를 검색하여 관련논문들을 읽어보세요:
 
-### 🇰🇷 국내 학술 검색
-- **네이버 학술정보** → https://academic.naver.com/
-- **RISS 학술정보** → https://www.riss.kr/  
-- **DBpia 논문검색** → https://www.dbpia.co.kr/
-- **NDSL 과학기술정보** → https://www.ndsl.kr/
+**국내 학술 검색 사이트:**
+• 네이버 학술정보: https://academic.naver.com/
+• RISS 학술연구정보: https://www.riss.kr/
+• DBpia 논문검색: https://www.dbpia.co.kr/
+• 한국과학기술정보연구원: https://www.ndsl.kr/
 
-### 🌍 해외 학술 검색  
-- **Google Scholar** → https://scholar.google.com/
-- **IEEE Xplore** → https://ieeexplore.ieee.org/
-- **PubMed** → https://pubmed.ncbi.nlm.nih.gov/
+**해외 학술 검색 사이트:**
+• 구글 학술검색: https://scholar.google.com/
+• IEEE Xplore: https://ieeexplore.ieee.org/
+• PubMed: https://pubmed.ncbi.nlm.nih.gov/
 
----
-
-### 💡 검색 키워드 추천
-`{topic}` + `실험방법` / `최신연구` / `응용사례` / `분석기법`
-
-> 💎 **팁**: 영어 키워드로도 검색해보면 더 많은 자료를 찾을 수 있어요!
+💡 **검색 팁:** "{topic}"와 함께 "실험", "분석", "응용", "최신 연구" 등의 키워드를 조합해서 검색해보세요."""
 
 def get_default_content(section):
     """기본 내용 제공 (레퍼런스 제외)"""
