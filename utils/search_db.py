@@ -1,24 +1,15 @@
+# 수정된 search_db.py - 누락된 함수 추가 및 중복 제거
+
 import pandas as pd
 import os
 import streamlit as st
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from utils.explain_topic import explain_topic
-import anthropic  # OpenAI 대신 anthropic 사용
+import anthropic
 import re
 
 # 📁 내부 DB 경로
 DB_PATH = os.path.join("data", "ISEF Final DB.xlsx")
-
-# 🔤 ISEF DB 열 매핑
-COLUMN_MAP = {
-    'Project Title': '제목',
-    'Year': '연도',
-    'Category': '분야',
-    'Fair Country': '국가',
-    'Fair State': '지역',
-    'Awards': '수상'
-}
 
 # 전역 변수 - 사전 처리된 데이터 저장
 _DB_INITIALIZED = False
@@ -27,7 +18,7 @@ _VECTORIZER = None
 _TFIDF_MATRIX = None
 
 # 초기화 함수 - 앱 시작 시 한 번만 실행
-@st.cache_data(ttl=86400, show_spinner=False)  # 캐시 24시간 유지
+@st.cache_data(ttl=86400, show_spinner=False)
 def initialize_db():
     """데이터베이스와 벡터라이저 초기화"""
     global _DB_INITIALIZED, _PROCESSED_DB, _VECTORIZER, _TFIDF_MATRIX
@@ -56,37 +47,27 @@ def initialize_db():
         print(f"❌ 내부 DB 초기화 실패: {e}")
         return False
 
-# 키워드 추출 함수 - 개선됨
+# 키워드 추출 함수
 def extract_keywords(text, top_n=5):
-    # 텍스트 정제 강화
+    """텍스트에서 중요 키워드 추출"""
     text = re.sub(r'[^\w\s]', '', text.lower())
     
-    # 한국어 조사/어미 제거 강화
     stopwords = [
-        # 한국어 조사/어미
-        '이', '가', '을', '를', '에', '에서', '로', '으로', '의', '는', '은', '도', '만', '부터', '까지', '와', '과', '하고',
-        '에게', '한테', '께', '아', '야', '이야', '라', '이라', '에요', '예요', '습니다', '입니다',
-        '하다', '있다', '되다', '같다', '이다', '아니다',
-        # 기타 불용어
-        '그', '저', '것', '및', '등', '들', '때', '곳', '중', '간', '내', '외', '전', '후', '상', '하', '좌', '우',
-        # 영어 불용어
-        'the', 'of', 'and', 'a', 'to', 'in', 'is', 'that', 'for', 'on', 'with', 'as', 'be', 'by', 'from', 'at', 'or'
+        '이', '가', '을', '를', '에', '에서', '로', '으로', '의', '는', '은', '도', '만', 
+        '부터', '까지', '와', '과', '하고', '에게', '한테', '께', '하다', '있다', '되다',
+        'the', 'of', 'and', 'a', 'to', 'in', 'is', 'that', 'for', 'on', 'with', 'as', 
+        'be', 'by', 'from', 'at', 'or'
     ]
     
-    # 단어 분리 및 필터링
     words = []
     for word in text.split():
-        # 길이 2 이상, 불용어 제외, 숫자만으로 구성된 단어 제외
         if len(word) >= 2 and word not in stopwords and not word.isdigit():
-            # 한국어는 어간 추출 (간단한 방법)
-            if any('\uAC00' <= char <= '\uD7A3' for char in word):  # 한글 포함
-                # 조사 제거 (간단한 규칙)
+            # 한국어 조사 제거
+            if any('\uAC00' <= char <= '\uD7A3' for char in word):
                 if word.endswith(('이', '가', '을', '를', '에', '로', '의', '는', '은')):
                     word = word[:-1]
-                elif word.endswith(('에서', '으로', '에게', '한테', '에요', '예요')):
+                elif word.endswith(('에서', '으로', '에게', '한테')):
                     word = word[:-2]
-                elif word.endswith(('습니다', '입니다')):
-                    word = word[:-3]
             words.append(word)
     
     # 단어 빈도 계산
@@ -96,15 +77,14 @@ def extract_keywords(text, top_n=5):
     
     # 빈도순 정렬
     sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
-    
-    # 상위 키워드 반환
     top_keywords = [word for word, _ in sorted_words[:top_n]]
     
     return top_keywords
 
-# 누락된 Claude 번역 함수 추가
+# ⭐ 누락된 함수 추가: 키워드 번역 함수
 @st.cache_data(show_spinner=False, ttl=3600)
-def claude_translate_keywords(keywords, tgt_lang="en") -> list:
+def claude_translate_keywords(keywords, tgt_lang="en"):
+    """키워드를 영어로 번역"""
     if not keywords:
         return []
         
@@ -114,7 +94,7 @@ def claude_translate_keywords(keywords, tgt_lang="en") -> list:
         
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=100,  # 키워드 번역은 짧으니 적은 토큰
+            max_tokens=100,
             system=f"다음 키워드들을 {tgt_lang}로 번역해주세요. 번역된 키워드만 쉼표로 구분하여 알려주세요.",
             messages=[
                 {"role": "user", "content": keyword_text}
@@ -124,13 +104,13 @@ def claude_translate_keywords(keywords, tgt_lang="en") -> list:
         translated = response.content[0].text.strip()
         return [k.strip() for k in translated.split(',')]
     except Exception as e:
-        st.warning(f"키워드 번역 중 오류: {e}")
+        print(f"키워드 번역 중 오류: {e}")
         return keywords
 
-# 개선된 일괄 처리 함수 (중복 제거 및 개선)
+# 일괄 처리 함수 - Claude API 효율화
 @st.cache_data(show_spinner=False, ttl=3600)
 def batch_infer_content(titles, categories=None):
-    """여러 프로젝트 제목을 한 번에 처리하여 Claude API 호출 최소화 - 개선된 버전"""
+    """여러 프로젝트 제목을 한 번에 처리하여 Claude API 호출 최소화"""
     if not titles:
         return []
     
@@ -158,33 +138,28 @@ def batch_infer_content(titles, categories=None):
             else:
                 prompts.append(f"{i+1}. '{title}'")
         
-        print(f"📝 프롬프트 생성 완료: {len(prompts)}개")
-        
-        # 간소화된 시스템 프롬프트
+        # 시스템 프롬프트
         system_prompt = """
         과학 논문 제목을 보고 내용을 추론해서 설명해주세요.
         
         규칙:
         1. 각 논문마다 번호를 붙여서 설명 (1., 2., 3. ...)
-        2. 제목만 보고 추론하는 것이므로 "~로 추정됩니다", "~일 것으로 보입니다" 표현 사용
+        2. 제목만 보고 추론하므로 "~로 추정됩니다", "~일 것으로 보입니다" 표현 사용
         3. 각 설명은 3-4문장으로 간결하게
         4. 전문용어는 쉽게 풀어서 설명
         
         형식 예시:
         1. 이 연구는 [주제]에 관한 것으로 추정됩니다. [예상 내용 설명]. 이는 [의의/응용분야]에 도움이 될 것으로 보입니다.
-        2. 이 프로젝트는 [주제]를 다룬 것으로 추정됩니다. [예상 방법/접근]. [기대효과] 등의 결과를 얻었을 것으로 예상됩니다.
         """
         
         # 사용자 프롬프트 작성
         user_prompt = "다음 과학 논문 제목들을 분석해주세요:\n\n" + "\n".join(prompts)
         
-        print(f"🤖 Claude API 호출 중...")
-        
-        # Claude API 호출 - 더 안정적인 설정
+        # Claude API 호출
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=1500,  # 토큰 수 줄여서 안정성 높임
-            temperature=0.5,  # 안정적인 응답을 위해 조정
+            max_tokens=1500,
+            temperature=0.5,
             system=system_prompt,
             messages=[
                 {"role": "user", "content": user_prompt}
@@ -194,10 +169,8 @@ def batch_infer_content(titles, categories=None):
         full_response = response.content[0].text.strip()
         print(f"✅ Claude 응답 받음: {len(full_response)} 글자")
         
-        # 응답 파싱 - 더 견고하게
+        # 응답 파싱
         summaries = []
-        
-        # 라인별로 분리해서 번호가 있는 라인 찾기
         lines = full_response.split('\n')
         current_summary = ""
         
@@ -223,74 +196,30 @@ def batch_infer_content(titles, categories=None):
         if current_summary:
             summaries.append(current_summary.strip())
         
-        print(f"📊 파싱 결과: {len(summaries)}개 요약 생성됨")
-        
         # 부족한 요약 보충
         while len(summaries) < len(titles):
             idx = len(summaries)
             title = titles[idx] if idx < len(titles) else "Unknown"
-            fallback_summary = f"{idx+1}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. 제목만으로는 구체적인 내용을 파악하기 어렵지만, 해당 분야의 흥미로운 연구일 것으로 보입니다."
+            fallback_summary = f"{idx+1}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다."
             summaries.append(fallback_summary)
-            print(f"⚠️ 부족한 요약 보충: {idx+1}번")
         
         # 초과 요약 제거
         if len(summaries) > len(titles):
             summaries = summaries[:len(titles)]
-            print(f"✂️ 초과 요약 제거, 최종 {len(summaries)}개")
         
         print(f"✅ 일괄 요약 완료: {len(summaries)}개")
         return summaries
     
     except Exception as e:
         print(f"❌ 일괄 추론 오류: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        # 에러 발생시 개별 처리로 폴백
-        print("🔄 개별 처리로 폴백 시도...")
-        fallback_summaries = []
-        for i, title in enumerate(titles):
-            try:
-                category = categories[i] if categories and i < len(categories) else None
-                individual_summary = infer_project_content_simple(title, category, i+1)
-                fallback_summaries.append(individual_summary)
-            except:
-                fallback_summaries.append(f"{i+1}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (요약 생성 중 오류 발생)")
-        
-        return fallback_summaries
+        # 에러 발생시 폴백
+        return [f"{i+1}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (요약 생성 중 오류 발생)" 
+                for i, title in enumerate(titles)]
 
-# 간단한 개별 추론 함수
-def infer_project_content_simple(title, category=None, number=1):
-    """간단한 개별 프로젝트 내용 추론"""
-    try:
-        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
-        
-        system_prompt = "과학 논문 제목을 보고 간단히 내용을 추론해서 3-4문장으로 설명해주세요. '~로 추정됩니다' 표현을 사용하세요."
-        
-        user_prompt = f"제목: {title}"
-        if category:
-            user_prompt += f" (분야: {category})"
-            
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=300,
-            temperature=0.5,
-            system=system_prompt,
-            messages=[
-                {"role": "user", "content": user_prompt}
-            ]
-        )
-        
-        content = response.content[0].text.strip()
-        return f"{number}. {content}"
-        
-    except Exception as e:
-        print(f"개별 추론 오류: {e}")
-        return f"{number}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (개별 추론 중 오류 발생)"
-
-# 내부 DB 로드 및 정제 (기존 함수 보존)
+# 내부 DB 로드 함수
 @st.cache_data(ttl=3600)
 def load_internal_db():
+    """기본 DB 로드 함수"""
     try:
         df = pd.read_excel(DB_PATH)
         return df
@@ -298,156 +227,124 @@ def load_internal_db():
         st.error(f"❌ 내부 DB 로드 실패: {e}")
         return pd.DataFrame()
 
-# 메인 검색 함수 - 수정된 버전
+# 메인 검색 함수
 def search_similar_titles(user_input: str, max_results: int = 10):
     """메인 검색 함수 - 사용자 입력으로 유사한 논문 제목들을 검색"""
-    print(f"🚨🚨🚨 search_similar_titles 함수 호출됨: '{user_input}' 🚨🚨🚨")  # 디버깅용
-    
     global _DB_INITIALIZED, _PROCESSED_DB, _VECTORIZER, _TFIDF_MATRIX
     
     print(f"🔍 검색 시작: '{user_input}'")
     
-    # DB 초기화 확인 및 수행
+    # DB 초기화 확인
     if not _DB_INITIALIZED:
         initialize_db()
     
-    # 기본 DB 사용 (초기화 실패 시)
+    # DB 로드
     if _PROCESSED_DB is None:
         df = load_internal_db()
     else:
         df = _PROCESSED_DB
     
     if df.empty:
-        print("   ❌ DB가 비어있음")
+        print("❌ DB가 비어있음")
         return []
     
-    # 1. 키워드 추출 - 디버깅 로그 추가
-    print("📝 1단계: 키워드 추출")
+    # 1. 키워드 추출
+    print("📝 키워드 추출 중...")
     keywords = extract_keywords(user_input)
     print(f"   추출된 키워드: {keywords}")
     
     if not keywords:
-        print("   ❌ 키워드 추출 실패")
+        print("❌ 키워드 추출 실패")
         return []
     
-    # 2. 키워드 번역 (Claude API 호출 1회) - 디버깅 로그 추가
-    print("🌐 2단계: 키워드 번역")
+    # 2. 키워드 번역
+    print("🌐 키워드 번역 중...")
     translated_keywords = claude_translate_keywords(keywords)
     print(f"   번역된 키워드: {translated_keywords}")
     
     if not translated_keywords:
         translated_keywords = keywords
-        print("   ⚠️ 번역 실패, 원본 키워드 사용")
     
     search_query = " ".join(translated_keywords)
     print(f"   최종 검색어: '{search_query}'")
     
-    # 3. 영어 제목으로 검색 (초기화된 벡터라이저 사용) - 오류 수정
-    print("🔢 3단계: 유사도 계산")
+    # 3. 유사도 계산
+    print("🔢 유사도 계산 중...")
     try:
-        if _VECTORIZER is not None and _TFIDF_MATRIX is not None:  # 수정: is not None 명시적 비교
-            # 사전 처리된 벡터라이저와 매트릭스 사용
+        if _VECTORIZER is not None and _TFIDF_MATRIX is not None:
+            # 사전 처리된 벡터 사용
             search_vector = _VECTORIZER.transform([search_query])
             cosine_sim = cosine_similarity(search_vector, _TFIDF_MATRIX)[0]
-            print(f"   벡터화 성공, 총 {len(cosine_sim)}개 문서와 비교")
+            print(f"   벡터화 성공, {len(cosine_sim)}개 문서와 비교")
         else:
-            # 초기화 실패 시 기존 방식으로 폴백
-            print("   ⚠️ 사전 처리된 벡터 없음, 새로 계산")
+            # 새로 계산
+            print("   새로 벡터화 계산...")
             title_field = 'Project Title'
             corpus = df[title_field].fillna("").astype(str).tolist()
             corpus.append(search_query)
             
-            vectorizer = TfidfVectorizer(
-                analyzer='word', 
-                ngram_range=(1, 2),
-                lowercase=True
-            )
-            
+            vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 2), lowercase=True)
             tfidf_matrix = vectorizer.fit_transform(corpus)
             cosine_sim = cosine_similarity(tfidf_matrix[-1:], tfidf_matrix[:-1])[0]
-            print(f"   새로 벡터화 완료, 총 {len(cosine_sim)}개 문서와 비교")
+            print(f"   새로 벡터화 완료, {len(cosine_sim)}개 문서와 비교")
     except Exception as e:
-        print(f"   ❌ 검색 벡터화 오류: {e}")
+        print(f"❌ 검색 벡터화 오류: {e}")
         return []
     
-    # 4. 결과 정렬 - 디버깅 로그 추가
-    print("📊 4단계: 결과 분석")
+    # 4. 결과 정렬 및 필터링
+    print("📊 결과 분석 중...")
     result_df = df.copy()
     result_df['score'] = cosine_sim
     
-    # 상위 10개 점수와 제목 출력
-    top_10_scores = result_df.nlargest(10, 'score')[['Project Title', 'Category', 'score']]
+    # 상위 결과 확인
+    top_scores = result_df.nlargest(10, 'score')[['Project Title', 'Category', 'score']]
     print("   상위 10개 유사도 점수:")
-    for idx, row in top_10_scores.iterrows():
+    for idx, row in top_scores.iterrows():
         print(f"     {row['score']:.6f}: [{row.get('Category', 'N/A')}] {row['Project Title'][:60]}...")
     
-    # 임계값 테스트
-    thresholds = [0.1, 0.05, 0.01, 0.005]
-    selected_threshold = 0.005  # 기본값
-    for threshold in thresholds:
-        filtered_count = len(result_df[result_df['score'] > threshold])
-        print(f"   임계값 {threshold} 이상: {filtered_count}개")
-        if filtered_count > 0 and filtered_count <= max_results * 3:  # 적당한 수의 결과
-            selected_threshold = threshold
-            break
-    
-    # 선택된 임계값으로 필터링
-    filtered_df = result_df[result_df['score'] > selected_threshold].copy()
-    print(f"   선택된 임계값: {selected_threshold}")
+    # 임계값 설정
+    threshold = 0.005
+    filtered_df = result_df[result_df['score'] > threshold].copy()
     
     if filtered_df.empty:
-        print("   ❌ 관련 프로젝트를 찾을 수 없음")
+        print("❌ 관련 프로젝트를 찾을 수 없음")
         return []
     
-    # 5. 상위 결과 선택 (간단한 필터링)
+    # 상위 결과 선택
     top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
     print(f"   최종 선택: {len(top_df)}개")
     
-    print("📋 선택된 논문들:")
-    for idx, row in top_df.iterrows():
-        print(f"     {row['score']:.6f}: [{row.get('Category', 'N/A')}] {row['Project Title']}")
+    # 5. AI 요약 생성
+    titles = [row.get('Project Title', '') for _, row in top_df.iterrows()]
+    categories = [row.get('Category', '') for _, row in top_df.iterrows()]
     
-    # 6. 결과를 위한 제목과 카테고리 수집
-    titles = []
-    categories = []
-    for _, row in top_df.iterrows():
-        titles.append(row.get('Project Title', ''))
-        categories.append(row.get('Category', ''))
-    
-    # 7. 일괄 처리로 모든 요약 한 번에 생성
     if titles:
-        print("🤖 5단계: AI 요약 생성")
+        print("🤖 AI 요약 생성 중...")
         summaries = batch_infer_content(titles, categories)
         print(f"   생성된 요약: {len(summaries)}개")
     else:
         summaries = []
     
-    # 8. 결과 구성
+    # 6. 결과 구성
     results = []
     for i, (_, row) in enumerate(top_df.iterrows()):
-        project_title = row.get('Project Title', '')
-        category = row.get('Category', '')
-        
-        # 요약 가져오기
         summary = ""
         if i < len(summaries):
-            # 요약에서 번호 제거
             summary_text = summaries[i]
             summary = re.sub(r'^\d+\.\s*', '', summary_text)
         else:
-            summary = f"이 프로젝트는 '{project_title}'에 관한 연구로 추정됩니다."
+            summary = f"이 프로젝트는 '{row.get('Project Title', '')}'에 관한 연구로 추정됩니다."
         
         result_item = {
-            '제목': project_title,  # 영어 제목 사용
+            '제목': row.get('Project Title', ''),
             '연도': str(row.get('Year', '')),
-            '분야': category,
+            '분야': row.get('Category', ''),
             '국가': row.get('Fair Country', ''),
             '지역': row.get('Fair State', ''),
             '수상': row.get('Awards', ''),
             '요약': summary,
             'score': float(row.get('score', 0))
         }
-        
         results.append(result_item)
     
     print(f"✅ 검색 완료: {len(results)}개 결과 반환")
