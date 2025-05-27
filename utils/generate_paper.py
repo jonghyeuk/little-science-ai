@@ -12,7 +12,7 @@ def generate_research_paper(topic, research_idea, references=""):
     try:
         client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
         
-        # 서론 추가된 시스템 프롬프트 - JSON 형식 엄격히 요구 + 참고문헌 규칙만 추가
+        # 서론 추가된 시스템 프롬프트 - JSON 형식 엄격히 요구
         system_prompt = """
         고등학생을 위한 연구 계획서를 작성해주세요. 반드시 JSON 형식으로만 응답하세요.
         
@@ -26,32 +26,18 @@ def generate_research_paper(topic, research_idea, references=""):
         - results: 예상되는 결과와 의미 (200-300단어)
         - visuals: 시각자료 제안을 텍스트로 설명 (100-200단어)
         - conclusion: 연구의 의의와 기대효과 (150-200단어)
-        - references: 참고문헌 목록 (아래 규칙 준수)
-        
-        **참고문헌 작성 규칙:**
-        1. 절대로 구체적인 논문 제목이나 저자명을 지어내지 마라
-        2. 대신 실제 기관의 보고서나 학회 자료 유형만 제안하라
-        3. 형식: **자료유형: 일반주제** (연도) - 기관명
-           내용요약: 2-3문장으로 구체적 설명
-           관련성: 본 연구와의 연관성 1-2문장
-           [검색링크](https://scholar.google.com/scholar?q=키워드)
+        - references: 참고할 만한 문헌 목록
         
         고등학생이 이해할 수 있는 수준으로 작성하되, 체계적이고 구체적으로 써주세요.
         """
         
-        # 사용자 프롬프트 - 참고문헌 예시만 추가
+        # 사용자 프롬프트 단순화
         user_prompt = f"""
         주제: {topic}
         연구 아이디어: {research_idea}
         
         위 내용으로 고등학생 수준의 연구 계획서를 JSON 형식으로 작성해주세요.
         각 섹션당 150-300단어 정도로 작성해주세요.
-        
-        참고문헌 예시:
-        **정부보고서: 청소년 건강관리 현황** (2023) - 질병관리청
-        내용요약: 국내 청소년 건강 실태를 조사한 공식 보고서입니다.
-        관련성: 본 연구의 배경 자료로 활용됩니다.
-        [관련자료 검색](https://scholar.google.com/scholar?q=청소년+건강+질병관리청)
         """
         
         # Claude 호출
@@ -113,10 +99,6 @@ def generate_research_paper(topic, research_idea, references=""):
             print("⚠️ JSON 파싱 모두 실패, 텍스트 파싱으로 대체")
             paper_data = parse_text_response(response_text)
         
-        # 🔥 참고문헌만 후처리
-        if paper_data and 'references' in paper_data:
-            paper_data['references'] = clean_references(paper_data['references'])
-        
         return paper_data
         
     except Exception as e:
@@ -174,25 +156,6 @@ def parse_text_response(text):
     except Exception as e:
         print(f"텍스트 파싱 오류: {e}")
         return create_error_response()
-
-# 🔥 새로 추가: 참고문헌 정리 함수
-def clean_references(references_text):
-    """참고문헌에서 가짜 DOI나 링크 제거"""
-    try:
-        cleaned = references_text
-        
-        # 가짜 DOI 제거
-        doi_pattern = r'(?:DOI\s*:?\s*)?(\b10\.\d{4,}\/[a-zA-Z0-9./_()-]+\b)'
-        cleaned = re.sub(doi_pattern, '', cleaned)
-        
-        # 의심스러운 저자명 제거
-        suspicious = ['Smith, J.', 'Johnson, A.', 'Brown, M.', 'Kim, S.']
-        for author in suspicious:
-            cleaned = cleaned.replace(f'- {author}', '- 연구진')
-        
-        return cleaned
-    except:
-        return references_text
 
 def create_error_response():
     """에러 발생 시 기본 응답"""
