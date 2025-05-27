@@ -47,9 +47,9 @@ def initialize_db():
         print(f"❌ 내부 DB 초기화 실패: {e}")
         return False
 
-# 🔥 간단한 키워드 추출 (한국어 → 영어) - 확장된 버전
+# 🔥 간단한 키워드 추출 (한국어 → 영어) - 하이브리드 방식
 def extract_and_translate_keywords(text):
-    """한국어 입력을 영어 키워드로 변환"""
+    """한국어 입력을 영어 키워드로 변환 - 매핑 + 실시간 번역"""
     # 🔥 확장된 매핑 테이블
     keyword_map = {
         # 운동/건강 관련 - 확장
@@ -110,6 +110,22 @@ def extract_and_translate_keywords(text):
         '센서': 'sensor detection measurement device monitoring',
         '광학': 'optics optical light laser photon',
         
+        # 🔥 추가된 분야들
+        '천문학': 'astronomy astrophysics space telescope star',
+        '지질학': 'geology earth science rock mineral',
+        '해양학': 'oceanography marine science water sea',
+        '수학': 'mathematics mathematical statistics analysis',
+        '통계학': 'statistics statistical analysis data',
+        '심리학': 'psychology behavioral cognitive mental',
+        '농업': 'agriculture farming crop plant cultivation',
+        '축산업': 'livestock animal farming agriculture',
+        '기계공학': 'mechanical engineering machinery design',
+        '전기공학': 'electrical engineering electronics circuit',
+        '토목공학': 'civil engineering construction infrastructure',
+        '재료공학': 'materials science engineering polymer',
+        '생명과학': 'life science biology biotechnology',
+        '식품과학': 'food science nutrition technology',
+        
         # 컴퓨터/AI 관련
         '인공지능': 'artificial intelligence machine learning AI neural',
         '딥러닝': 'deep learning neural network AI',
@@ -131,36 +147,76 @@ def extract_and_translate_keywords(text):
     
     print(f"📝 입력 텍스트 분석: '{text_lower}'")
     
+    # 1단계: 매핑 테이블에서 찾기
     for korean, english in keyword_map.items():
         if korean in text_lower:
             matched_keywords.extend(english.split())
-            print(f"   매칭: '{korean}' → {english.split()}")
+            print(f"   ✅ 매핑: '{korean}' → {english.split()}")
     
-    # 기본 키워드가 없으면 텍스트를 단어별로 분리
-    if not matched_keywords:
-        # 영어 단어는 그대로 사용
-        english_words = re.findall(r'[a-zA-Z]+', text)
+    # 2단계: 매핑에 없는 한국어가 있으면 Claude로 번역
+    korean_words = re.findall(r'[가-힣]+', text)
+    unmapped_korean = []
+    for word in korean_words:
+        if word not in keyword_map and len(word) >= 2:
+            unmapped_korean.append(word)
+    
+    if unmapped_korean:
+        print(f"   🌐 매핑에 없는 한국어 발견: {unmapped_korean}")
+        try:
+            translated = claude_translate_keywords(unmapped_korean)
+            matched_keywords.extend(translated)
+            print(f"   🤖 Claude 번역 결과: {translated}")
+        except Exception as e:
+            print(f"   ⚠️ Claude 번역 실패: {e}")
+            matched_keywords.extend(unmapped_korean)  # 번역 실패시 원본 사용
+    
+    # 3단계: 영어 단어는 그대로 사용
+    english_words = re.findall(r'[a-zA-Z]+', text)
+    if english_words:
         matched_keywords.extend(english_words)
-        print(f"   영어 단어 추출: {english_words}")
-        
-        # 한국어 단어도 그대로 추가 (일부 논문 제목이 한국어일 수 있음)
-        korean_words = re.findall(r'[가-힣]+', text)
-        if korean_words:
-            matched_keywords.extend(korean_words)
-            print(f"   한국어 단어 추가: {korean_words}")
-        
-        # 🔥 추가: 공백으로 분리된 모든 단어 포함
+        print(f"   📖 영어 단어 추가: {english_words}")
+    
+    # 4단계: 추가 단어 처리
+    if not matched_keywords:
         all_words = text.replace(',', ' ').replace('.', ' ').split()
         for word in all_words:
             if len(word) >= 2:
                 matched_keywords.append(word)
-        print(f"   모든 단어 추가: {all_words}")
+        print(f"   📝 모든 단어 추가: {all_words}")
     
-    # 중복 제거 및 최대 10개로 확장 (더 많은 키워드로 검색 범위 확대)
+    # 중복 제거 및 최대 10개로 제한
     unique_keywords = list(set(matched_keywords))[:10]
     
-    print(f"🔍 키워드 변환: '{text}' → {unique_keywords}")
+    print(f"🔍 최종 키워드: '{text}' → {unique_keywords}")
     return unique_keywords
+
+# 🔥 Claude 번역 함수 추가
+@st.cache_data(show_spinner=False, ttl=3600)
+def claude_translate_keywords(keywords):
+    """매핑에 없는 한국어를 Claude로 번역"""
+    if not keywords:
+        return []
+    
+    try:
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
+        keyword_text = ", ".join(keywords)
+        
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=100,
+            system="다음 한국어 과학 용어들을 영어로 번역해주세요. 각 용어마다 관련 영어 키워드를 2-3개씩 포함해서 번역해주세요. 결과는 쉼표로 구분해주세요.",
+            messages=[
+                {"role": "user", "content": f"번역할 한국어: {keyword_text}"}
+            ]
+        )
+        
+        translated = response.content[0].text.strip()
+        result = [k.strip() for k in translated.split(',')]
+        print(f"   Claude 번역: {keyword_text} → {result}")
+        return result
+    except Exception as e:
+        print(f"   Claude 번역 오류: {e}")
+        return keywords  # 실패시 원본 반환
 
 # 🤖 간단한 요약 생성 - 에러 처리 강화
 @st.cache_data(show_spinner=False, ttl=3600)
