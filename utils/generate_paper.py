@@ -12,7 +12,7 @@ def generate_research_paper(topic, research_idea, references=""):
     try:
         client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
         
-        # 서론 추가된 시스템 프롬프트 - JSON 형식 엄격히 요구 + 참고문헌 지침만 추가
+        # 🔥 수정된 시스템 프롬프트 - 실험방법 부분 대폭 강화
         system_prompt = """
         고등학생을 위한 연구 계획서를 작성해주세요. 반드시 JSON 형식으로만 응답하세요.
         
@@ -22,42 +22,69 @@ def generate_research_paper(topic, research_idea, references=""):
         각 섹션 작성 가이드:
         - abstract: 연구 목적과 예상 결과를 간단히 요약 (150-200단어)
         - introduction: 연구 배경 → 문제점 → 기존 연구 → 본 연구 목적 순서로 작성 (300-400단어)
-        - methods: 실험 절차와 방법론 (300-400단어)  
+        - methods: 실험 절차와 방법론 (400-500단어) - 아래 규칙 준수
         - results: 예상되는 결과와 의미 (200-300단어)
         - visuals: 시각자료 제안을 텍스트로 설명 (100-200단어)
         - conclusion: 연구의 의의와 기대효과 (150-200단어)
         - references: 아래 규칙에 따라 실제 자료만 참조
         
+        **🔥 실험방법(Methods) 작성 규칙 (가장 중요!):**
+        1. **필요한 재료 및 장비** (2-3문장으로 간단히)
+           - 핵심 장비만 나열, 너무 길지 않게
+        
+        2. **실험 절차** (전체 분량의 80% 할당) - 매우 상세하고 친절하게!
+           - "1단계: [제목]" 형식으로 번호 매기기
+           - 각 단계마다 구체적인 행동을 서술형으로 설명
+           - "먼저", "다음으로", "그 후에", "마지막으로" 등 연결어 사용
+           - 고등학생이 따라 할 수 있을 정도로 친절하고 구체적으로
+           - 측정 방법, 기록 방법, 주의사항도 포함
+           - 최소 5-7단계로 나누어 설명
+        
+        3. **데이터 수집 및 분석**
+           - 어떤 데이터를 어떻게 기록할지
+           - 반복 실험 횟수와 이유
+        
         **참고문헌 작성 규칙:**
-        1. 절대로 구체적인 논문 제목이나 저자명을 지어내지 마라
-        2. 정부기관 보고서, 대학 연구소 자료, 논문을 제안하되 절대 지어내지 말것 그리고 내용확인이 가능한 링크를 남길것, 이 때 링크는 클릭해서 실제 논문이 있어야 함
-        3. 형식: **자료유형: 일반주제** (연도) - 기관명 링크
-           요약: 이 자료의 핵심 내용 2-3문장 설명
-           관련성: 본 연구에 어떻게 도움이 되는지 1-2문장
+        1. 실제 확인 가능한 자료만 사용하고, 클릭 가능한 링크 제공
+        2. 다음 형식으로 작성:
+           **[번호]. 자료 제목** 
+           📄 내용 요약: (이 자료가 다루는 핵심 내용을 2-3문장으로 설명)
+           🔗 링크: [실제 접근 가능한 URL]
+           📌 활용 방안: (본 연구에 어떻게 도움이 되는지 1-2문장)
         
-        **방법 작성 규칙:**
-        1. 실험에 필요한 물품 및 장비를 소개할 것 
-        2. 앞서 소개한 물품과 장비들을 어떻게 이용하는지 체계적으로 서술형으로 쉽게 구체적으로 설명할 것
+        3. 추천 자료 유형:
+           - Google Scholar 검색 결과 (scholar.google.com)
+           - 정부기관 공식 보고서 (.go.kr)
+           - 대학 연구소 자료
+           - IEEE, Nature, Science 등 공개 자료
+           - arXiv 프리프린트
         
-        고등학생이 이해할 수 있는 수준으로 작성하되, 체계적이고 구체적으로 써주세요.
+        고등학생이 실제로 실험할 수 있을 정도로 친절하고 구체적으로 써주세요.
         """
         
-        # 사용자 프롬프트 - 참고문헌 예시만 추가
         user_prompt = f"""
         주제: {topic}
         연구 아이디어: {research_idea}
         
         위 내용으로 고등학생 수준의 연구 계획서를 JSON 형식으로 작성해주세요.
-        각 섹션당 150-300단어 정도로 작성해주세요.
         
-
+        특히 실험방법(methods) 섹션은:
+        - 장비 나열보다는 "실험을 어떻게 진행하는지" 단계별 설명에 집중
+        - "1단계: 준비 과정에서는...", "2단계: 측정 과정에서는..." 형식으로 상세히
+        - 고등학생이 실제로 따라할 수 있을 정도로 친절하게 작성
+        
+        특히 참고문헌(references) 섹션은:
+        - 실제 클릭해서 확인 가능한 링크만 포함
+        - 각 자료의 핵심 내용을 2-3문장으로 요약
+        - Google Scholar, arXiv, 정부기관 사이트 등 신뢰할 수 있는 출처만 사용
+        - 형식 예시: "1. 자료제목 📄 내용요약: ... 🔗 링크: https://... 📌 활용방안: ..."
         """
         
         # Claude 호출
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=3000,
-            temperature=0.3,  # 더 일관된 JSON 응답을 위해 낮춤
+            max_tokens=3500,  # 더 긴 응답을 위해 증가
+            temperature=0.3,
             system=system_prompt,
             messages=[
                 {"role": "user", "content": user_prompt}
@@ -112,7 +139,7 @@ def generate_research_paper(topic, research_idea, references=""):
             print("⚠️ JSON 파싱 모두 실패, 텍스트 파싱으로 대체")
             paper_data = parse_text_response(response_text)
         
-        # 🔥 참고문헌만 후처리 추가
+        # 참고문헌만 후처리 추가
         if paper_data and 'references' in paper_data:
             paper_data['references'] = clean_fake_references(paper_data['references'])
         
@@ -174,23 +201,48 @@ def parse_text_response(text):
         print(f"텍스트 파싱 오류: {e}")
         return create_error_response()
 
-# 🔥 새로 추가: 가짜 참고문헌 정리 함수
 def clean_fake_references(ref_text):
-    """가짜 논문명/저자명 제거하고 안전한 링크로 교체"""
+    """참고문헌 품질 개선 - 실제 링크는 유지하고 가짜 정보만 제거"""
     try:
         cleaned = ref_text
         
-        # 가짜 DOI 제거
-        cleaned = re.sub(r'DOI\s*:?\s*10\.\d+\/[^\s]+', '', cleaned)
+        # 🔥 실제 확인 가능한 도메인은 유지
+        trusted_domains = [
+            'scholar.google.com',
+            'arxiv.org', 
+            'ieee.org',
+            'nature.com',
+            'science.org',
+            'ncbi.nlm.nih.gov',
+            'go.kr',  # 정부기관
+            'edu',    # 대학
+            'ac.kr'   # 한국 대학
+        ]
         
-        # 의심스러운 가짜 저자명 제거
+        # 신뢰할 수 있는 도메인의 링크는 유지
+        # 나머지 의심스러운 링크만 제거
+        lines = cleaned.split('\n')
+        filtered_lines = []
+        
+        for line in lines:
+            # 신뢰할 수 있는 도메인 링크가 있으면 유지
+            has_trusted_link = any(domain in line for domain in trusted_domains)
+            
+            if has_trusted_link:
+                filtered_lines.append(line)
+            else:
+                # 의심스러운 링크 제거
+                line_without_suspicious = re.sub(r'https?://[^\s\)]+', '', line)
+                if line_without_suspicious.strip():  # 빈 줄이 아니면 추가
+                    filtered_lines.append(line_without_suspicious)
+        
+        cleaned = '\n'.join(filtered_lines)
+        
+        # 의심스러운 가짜 저자명 제거 (기존 로직 유지)
         fake_authors = ['Smith, J.', 'Johnson, A.', 'Brown, M.', 'Lee, K.', 'Kim, S.', 'Park, H.']
         for fake in fake_authors:
             cleaned = cleaned.replace(f'- {fake}', '- 연구진')
             cleaned = cleaned.replace(fake, '연구진')
-        
-        # 가짜 직접링크 제거 (scholar.google.com 제외)
-        cleaned = re.sub(r'https?://(?!scholar\.google\.com)[^\s\)]+', '', cleaned)
         
         return cleaned.strip()
     except:
