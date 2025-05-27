@@ -38,10 +38,15 @@ def generate_research_paper(topic, research_idea, references=""):
         참고문헌 작성법:
         1. 자료제목
         - 내용: 핵심내용 2문장 설명  
-        - 링크: 실제 확인 가능한 URL (https://scholar.google.com/scholar?q=[키워드] 또는 실제 사이트)
+        - 링크: 다음 중 하나만 사용
+          * https://ieeexplore.ieee.org (공학/전자 관련)
+          * https://www.nature.com/subjects (자연과학 관련)  
+          * https://www.nist.gov (측정/표준 관련)
+          * https://energy.mit.edu (에너지 관련)
+          * https://www.nsf.gov/discoveries (일반 과학)
         - 활용: 연구에 어떻게 도움되는지
         
-        중요: 반드시 실제 클릭 가능한 링크를 포함하세요. Google Scholar 검색 링크라도 좋습니다.
+        중요: Google Scholar 검색 링크 절대 사용 금지! 위 실제 기관 사이트만 사용하세요.
         """
         
         # 🔥 간단한 사용자 프롬프트
@@ -221,29 +226,36 @@ def get_default_content(section):
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
 def clean_references(ref_text):
-    """참고문헌 정리 - Google Scholar 검색 링크만 실제 기관 링크로 교체"""
+    """참고문헌 정리 - 한국+영문 DB 사이트로 교체 (한국 4개, 영문 3개)"""
     try:
         cleaned = ref_text
         
-        # 🔥 Google Scholar 검색 링크를 실제 기관/논문 사이트로 교체
-        scholar_replacements = {
-            'https://scholar.google.com/scholar?q=electromagnetic': 'https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=20',
-            'https://scholar.google.com/scholar?q=motor': 'https://www.nature.com/subjects/mechanical-engineering',
-            'https://scholar.google.com/scholar?q=energy': 'https://www.nist.gov/pml/div688/grp03/sensors.cfm',
-            'https://scholar.google.com/scholar?q=neodymium': 'https://energy.mit.edu/research/energy-storage/',
-            'https://scholar.google.com/scholar?q=related': 'https://www.nsf.gov/discoveries/',
-            'https://www.sciencedirect.com/science/article/pii/S037877969193': 'https://www.sciencedirect.com/journal/energy-conversion-and-management'
-        }
-        
-        for old_link, new_link in scholar_replacements.items():
-            cleaned = cleaned.replace(old_link, new_link)
-        
-        # 구체적인 패턴별로 다른 링크 적용
+        # 🔥 모든 링크를 실제 DB 사이트로 교체
         import re
-        cleaned = re.sub(r'https://scholar\.google\.com/scholar\?q=[^\s]*electromagnetic[^\s]*', 'https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=20', cleaned)
-        cleaned = re.sub(r'https://scholar\.google\.com/scholar\?q=[^\s]*motor[^\s]*', 'https://www.nature.com/subjects/mechanical-engineering', cleaned)
-        cleaned = re.sub(r'https://scholar\.google\.com/scholar\?q=[^\s]*energy[^\s]*', 'https://www.nist.gov/pml/div688/grp03/sensors.cfm', cleaned)
-        # ❌ 모든 scholar 링크를 같은 링크로 바꾸는 부분 제거!
+        
+        # 모든 링크 패턴 찾기 (scholar, sciencedirect 등)
+        all_links = re.findall(r'https://[^\s]*', cleaned)
+        
+        # 교체용 링크 (한국 4개 + 영문 3개)
+        replacement_links = [
+            'https://www.dbpia.co.kr/search/topSearch?searchName=',  # 한국 1
+            'https://www.riss.kr/search/Search.do?queryText=',       # 한국 2  
+            'https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci', # 한국 3
+            'https://www.ndsl.kr/ndsl/search/detail/trend/trendSearchResultDetail.do', # 한국 4
+            'https://www.sciencedirect.com/search?qs=',             # 영문 1
+            'https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=', # 영문 2
+            'https://pubmed.ncbi.nlm.nih.gov/?term='               # 영문 3
+        ]
+        
+        # 발견된 링크를 순서대로 교체
+        for i, old_link in enumerate(all_links):
+            if i < len(replacement_links):
+                replacement_link = replacement_links[i]
+                cleaned = cleaned.replace(old_link, replacement_link, 1)
+            else:
+                # 7개 초과 시 순환
+                replacement_link = replacement_links[i % len(replacement_links)]
+                cleaned = cleaned.replace(old_link, replacement_link, 1)
         
         return cleaned.strip()
     except:
