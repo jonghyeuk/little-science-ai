@@ -26,7 +26,7 @@ def generate_research_paper(topic, research_idea, references=""):
         - results: 예상되는 구체적 결과들 (150-200단어)
         - visuals: 필요한 그래프/차트 설명 (100-150단어)
         - conclusion: 실험을 통해 증명하려는 과학적 결론과 학술적 의의 (100-150단어)
-        - references: 실제 확인가능한 자료 8-10개 (반드시 실제 링크 포함)
+        - references: 실제 확인가능한 자료 3-4개 (반드시 실제 링크 포함)
 
         실험방법 작성법:
         1단계: [제목] - (장비/재료 간단히)
@@ -36,14 +36,17 @@ def generate_research_paper(topic, research_idea, references=""):
         (각 단계마다 고등학생이 따라할 수 있도록 구체적이고 친절한 서술형으로)
 
         참고문헌 작성법:
-        1. 자료제목 (한국어 6개 + 영어 4개 총 10개)
+        1. 자료제목
         - 내용: 핵심내용 2문장 설명  
-        - 링크: 다음 사이트들만 사용
-          한국사이트: DBpia, RISS, KCI, NDSL, KISS, 국회도서관
-          영문사이트: ScienceDirect, IEEE, Nature, PubMed
+        - 링크: 다음 중 하나만 사용
+          * https://ieeexplore.ieee.org (공학/전자 관련)
+          * https://www.nature.com/subjects (자연과학 관련)  
+          * https://www.nist.gov (측정/표준 관련)
+          * https://energy.mit.edu (에너지 관련)
+          * https://www.nsf.gov/discoveries (일반 과학)
         - 활용: 연구에 어떻게 도움되는지
         
-        중요: 정확한 DB 사이트 링크만 사용하세요!
+        중요: Google Scholar 검색 링크 절대 사용 금지! 위 실제 기관 사이트만 사용하세요.
         """
         
         # 🔥 간단한 사용자 프롬프트
@@ -57,7 +60,7 @@ def generate_research_paper(topic, research_idea, references=""):
         - 초록과 서론: 학술논문 형식으로, "고등학생" 등 교육 대상 언급 금지
         - 결론: 실험을 통해 증명하려는 과학적 결론과 학술적 의의 중심
         - 실험방법: "먼저 ~를 합니다. 다음으로 ~를 설정합니다" 친절한 서술형
-        - 참고문헌: 총 8-10개, 한국 DB 사이트 60% + 영문 DB 사이트 40% 비율로 구성
+        - 참고문헌: 반드시 실제 클릭 가능한 링크 포함
         """
         
         # Claude 호출
@@ -218,12 +221,12 @@ def get_default_content(section):
         'results': "실험을 통해 다음과 같은 결과를 얻을 것으로 예상된다: 측정값들 간의 상관관계, 가설의 검증 결과, 그리고 이론적 모델과의 일치성 평가이다. 이러한 결과는 관련 분야의 이론적 토대를 강화하는 데 기여할 것이다.",
         'visuals': "실험 결과를 효과적으로 표현하기 위해 다음과 같은 시각자료를 제작할 예정입니다: 실험 과정을 보여주는 사진, 데이터 변화를 나타내는 그래프, 결과를 요약한 표 등입니다.",
         'conclusion': "본 연구를 통해 제시된 가설이 실험적으로 검증될 것으로 예상된다. 이는 관련 분야의 이론적 이해를 깊게 하고, 후속 연구의 방향성을 제시하는 중요한 의미를 갖는다. 또한 본 연구에서 개발된 실험 방법론은 유사 연구에 활용될 수 있을 것이다.",
-        'references': "1. 관련 주제 최신 연구 동향\n- 내용: 해당 분야의 최신 연구 동향과 주요 발견사항을 정리한 국내 자료입니다.\n- 링크: https://www.dbpia.co.kr/\n- 활용: 연구 배경 이해와 방향 설정에 도움이 됩니다.\n\n2. 실험 방법론 설계 가이드\n- 내용: 과학적 실험 설계와 데이터 분석 방법에 대한 종합적 안내서입니다.\n- 링크: https://www.riss.kr/\n- 활용: 체계적인 실험 진행을 위한 참고자료로 활용합니다.\n\n3. 정부 연구개발 정책 보고서\n- 내용: 관련 분야에 대한 정부 차원의 연구 및 정책 자료입니다.\n- 링크: https://www.kci.go.kr/\n- 활용: 국가적 관점에서의 연구 방향성 파악에 도움이 됩니다.\n\n4. 과학기술 발전 동향 분석\n- 내용: 최신 과학기술 발전 동향과 미래 전망을 다룬 연구 자료입니다.\n- 링크: https://www.ndsl.kr/\n- 활용: 기술적 배경 지식 확보에 활용됩니다.\n\n5. 한국 학술연구 정보서비스\n- 내용: 다양한 학술 분야의 연구 논문과 자료를 제공하는 데이터베이스입니다.\n- 링크: https://kiss.kstudy.com/\n- 활용: 심화 연구 자료 확보에 도움이 됩니다.\n\n6. 국가정책연구 자료센터\n- 내용: 국가 차원의 정책 연구와 관련 통계 자료를 제공합니다.\n- 링크: https://www.nl.go.kr/\n- 활용: 정책적 배경과 사회적 맥락 이해에 활용됩니다.\n\n7. International Research Database\n- 내용: 해외 주요 학술지와 연구 논문을 검색할 수 있는 종합 데이터베이스입니다.\n- 링크: https://www.sciencedirect.com/\n- 활용: 국제적 연구 동향 파악에 도움이 됩니다.\n\n8. IEEE Engineering Research Archive\n- 내용: 공학 분야의 최신 연구 성과와 기술 동향을 다룬 자료들입니다.\n- 링크: https://ieeexplore.ieee.org/\n- 활용: 기술적 구현 방법과 공학적 접근법 참고에 활용됩니다.\n\n9. Nature Scientific Publications\n- 내용: 자연과학 분야의 권위있는 연구 논문과 최신 발견 사항들을 제공합니다.\n- 링크: https://www.nature.com/\n- 활용: 과학적 이론과 실험 방법론 학습에 활용됩니다.\n\n10. PubMed Medical Research Database\n- 내용: 의학 및 생명과학 분야의 연구 논문과 임상 연구 자료를 제공합니다.\n- 링크: https://pubmed.ncbi.nlm.nih.gov/\n- 활용: 생물학적 배경 지식과 관련 연구 방법론 참고에 활용됩니다."
+        'references': "1. 관련 주제 연구 동향\n- 내용: 해당 분야의 최신 연구 동향과 주요 발견사항을 정리한 자료입니다. 국내외 연구 현황을 파악할 수 있습니다.\n- 링크: https://scholar.google.com/scholar?q=related+research+trends+2024\n- 활용: 연구 배경 이해와 방향 설정에 도움이 됩니다.\n\n2. 실험 방법론 가이드\n- 내용: 과학적 실험 설계와 데이터 분석 방법에 대한 종합적 안내서입니다.\n- 링크: https://www.physics.org/experimental-methods\n- 활용: 체계적인 실험 진행을 위한 참고자료로 활용합니다.\n\n3. 정부 연구 보고서\n- 내용: 관련 분야에 대한 정부 차원의 연구 및 정책 자료입니다.\n- 링크: https://www.ndsl.kr\n- 활용: 국가적 관점에서의 연구 방향성 파악에 도움이 됩니다."
     }
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
 def clean_references(ref_text):
-    """참고문헌 정리 - 한국+영문 DB 사이트로 교체 (총 10개: 한국 6개, 영문 4개)"""
+    """참고문헌 정리 - 한국+영문 DB 사이트로 교체 (한국 4개, 영문 3개)"""
     try:
         cleaned = ref_text
         
@@ -233,18 +236,15 @@ def clean_references(ref_text):
         # 모든 링크 패턴 찾기 (scholar, sciencedirect 등)
         all_links = re.findall(r'https://[^\s]*', cleaned)
         
-        # 교체용 링크 (한국 6개 + 영문 4개 = 총 10개)
+        # 교체용 링크 (한국 4개 + 영문 3개)
         replacement_links = [
-            'https://www.dbpia.co.kr/',          # 한국 1 - DBpia
-            'https://www.riss.kr/',              # 한국 2 - RISS  
-            'https://www.kci.go.kr/',            # 한국 3 - KCI
-            'https://www.ndsl.kr/',              # 한국 4 - NDSL
-            'https://kiss.kstudy.com/',          # 한국 5 - KISS
-            'https://www.nl.go.kr/',             # 한국 6 - 국회도서관
-            'https://www.sciencedirect.com/',    # 영문 1 - ScienceDirect
-            'https://ieeexplore.ieee.org/',      # 영문 2 - IEEE
-            'https://www.nature.com/',           # 영문 3 - Nature
-            'https://pubmed.ncbi.nlm.nih.gov/'   # 영문 4 - PubMed
+            'https://www.dbpia.co.kr/search/topSearch?searchName=',  # 한국 1
+            'https://www.riss.kr/search/Search.do?queryText=',       # 한국 2  
+            'https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci', # 한국 3
+            'https://www.ndsl.kr/ndsl/search/detail/trend/trendSearchResultDetail.do', # 한국 4
+            'https://www.sciencedirect.com/search?qs=',             # 영문 1
+            'https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=', # 영문 2
+            'https://pubmed.ncbi.nlm.nih.gov/?term='               # 영문 3
         ]
         
         # 발견된 링크를 순서대로 교체
@@ -253,7 +253,7 @@ def clean_references(ref_text):
                 replacement_link = replacement_links[i]
                 cleaned = cleaned.replace(old_link, replacement_link, 1)
             else:
-                # 10개 초과 시 순환
+                # 7개 초과 시 순환
                 replacement_link = replacement_links[i % len(replacement_links)]
                 cleaned = cleaned.replace(old_link, replacement_link, 1)
         
