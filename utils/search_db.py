@@ -9,6 +9,9 @@ import re
 # 📁 내부 DB 경로
 DB_PATH = os.path.join("data", "ISEF Final DB.xlsx")
 
+# DB 파일 존재 확인
+print(f"📁 DB 파일 확인: {os.path.exists(DB_PATH)} ({DB_PATH})")
+
 # 전역 변수 - 사전 처리된 데이터 저장
 _DB_INITIALIZED = False
 _PROCESSED_DB = None
@@ -44,54 +47,82 @@ def initialize_db():
         print(f"❌ 내부 DB 초기화 실패: {e}")
         return False
 
-# 🔥 간단한 키워드 추출 (한국어 → 영어)
+# 🔥 간단한 키워드 추출 (한국어 → 영어) - 확장된 버전
 def extract_and_translate_keywords(text):
     """한국어 입력을 영어 키워드로 변환"""
-    # 간단한 매핑 테이블 (자주 사용되는 과학 주제들)
+    # 🔥 확장된 매핑 테이블
     keyword_map = {
-        # 운동/건강 관련
-        '운동': 'exercise physical activity fitness',
-        '체지방': 'body fat weight loss',
-        '감량': 'weight loss reduction',
-        '다이어트': 'diet weight loss nutrition',
-        '근육': 'muscle strength training',
-        '건강': 'health wellness medical',
+        # 운동/건강 관련 - 확장
+        '운동': 'exercise physical activity fitness training workout',
+        '체지방': 'body fat weight loss adipose tissue',
+        '감량': 'weight loss reduction decrease',
+        '다이어트': 'diet weight loss nutrition dietary',
+        '근육': 'muscle strength training resistance',
+        '건강': 'health wellness medical fitness',
+        '스포츠': 'sports athletics performance competition',
+        '비만': 'obesity overweight BMI body mass',
+        '식이': 'dietary nutrition food eating',
+        '칼로리': 'calorie energy metabolism burn',
+        '근력': 'strength resistance training power',
+        '지구력': 'endurance cardio aerobic stamina',
+        '헬스': 'fitness health wellness gym',
+        '트레이닝': 'training exercise workout routine',
+        '체중': 'weight body mass scale',
+        '신진대사': 'metabolism metabolic rate energy',
         
         # 환경 관련
-        '환경': 'environment environmental pollution',
-        '오염': 'pollution contamination environmental',
-        '미세플라스틱': 'microplastic plastic pollution marine',
-        '기후': 'climate change global warming',
-        '재활용': 'recycling waste management',
+        '환경': 'environment environmental pollution ecology',
+        '오염': 'pollution contamination environmental waste',
+        '미세플라스틱': 'microplastic plastic pollution marine ocean',
+        '기후': 'climate change global warming temperature',
+        '재활용': 'recycling waste management sustainability',
+        '지구온난화': 'global warming climate change temperature',
+        '생태계': 'ecosystem ecological environment biodiversity',
         
         # 에너지 관련
-        '태양광': 'solar energy renewable photovoltaic',
-        '신재생': 'renewable energy sustainable',
-        '배터리': 'battery energy storage',
-        '연료전지': 'fuel cell hydrogen energy',
+        '태양광': 'solar energy renewable photovoltaic panel',
+        '신재생': 'renewable energy sustainable green',
+        '배터리': 'battery energy storage power cell',
+        '연료전지': 'fuel cell hydrogen energy power',
+        '전기': 'electricity electrical power energy',
+        '발전': 'power generation electricity energy',
         
         # 생물학 관련
         '유전자': 'gene genetic DNA molecular biology',
-        '세포': 'cell cellular biology molecular',
-        '항생제': 'antibiotic antimicrobial resistance',
-        '바이러스': 'virus viral infection disease',
-        '박테리아': 'bacteria bacterial microbiology',
+        '세포': 'cell cellular biology molecular membrane',
+        '항생제': 'antibiotic antimicrobial resistance bacteria',
+        '바이러스': 'virus viral infection disease pathogen',
+        '박테리아': 'bacteria bacterial microbiology pathogen',
+        '단백질': 'protein molecular biology biochemistry',
+        '효소': 'enzyme biochemistry catalysis reaction',
         
         # 화학 관련
-        '화학': 'chemistry chemical reaction synthesis',
+        '화학': 'chemistry chemical reaction synthesis compound',
         '촉매': 'catalyst catalysis chemical reaction',
         '나노': 'nano nanotechnology materials science',
+        '분자': 'molecule molecular chemistry structure',
+        '반응': 'reaction chemical synthesis process',
         
         # 물리학 관련
         '물리': 'physics mechanical quantum electromagnetic',
-        '전자': 'electronics electronic circuit sensor',
+        '전자': 'electronics electronic circuit sensor device',
         '로봇': 'robot robotics automation artificial intelligence',
+        '센서': 'sensor detection measurement device monitoring',
+        '광학': 'optics optical light laser photon',
         
         # 컴퓨터/AI 관련
-        '인공지능': 'artificial intelligence machine learning AI',
+        '인공지능': 'artificial intelligence machine learning AI neural',
         '딥러닝': 'deep learning neural network AI',
         '앱': 'application software mobile technology',
-        '센서': 'sensor detection measurement device'
+        '데이터': 'data analysis statistics information',
+        '알고리즘': 'algorithm computational programming',
+        
+        # 의학 관련
+        '의학': 'medicine medical health clinical',
+        '치료': 'treatment therapy medical healing',
+        '약물': 'drug pharmaceutical medicine therapy',
+        '질병': 'disease illness medical pathology',
+        '진단': 'diagnosis medical detection screening'
     }
     
     # 입력 텍스트에서 키워드 찾기
@@ -117,14 +148,21 @@ def extract_and_translate_keywords(text):
         if korean_words:
             matched_keywords.extend(korean_words)
             print(f"   한국어 단어 추가: {korean_words}")
+        
+        # 🔥 추가: 공백으로 분리된 모든 단어 포함
+        all_words = text.replace(',', ' ').replace('.', ' ').split()
+        for word in all_words:
+            if len(word) >= 2:
+                matched_keywords.append(word)
+        print(f"   모든 단어 추가: {all_words}")
     
-    # 중복 제거 및 최대 8개로 확장 (더 많은 키워드로 검색 범위 확대)
-    unique_keywords = list(set(matched_keywords))[:8]
+    # 중복 제거 및 최대 10개로 확장 (더 많은 키워드로 검색 범위 확대)
+    unique_keywords = list(set(matched_keywords))[:10]
     
     print(f"🔍 키워드 변환: '{text}' → {unique_keywords}")
     return unique_keywords
 
-# 🤖 간단한 요약 생성
+# 🤖 간단한 요약 생성 - 에러 처리 강화
 @st.cache_data(show_spinner=False, ttl=3600)
 def generate_simple_summary(title, category=None, index=1):
     """간단한 프로젝트 요약 생성"""
@@ -148,10 +186,10 @@ def generate_simple_summary(title, category=None, index=1):
         return response.content[0].text.strip()
         
     except Exception as e:
-        print(f"요약 생성 오류: {e}")
+        print(f"⚠️ 요약 생성 오류: {e}")
         return f"이 프로젝트는 '{title}'에 관한 연구로 추정됩니다."
 
-# 🎯 메인 검색 함수 - 완전히 단순화
+# 🎯 메인 검색 함수 - 디버깅 강화 및 임계값 조정
 def search_similar_titles(user_input: str, max_results: int = 5):
     """간단하고 정확한 검색 함수"""
     global _DB_INITIALIZED, _PROCESSED_DB, _VECTORIZER, _TFIDF_MATRIX
@@ -160,9 +198,11 @@ def search_similar_titles(user_input: str, max_results: int = 5):
     
     # DB 초기화
     if not _DB_INITIALIZED:
+        print("🔄 DB 초기화 중...")
         initialize_db()
     
     if _PROCESSED_DB is None:
+        print("⚠️ 전역 DB 없음, 직접 로드 시도...")
         df = pd.read_excel(DB_PATH)
     else:
         df = _PROCESSED_DB
@@ -172,6 +212,7 @@ def search_similar_titles(user_input: str, max_results: int = 5):
         return []
     
     # 1. 키워드 추출 및 변환
+    print("📝 1단계: 키워드 추출 및 변환")
     keywords = extract_and_translate_keywords(user_input)
     if not keywords:
         print("❌ 키워드 추출 실패")
@@ -181,12 +222,15 @@ def search_similar_titles(user_input: str, max_results: int = 5):
     print(f"🎯 최종 검색어: '{search_query}'")
     
     # 2. 유사도 계산
+    print("🔢 2단계: 유사도 계산")
     try:
         if _VECTORIZER is not None and _TFIDF_MATRIX is not None:
             search_vector = _VECTORIZER.transform([search_query])
             cosine_sim = cosine_similarity(search_vector, _TFIDF_MATRIX)[0]
+            print(f"   ✅ 사전 계산된 벡터 사용")
         else:
             # 새로 계산
+            print("   ⚠️ 새로 벡터 계산 중...")
             corpus = df['Project Title'].fillna("").astype(str).tolist()
             corpus.append(search_query)
             
@@ -198,11 +242,18 @@ def search_similar_titles(user_input: str, max_results: int = 5):
         return []
     
     # 3. 결과 정렬 및 필터링
+    print("📊 3단계: 결과 분석")
     result_df = df.copy()
     result_df['score'] = cosine_sim
     
-    # 🔥 점진적 임계값 시도 (높은 정확도 → 낮은 정확도)
-    thresholds = [0.08, 0.05, 0.02, 0.01, 0.005]
+    # 🔥 상위 결과 확인 로그 추가
+    print(f"🔢 유사도 계산 완료, 상위 10개 결과:")
+    top_10 = result_df.nlargest(10, 'score')[['Project Title', 'Category', 'score']]
+    for idx, row in top_10.iterrows():
+        print(f"  {row['score']:.6f}: [{row.get('Category', 'N/A')}] {row['Project Title'][:50]}...")
+    
+    # 🔥 더 낮은 임계값으로 점진적 시도
+    thresholds = [0.05, 0.02, 0.01, 0.005, 0.001]  # 더 낮은 임계값 추가
     filtered_df = None
     
     for threshold in thresholds:
@@ -211,7 +262,7 @@ def search_similar_titles(user_input: str, max_results: int = 5):
         print(f"   임계값 {threshold}: {result_count}개 결과")
         
         # 적당한 수의 결과가 나오면 중단
-        if 1 <= result_count <= 15:
+        if 1 <= result_count <= 20:  # 범위 확대 (15→20)
             print(f"   ✅ 임계값 {threshold} 선택 ({result_count}개)")
             break
     
@@ -222,19 +273,24 @@ def search_similar_titles(user_input: str, max_results: int = 5):
     # 4. 상위 결과만 선택 (최대 5개)
     top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
     
-    print(f"📊 선택된 결과 ({len(top_df)}개):")
+    print(f"📋 선택된 결과 ({len(top_df)}개):")
     for idx, row in top_df.iterrows():
-        print(f"  {row['score']:.4f}: {row['Project Title'][:60]}...")
+        print(f"  {row['score']:.4f}: [{row.get('Category', 'N/A')}] {row['Project Title'][:60]}...")
     
-    # 5. 결과 구성
+    # 5. 결과 구성 - 에러 처리 강화
+    print("🏗️ 4단계: 결과 구성 및 요약 생성")
     results = []
     for i, (_, row) in enumerate(top_df.iterrows()):
-        # 간단한 요약 생성
-        summary = generate_simple_summary(
-            row.get('Project Title', ''), 
-            row.get('Category', ''),
-            i + 1
-        )
+        try:
+            # 간단한 요약 생성
+            summary = generate_simple_summary(
+                row.get('Project Title', ''), 
+                row.get('Category', ''),
+                i + 1
+            )
+        except Exception as e:
+            print(f"⚠️ 요약 생성 실패 ({i+1}번): {e}")
+            summary = f"이 프로젝트는 '{row.get('Project Title', '')}'에 관한 연구로 추정됩니다."
         
         result_item = {
             '제목': row.get('Project Title', ''),
@@ -261,3 +317,24 @@ def load_internal_db():
     except Exception as e:
         st.error(f"❌ 내부 DB 로드 실패: {e}")
         return pd.DataFrame()
+
+# 🧪 테스트 함수 추가
+def test_search():
+    """간단한 검색 테스트"""
+    test_queries = ["운동", "exercise", "체지방", "환경", "운동과 체지방 감량"]
+    for query in test_queries:
+        print(f"\n🧪 테스트: '{query}'")
+        try:
+            results = search_similar_titles(query, max_results=3)
+            print(f"✅ 결과: {len(results)}개")
+            if results:
+                for i, result in enumerate(results[:2]):  # 상위 2개만 출력
+                    print(f"  {i+1})점수:{result['score']:.4f} - {result['제목'][:50]}...")
+        except Exception as e:
+            print(f"❌ 테스트 실패: {e}")
+        print("-" * 50)
+
+# 사용 예시 (개발/테스트용)
+if __name__ == "__main__":
+    print("🚀 검색 엔진 테스트 시작...")
+    test_search()
