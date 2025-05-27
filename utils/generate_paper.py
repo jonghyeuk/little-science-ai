@@ -38,15 +38,10 @@ def generate_research_paper(topic, research_idea, references=""):
         참고문헌 작성법:
         1. 자료제목
         - 내용: 핵심내용 2문장 설명  
-        - 링크: 다음 중 하나만 사용
-          * https://ieeexplore.ieee.org (공학/전자 관련)
-          * https://www.nature.com/subjects (자연과학 관련)  
-          * https://www.nist.gov (측정/표준 관련)
-          * https://energy.mit.edu (에너지 관련)
-          * https://www.nsf.gov/discoveries (일반 과학)
+        - 링크: 실제 확인 가능한 URL (https://scholar.google.com/scholar?q=[키워드] 또는 실제 사이트)
         - 활용: 연구에 어떻게 도움되는지
         
-        중요: Google Scholar 검색 링크 절대 사용 금지! 위 실제 기관 사이트만 사용하세요.
+        중요: 반드시 실제 클릭 가능한 링크를 포함하세요. Google Scholar 검색 링크라도 좋습니다.
         """
         
         # 🔥 간단한 사용자 프롬프트
@@ -226,36 +221,29 @@ def get_default_content(section):
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
 def clean_references(ref_text):
-    """참고문헌 정리 - 한국+영문 DB 사이트로 교체 (한국 4개, 영문 3개)"""
+    """참고문헌 정리 - Google Scholar 검색 링크를 한국+영문 DB 사이트로 교체"""
     try:
         cleaned = ref_text
         
-        # 🔥 모든 링크를 실제 DB 사이트로 교체
+        # 🔥 Google Scholar 및 기타 검색 링크를 실제 DB 사이트로 교체
         import re
         
-        # 모든 링크 패턴 찾기 (scholar, sciencedirect 등)
-        all_links = re.findall(r'https://[^\s]*', cleaned)
-        
-        # 교체용 링크 (한국 4개 + 영문 3개)
+        # 한국 + 영문 DB 사이트 (간단한 URL)
         replacement_links = [
-            'https://www.dbpia.co.kr/search/topSearch?searchName=',  # 한국 1
-            'https://www.riss.kr/search/Search.do?queryText=',       # 한국 2  
-            'https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci', # 한국 3
-            'https://www.ndsl.kr/ndsl/search/detail/trend/trendSearchResultDetail.do', # 한국 4
-            'https://www.sciencedirect.com/search?qs=',             # 영문 1
-            'https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=', # 영문 2
-            'https://pubmed.ncbi.nlm.nih.gov/?term='               # 영문 3
+            'https://www.dbpia.co.kr/',          # 한국 1
+            'https://www.riss.kr/',              # 한국 2  
+            'https://www.kci.go.kr/',            # 한국 3
+            'https://www.sciencedirect.com/',    # 영문 1
+            'https://ieeexplore.ieee.org/',      # 영문 2
+            'https://www.nature.com/',           # 영문 3
         ]
         
-        # 발견된 링크를 순서대로 교체
+        # 모든 링크 패턴 찾아서 교체
+        all_links = re.findall(r'https://[^\s]*', cleaned)
+        
         for i, old_link in enumerate(all_links):
-            if i < len(replacement_links):
-                replacement_link = replacement_links[i]
-                cleaned = cleaned.replace(old_link, replacement_link, 1)
-            else:
-                # 7개 초과 시 순환
-                replacement_link = replacement_links[i % len(replacement_links)]
-                cleaned = cleaned.replace(old_link, replacement_link, 1)
+            replacement_link = replacement_links[i % len(replacement_links)]
+            cleaned = cleaned.replace(old_link, replacement_link, 1)
         
         return cleaned.strip()
     except:
