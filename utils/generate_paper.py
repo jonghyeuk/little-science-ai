@@ -29,15 +29,16 @@ def generate_research_paper(topic, research_idea, references=""):
         - references: 실제 확인가능한 자료 3-4개
 
         실험방법 작성법:
-        1단계: [제목] - 구체적 설명
+        1단계: 실험에 필요한 물품 list
         2단계: [제목] - 구체적 설명
         3단계: [제목] - 구체적 설명
+        4단계: [제목] - 구체적 설명
         (이런 식으로 단계별로 명확히 구분)
 
         참고문헌 작성법:
         1. 자료제목
         - 내용: 핵심내용 2문장 설명
-        - 링크: 실제URL (Google Scholar, 정부기관 등)
+        - 링크: 실제URL (Google Scholar, 저널지, 정부기관 등)
         - 활용: 연구에 어떻게 도움되는지
         """
         
