@@ -26,7 +26,7 @@ def generate_research_paper(topic, research_idea, references=""):
         - results: 예상되는 구체적 결과들 (150-200단어)
         - visuals: 필요한 그래프/차트 설명 (100-150단어)
         - conclusion: 실험을 통해 증명하려는 과학적 결론과 학술적 의의 (100-150단어)
-        - references: "검색 가이드 템플릿 사용" (간단한 한 줄로)
+        - references: 실제 확인가능한 자료 3-4개 (반드시 실제 링크 포함)
 
         실험방법 작성법:
         1단계: [제목] - (장비/재료 간단히)
@@ -44,13 +44,13 @@ def generate_research_paper(topic, research_idea, references=""):
         주의사항:
         - 초록과 서론: 학술논문 형식으로 작성
         - 실험방법: "먼저 ~를 합니다. 다음으로 ~를 설정합니다" 친절한 서술형
-        - 참고문헌: 간단히 "검색 템플릿 사용"이라고만 써주세요
+        - 참고문헌: 반드시 실제 클릭 가능한 링크 포함
         """
         
         # Claude 호출
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=2000,  # 토큰 더 줄임 (레퍼런스 간소화)
+            max_tokens=2500,  # 참고문헌 늘어난 만큼 토큰 증가
             temperature=0.2,
             system=system_prompt,
             messages=[
@@ -65,15 +65,15 @@ def generate_research_paper(topic, research_idea, references=""):
         # JSON 추출
         paper_data = extract_json_robust(response_text)
         
-        # 검증 및 수정 (레퍼런스는 무조건 템플릿으로 교체)
+        # JSON 추출
         if paper_data:
-            paper_data = validate_and_fix_sections(paper_data, topic)
+            paper_data = validate_and_fix_sections(paper_data)
         
-        return paper_data if paper_data else create_error_response(topic)
+        return paper_data if paper_data else create_error_response()
         
     except Exception as e:
         print(f"❌ 전체 논문 생성 오류: {e}")
-        return create_error_response(topic)
+        return create_error_response()
 
 def extract_json_robust(text):
     """간소화된 JSON 추출"""
@@ -154,20 +154,14 @@ def manual_parse_sections(text):
     except:
         return None
 
-def validate_and_fix_sections(paper_data, topic):
-    """섹션별 검증 및 수정 - 레퍼런스는 무조건 템플릿으로"""
+def validate_and_fix_sections(paper_data):
+    """섹션별 검증 및 수정"""
     try:
         required_sections = ['abstract', 'introduction', 'methods', 'results', 'visuals', 'conclusion', 'references']
         
         for section in required_sections:
             if section not in paper_data or not paper_data[section] or len(paper_data[section].strip()) < 20:
-                if section == 'references':
-                    paper_data[section] = get_search_guide_template(topic)
-                else:
-                    paper_data[section] = get_default_content(section)
-        
-        # 🔥 레퍼런스는 항상 검색 가이드로 교체
-        paper_data['references'] = get_search_guide_template(topic)
+                paper_data[section] = get_default_content(section)
         
         return paper_data
         
@@ -175,21 +169,28 @@ def validate_and_fix_sections(paper_data, topic):
         return paper_data
 
 def get_search_guide_template(topic):
-    """🔥 새로운 검색 가이드 템플릿"""
+    """🔥 줄바꿈 정렬된 검색 가이드"""
     return f"""📚 추가 연구를 위한 검색 가이드
 
 아래 링크에서 "{topic}" 관련 키워드를 검색하여 관련논문들을 읽어보세요:
 
 **국내 학술 검색 사이트:**
-• 네이버 학술정보: https://academic.naver.com/
-• RISS 학술연구정보: https://www.riss.kr/
-• DBpia 논문검색: https://www.dbpia.co.kr/
-• 한국과학기술정보연구원: https://www.ndsl.kr/
+
+네이버 학술정보: https://academic.naver.com/
+
+RISS 학술연구정보: https://www.riss.kr/
+
+DBpia 논문검색: https://www.dbpia.co.kr/
+
+한국과학기술정보연구원: https://www.ndsl.kr/
 
 **해외 학술 검색 사이트:**
-• 구글 학술검색: https://scholar.google.com/
-• IEEE Xplore: https://ieeexplore.ieee.org/
-• PubMed: https://pubmed.ncbi.nlm.nih.gov/
+
+구글 학술검색: https://scholar.google.com/
+
+IEEE Xplore: https://ieeexplore.ieee.org/
+
+PubMed: https://pubmed.ncbi.nlm.nih.gov/
 
 💡 **검색 팁:** "{topic}"와 함께 "실험", "분석", "응용", "최신 연구" 등의 키워드를 조합해서 검색해보세요."""
 
@@ -201,11 +202,12 @@ def get_default_content(section):
         'methods': "1단계: 실험 재료 준비\n필요한 실험 도구와 재료를 준비합니다.\n\n2단계: 실험 환경 설정\n먼저 실험실의 조명을 조절하여 적절한 환경을 만듭니다. 다음으로 실험 장비를 안정적인 곳에 배치합니다.\n\n3단계: 데이터 수집 진행\n그 후에 실험을 단계적으로 진행하며 각 단계마다 결과를 기록합니다.\n\n4단계: 결과 분석 및 정리\n마지막으로 수집된 데이터를 체계적으로 분석합니다. 그래프나 표로 정리하여 패턴을 찾아냅니다.",
         'results': "실험을 통해 다음과 같은 결과를 얻을 것으로 예상된다: 측정값들 간의 상관관계, 가설의 검증 결과, 그리고 이론적 모델과의 일치성 평가이다. 이러한 결과는 관련 분야의 이론적 토대를 강화하는 데 기여할 것이다.",
         'visuals': "실험 결과를 효과적으로 표현하기 위해 다음과 같은 시각자료를 제작할 예정입니다: 실험 과정을 보여주는 사진, 데이터 변화를 나타내는 그래프, 결과를 요약한 표 등입니다.",
-        'conclusion': "본 연구를 통해 제시된 가설이 실험적으로 검증될 것으로 예상된다. 이는 관련 분야의 이론적 이해를 깊게 하고, 후속 연구의 방향성을 제시하는 중요한 의미를 갖는다."
+        'conclusion': "본 연구를 통해 제시된 가설이 실험적으로 검증될 것으로 예상된다. 이는 관련 분야의 이론적 이해를 깊게 하고, 후속 연구의 방향성을 제시하는 중요한 의미를 갖는다.",
+        'references': "1. 관련 주제 연구 동향\n\n- 내용: 해당 분야의 최신 연구 동향과 주요 발견사항을 정리한 자료입니다. 국내외 연구 현황을 파악할 수 있습니다.\n\n- 링크: https://scholar.google.com/scholar?q=related+research+trends+2024\n\n- 활용: 연구 배경 이해와 방향 설정에 도움이 됩니다.\n\n\n2. 실험 방법론 가이드\n\n- 내용: 과학적 실험 설계와 데이터 분석 방법에 대한 종합적 안내서입니다.\n\n- 링크: https://www.physics.org/experimental-methods\n\n- 활용: 체계적인 실험 진행을 위한 참고자료로 활용합니다.\n\n\n3. 정부 연구 보고서\n\n- 내용: 관련 분야에 대한 정부 차원의 연구 및 정책 자료입니다.\n\n- 링크: https://www.ndsl.kr\n\n- 활용: 국가적 관점에서의 연구 방향성 파악에 도움이 됩니다."
     }
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
-def create_error_response(topic=""):
+def create_error_response():
     """에러 발생 시 기본 응답"""
     return {
         "abstract": "논문 초록 생성 중 오류가 발생했습니다. 주제를 더 구체적으로 입력하고 다시 시도해주세요.",
