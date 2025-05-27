@@ -29,17 +29,18 @@ def generate_research_paper(topic, research_idea, references=""):
         - references: 실제 확인가능한 자료 3-4개
 
         실험방법 작성법:
-        1단계: 실험에 필요한 물품 list
+        1단계: [제목] - 구체적 설명
         2단계: [제목] - 구체적 설명
         3단계: [제목] - 구체적 설명
-        4단계: [제목] - 구체적 설명
         (이런 식으로 단계별로 명확히 구분)
 
         참고문헌 작성법:
         1. 자료제목
-        - 내용: 핵심내용 2문장 설명
-        - 링크: 실제URL (Google Scholar, 저널지, 정부기관 등)
+        - 내용: 핵심내용 2문장 설명  
+        - 검색: Google Scholar에서 "[키워드]" 검색 또는 실제 존재하는 사이트만 (nasa.gov, nih.gov, 대학사이트 등)
         - 활용: 연구에 어떻게 도움되는지
+        
+        주의: 절대로 가짜 DOI나 존재하지 않는 링크를 만들지 말고, 대신 검색 방법을 안내하세요.
         """
         
         # 🔥 간단한 사용자 프롬프트
@@ -209,16 +210,40 @@ def get_default_content(section):
         'results': "실험을 통해 다음과 같은 결과를 얻을 것으로 예상됩니다: 측정값들 간의 상관관계, 가설의 검증 결과, 그리고 실용적 활용 가능성에 대한 평가입니다.",
         'visuals': "실험 결과를 효과적으로 표현하기 위해 다음과 같은 시각자료를 제작할 예정입니다: 실험 과정을 보여주는 사진, 데이터 변화를 나타내는 그래프, 결과를 요약한 표 등입니다.",
         'conclusion': "본 연구를 통해 제시된 주제에 대한 새로운 이해를 얻을 수 있을 것이며, 이는 관련 분야의 발전에 기여할 것으로 기대됩니다. 또한 실생활에서의 응용 가능성도 탐구할 예정입니다.",
-        'references': "1. 관련 주제 연구 동향\n- 내용: 해당 분야의 최신 연구 동향과 주요 발견사항을 정리한 자료\n- 활용: 연구 배경 이해와 방향 설정에 도움\n\n2. 실험 방법론 가이드\n- 내용: 과학적 실험 설계와 데이터 분석 방법에 대한 종합적 안내\n- 활용: 체계적인 실험 진행을 위한 참고자료"
+        'references': "1. 관련 주제 연구 동향\n- 내용: 해당 분야의 최신 연구 동향과 주요 발견사항을 정리한 자료\n- 검색: Google Scholar에서 '주제명 + research trends' 검색\n- 활용: 연구 배경 이해와 방향 설정에 도움\n\n2. 실험 방법론 가이드\n- 내용: 과학적 실험 설계와 데이터 분석 방법에 대한 종합적 안내\n- 검색: 각 대학교 과학교육과 또는 실험방법론 관련 교재 검색\n- 활용: 체계적인 실험 진행을 위한 참고자료\n\n3. 정부 연구 보고서\n- 내용: 관련 분야에 대한 정부 차원의 연구 및 정책 자료\n- 검색: 국가과학기술정보센터(NDSL) 또는 관련 정부기관 홈페이지\n- 활용: 국가적 관점에서의 연구 방향성 파악"
     }
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
 def clean_references(ref_text):
-    """참고문헌 정리"""
+    """참고문헌 정리 - 가짜 링크 제거하고 검색 방법으로 대체"""
     try:
-        # 이상한 문자 제거
-        cleaned = re.sub(r'[|]+$', '', ref_text)
-        cleaned = re.sub(r'^\d+\.\s*$', '', cleaned, flags=re.MULTILINE)
+        cleaned = ref_text
+        
+        # 🔥 가짜 DOI와 링크들 제거
+        fake_patterns = [
+            r'https?://[^\s]*X\d+',  # X123456789 같은 가짜 ID
+            r'https?://doi\.org/10\.\d+/[^\s]*XXX[^\s]*',  # XXX 포함 가짜 DOI
+            r'https?://[^\s]*fake[^\s]*',  # fake 포함 링크
+            r'DOI:\s*10\.\d+/[^\s]*XXX[^\s]*'  # 가짜 DOI 패턴
+        ]
+        
+        for pattern in fake_patterns:
+            cleaned = re.sub(pattern, '', cleaned)
+        
+        # 🔥 "링크:" 를 "검색:" 으로 변경
+        cleaned = cleaned.replace('링크:', '검색:')
+        cleaned = cleaned.replace('- 링크:', '- 검색:')
+        
+        # 🔥 빈 링크 라인 정리
+        lines = cleaned.split('\n')
+        filtered_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            if line and not (line.startswith('검색:') and len(line) < 20):
+                filtered_lines.append(line)
+        
+        cleaned = '\n'.join(filtered_lines)
         
         # 너무 짧으면 기본값 사용
         if len(cleaned.strip()) < 50:
