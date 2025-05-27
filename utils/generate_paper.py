@@ -1,4 +1,3 @@
-# utils/generate_paper.py
 import streamlit as st
 import anthropic
 import json
@@ -61,8 +60,8 @@ def generate_research_paper(topic, research_idea, references=""):
         # Claude 호출
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=3000,  # 참고문헌 늘어난 만큼 토큰 증가
-            temperature=0.2,  # 더 일관된 응답
+            max_tokens=3000,
+            temperature=0.2,
             system=system_prompt,
             messages=[
                 {"role": "user", "content": user_prompt}
@@ -72,11 +71,8 @@ def generate_research_paper(topic, research_idea, references=""):
         response_text = response.content[0].text.strip()
         print(f"=== Claude 응답 원본 ===")
         print(response_text[:300] + "...")
-        
-        # 🔥 더 강력한 JSON 추출
+
         paper_data = extract_json_robust(response_text)
-        
-        # 🔥 섹션별 검증 및 수정
         if paper_data:
             paper_data = validate_and_fix_sections(paper_data)
         
@@ -87,15 +83,12 @@ def generate_research_paper(topic, research_idea, references=""):
         return create_error_response()
 
 def extract_json_robust(text):
-    """더 강력한 JSON 추출"""
     try:
-        # 방법 1: 직접 파싱
         try:
             return json.loads(text)
         except:
             pass
         
-        # 방법 2: 코드블록 제거
         if "```json" in text:
             content = text.split("```json")[1].split("```")[0].strip()
         elif "```" in text:
@@ -108,7 +101,6 @@ def extract_json_robust(text):
         except:
             pass
         
-        # 방법 3: 정규식으로 JSON 찾기
         json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
         matches = re.findall(json_pattern, text, re.DOTALL)
         
@@ -120,14 +112,12 @@ def extract_json_robust(text):
             except:
                 continue
         
-        # 방법 4: 수동 파싱
         return manual_parse_sections(text)
         
     except:
         return None
 
 def manual_parse_sections(text):
-    """수동으로 섹션 파싱"""
     try:
         sections = {
             "abstract": "",
@@ -139,7 +129,6 @@ def manual_parse_sections(text):
             "references": ""
         }
         
-        # 더 유연한 키워드 검색
         keywords = {
             'abstract': ['초록', 'abstract', '요약'],
             'introduction': ['서론', 'introduction', '배경', '도입'],
@@ -158,7 +147,6 @@ def manual_parse_sections(text):
             if not line or line.startswith('{') or line.startswith('}'):
                 continue
             
-            # 섹션 감지
             found_section = None
             for section, kws in keywords.items():
                 if any(kw in line.lower() for kw in kws):
@@ -168,13 +156,11 @@ def manual_parse_sections(text):
             if found_section:
                 current_section = found_section
             elif current_section and not line.startswith('"') and not line.startswith(','):
-                # 내용 추가
                 if sections[current_section]:
                     sections[current_section] += " " + line
                 else:
                     sections[current_section] = line
         
-        # 빈 섹션 처리
         for key, value in sections.items():
             if not value.strip():
                 sections[key] = get_default_content(key)
@@ -185,7 +171,6 @@ def manual_parse_sections(text):
         return None
 
 def validate_and_fix_sections(paper_data):
-    """섹션별 검증 및 수정"""
     try:
         required_sections = ['abstract', 'introduction', 'methods', 'results', 'visuals', 'conclusion', 'references']
         
@@ -193,83 +178,72 @@ def validate_and_fix_sections(paper_data):
             if section not in paper_data or not paper_data[section] or len(paper_data[section].strip()) < 20:
                 paper_data[section] = get_default_content(section)
         
-        # methods 섹션 특별 처리 (너무 길면 단축)
         if len(paper_data['methods']) > 1000:
             methods_text = paper_data['methods'][:800] + "...\n\n데이터 수집 및 분석: 실험 결과를 체계적으로 기록하고 통계적으로 분석합니다."
             paper_data['methods'] = methods_text
         
-        # references 섹션 정리
         if paper_data['references']:
             paper_data['references'] = clean_references(paper_data['references'])
+            paper_data['references'] = make_links_clickable(paper_data['references'])  # ✅ 링크 클릭 가능하게 처리
         
         return paper_data
         
     except:
         return paper_data
 
+def make_links_clickable(reference_text):
+    """링크 텍스트를 실제 클릭 가능한 <a> 링크로 변환"""
+    url_pattern = r'(https?://[^\s]+)'
+    return re.sub(url_pattern, r'<a href="\1" target="_blank" style="color:#0969da;">🔗 링크 바로가기</a>', reference_text)
+
 def get_default_content(section):
-    """기본 내용 제공"""
     defaults = {
-        'abstract': "본 연구는 제시된 주제에 대해 체계적인 실험을 통해 과학적 근거를 확보하고자 한다. 실험을 통해 얻은 데이터를 분석하여 의미있는 결론을 도출할 예정이다. 이 연구 결과는 관련 분야의 이해를 넓히는 데 기여할 것으로 기대된다.",
-        'introduction': "현재 관련 분야에서는 다양한 연구가 진행되고 있지만, 여전히 해결되지 않은 문제들이 존재한다. 기존 연구들의 한계점을 보완하고 새로운 관점을 제시하기 위해 본 연구를 수행한다. 본 연구의 목적은 실험적 접근을 통해 이론적 가설을 검증하는 것이다.",
-        'methods': "1단계: 실험 재료 준비\n필요한 실험 도구와 재료를 준비합니다.\n\n2단계: 실험 환경 설정\n먼저 실험실의 조명을 조절하여 적절한 환경을 만듭니다. 다음으로 실험 장비를 안정적인 곳에 배치합니다. 이때 주의할 점은 장비가 흔들리지 않도록 고정하는 것입니다.\n\n3단계: 데이터 수집 진행\n그 후에 실험을 단계적으로 진행하며 각 단계마다 결과를 기록합니다. 측정값이 정확한지 확인하면서 진행합니다. 실험 중에는 외부 요인이 영향을 주지 않도록 주의합니다.\n\n4단계: 결과 분석 및 정리\n마지막으로 수집된 데이터를 체계적으로 분석합니다. 그래프나 표로 정리하여 패턴을 찾아냅니다. 예상 결과와 비교하여 의미있는 결론을 도출합니다.",
-        'results': "실험을 통해 다음과 같은 결과를 얻을 것으로 예상된다: 측정값들 간의 상관관계, 가설의 검증 결과, 그리고 이론적 모델과의 일치성 평가이다. 이러한 결과는 관련 분야의 이론적 토대를 강화하는 데 기여할 것이다.",
-        'visuals': "실험 결과를 효과적으로 표현하기 위해 다음과 같은 시각자료를 제작할 예정입니다: 실험 과정을 보여주는 사진, 데이터 변화를 나타내는 그래프, 결과를 요약한 표 등입니다.",
-        'conclusion': "본 연구를 통해 제시된 가설이 실험적으로 검증될 것으로 예상된다. 이는 관련 분야의 이론적 이해를 깊게 하고, 후속 연구의 방향성을 제시하는 중요한 의미를 갖는다. 또한 본 연구에서 개발된 실험 방법론은 유사 연구에 활용될 수 있을 것이다.",
-        'references': "1. 관련 주제 최신 연구 동향\n- 내용: 해당 분야의 최신 연구 동향과 주요 발견사항을 정리한 국내 자료입니다.\n- 링크: https://www.dbpia.co.kr/\n- 활용: 연구 배경 이해와 방향 설정에 도움이 됩니다.\n\n2. 실험 방법론 설계 가이드\n- 내용: 과학적 실험 설계와 데이터 분석 방법에 대한 종합적 안내서입니다.\n- 링크: https://www.riss.kr/\n- 활용: 체계적인 실험 진행을 위한 참고자료로 활용합니다.\n\n3. 정부 연구개발 정책 보고서\n- 내용: 관련 분야에 대한 정부 차원의 연구 및 정책 자료입니다.\n- 링크: https://www.kci.go.kr/\n- 활용: 국가적 관점에서의 연구 방향성 파악에 도움이 됩니다.\n\n4. 과학기술 발전 동향 분석\n- 내용: 최신 과학기술 발전 동향과 미래 전망을 다룬 연구 자료입니다.\n- 링크: https://www.ndsl.kr/\n- 활용: 기술적 배경 지식 확보에 활용됩니다.\n\n5. 한국 학술연구 정보서비스\n- 내용: 다양한 학술 분야의 연구 논문과 자료를 제공하는 데이터베이스입니다.\n- 링크: https://kiss.kstudy.com/\n- 활용: 심화 연구 자료 확보에 도움이 됩니다.\n\n6. 국가정책연구 자료센터\n- 내용: 국가 차원의 정책 연구와 관련 통계 자료를 제공합니다.\n- 링크: https://www.nl.go.kr/\n- 활용: 정책적 배경과 사회적 맥락 이해에 활용됩니다.\n\n7. International Research Database\n- 내용: 해외 주요 학술지와 연구 논문을 검색할 수 있는 종합 데이터베이스입니다.\n- 링크: https://www.sciencedirect.com/\n- 활용: 국제적 연구 동향 파악에 도움이 됩니다.\n\n8. IEEE Engineering Research Archive\n- 내용: 공학 분야의 최신 연구 성과와 기술 동향을 다룬 자료들입니다.\n- 링크: https://ieeexplore.ieee.org/\n- 활용: 기술적 구현 방법과 공학적 접근법 참고에 활용됩니다.\n\n9. Nature Scientific Publications\n- 내용: 자연과학 분야의 권위있는 연구 논문과 최신 발견 사항들을 제공합니다.\n- 링크: https://www.nature.com/\n- 활용: 과학적 이론과 실험 방법론 학습에 활용됩니다.\n\n10. PubMed Medical Research Database\n- 내용: 의학 및 생명과학 분야의 연구 논문과 임상 연구 자료를 제공합니다.\n- 링크: https://pubmed.ncbi.nlm.nih.gov/\n- 활용: 생물학적 배경 지식과 관련 연구 방법론 참고에 활용됩니다."
+        'abstract': "본 연구는 제시된 주제에 대해 체계적인 실험을 통해 과학적 근거를 확보하고자 한다...",
+        'introduction': "현재 관련 분야에서는 다양한 연구가 진행되고 있지만...",
+        'methods': "1단계: 실험 재료 준비\n필요한 실험 도구와 재료를 준비합니다...\n\n4단계: 결과 분석 및 정리...",
+        'results': "실험을 통해 다음과 같은 결과를 얻을 것으로 예상된다...",
+        'visuals': "실험 결과를 효과적으로 표현하기 위해 다음과 같은 시각자료를 제작할 예정입니다...",
+        'conclusion': "본 연구를 통해 제시된 가설이 실험적으로 검증될 것으로 예상된다...",
+        'references': "1. 관련 주제 최신 연구 동향\n- 링크: https://www.dbpia.co.kr/\n..."
     }
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
 def clean_references(ref_text):
-    """참고문헌 정리 - 한국+영문 DB 사이트로 교체 (총 10개)"""
     try:
         cleaned = ref_text
-        
-        # 🔥 모든 링크를 실제 DB 사이트로 교체
-        import re
-        
-        # 모든 링크 패턴 찾기 (scholar, sciencedirect 등)
         all_links = re.findall(r'https://[^\s]*', cleaned)
-        
-        # 교체용 링크 (한국 6개 + 영문 4개 = 총 10개)
         replacement_links = [
-            'https://www.dbpia.co.kr/',          # 한국 1 - DBpia
-            'https://www.riss.kr/',              # 한국 2 - RISS  
-            'https://www.kci.go.kr/',            # 한국 3 - KCI
-            'https://www.ndsl.kr/',              # 한국 4 - NDSL
-            'https://kiss.kstudy.com/',          # 한국 5 - KISS
-            'https://www.nl.go.kr/',             # 한국 6 - 국회도서관
-            'https://www.sciencedirect.com/',    # 영문 1 - ScienceDirect
-            'https://ieeexplore.ieee.org/',      # 영문 2 - IEEE
-            'https://www.nature.com/',           # 영문 3 - Nature
-            'https://pubmed.ncbi.nlm.nih.gov/'   # 영문 4 - PubMed
+            'https://www.dbpia.co.kr/',
+            'https://www.riss.kr/',
+            'https://www.kci.go.kr/',
+            'https://www.ndsl.kr/',
+            'https://kiss.kstudy.com/',
+            'https://www.nl.go.kr/',
+            'https://www.sciencedirect.com/',
+            'https://ieeexplore.ieee.org/',
+            'https://www.nature.com/',
+            'https://pubmed.ncbi.nlm.nih.gov/'
         ]
-        
-        # 발견된 링크를 순서대로 교체
         for i, old_link in enumerate(all_links):
             if i < len(replacement_links):
                 replacement_link = replacement_links[i]
                 cleaned = cleaned.replace(old_link, replacement_link, 1)
             else:
-                # 10개 초과 시 순환
                 replacement_link = replacement_links[i % len(replacement_links)]
                 cleaned = cleaned.replace(old_link, replacement_link, 1)
-        
         return cleaned.strip()
     except:
         return ref_text
 
 def parse_text_response(text):
-    """JSON 파싱 실패 시 텍스트에서 섹션별로 추출"""
     return manual_parse_sections(text)
 
 def create_error_response():
-    """에러 발생 시 기본 응답"""
     return {
-        "abstract": "논문 초록 생성 중 오류가 발생했습니다. 주제를 더 구체적으로 입력하고 다시 시도해주세요.",
-        "introduction": "서론 생성 중 오류가 발생했습니다. 연구 배경을 다시 검토해주세요.",
-        "methods": "연구 방법 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-        "results": "예상 결과 생성 중 오류가 발생했습니다. 네트워크 상태를 확인해주세요.",
+        "abstract": "논문 초록 생성 중 오류가 발생했습니다...",
+        "introduction": "서론 생성 중 오류가 발생했습니다...",
+        "methods": "연구 방법 생성 중 오류가 발생했습니다...",
+        "results": "예상 결과 생성 중 오류가 발생했습니다...",
         "visuals": "시각자료 제안 생성 중 오류가 발생했습니다.",
         "conclusion": "결론 생성 중 오류가 발생했습니다.",
         "references": "참고문헌 생성 중 오류가 발생했습니다."
