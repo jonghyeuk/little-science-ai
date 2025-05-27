@@ -102,7 +102,32 @@ def extract_keywords(text, top_n=5):
     
     return top_keywords
 
-# 효율적인 Claude 번역 함수 - 키워드만 번역
+# 누락된 Claude 번역 함수 추가
+@st.cache_data(show_spinner=False, ttl=3600)
+def claude_translate_keywords(keywords, tgt_lang="en") -> list:
+    if not keywords:
+        return []
+        
+    try:
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
+        keyword_text = ", ".join(keywords)
+        
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=100,  # 키워드 번역은 짧으니 적은 토큰
+            system=f"다음 키워드들을 {tgt_lang}로 번역해주세요. 번역된 키워드만 쉼표로 구분하여 알려주세요.",
+            messages=[
+                {"role": "user", "content": keyword_text}
+            ]
+        )
+        
+        translated = response.content[0].text.strip()
+        return [k.strip() for k in translated.split(',')]
+    except Exception as e:
+        st.warning(f"키워드 번역 중 오류: {e}")
+        return keywords
+
+# 개선된 일괄 처리 함수 (중복 제거 및 개선)
 @st.cache_data(show_spinner=False, ttl=3600)
 def batch_infer_content(titles, categories=None):
     """여러 프로젝트 제목을 한 번에 처리하여 Claude API 호출 최소화 - 개선된 버전"""
@@ -234,7 +259,7 @@ def batch_infer_content(titles, categories=None):
         
         return fallback_summaries
 
-# 간단한 개별 추론 함수 추가
+# 간단한 개별 추론 함수
 def infer_project_content_simple(title, category=None, number=1):
     """간단한 개별 프로젝트 내용 추론"""
     try:
@@ -262,130 +287,6 @@ def infer_project_content_simple(title, category=None, number=1):
     except Exception as e:
         print(f"개별 추론 오류: {e}")
         return f"{number}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (개별 추론 중 오류 발생)"
-        
-# 일괄 처리 함수 - 여러 프로젝트 제목 한 번에 처리 (Claude 버전)
-@st.cache_data(show_spinner=False, ttl=3600)
-def batch_infer_content(titles, categories=None):
-    """여러 프로젝트 제목을 한 번에 처리하여 Claude API 호출 최소화"""
-    if not titles:
-        return []
-        
-    try:
-        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
-        
-        # 범주 정보 추가
-        prompts = []
-        for i, title in enumerate(titles):
-            category = categories[i] if categories and i < len(categories) else None
-            if category:
-                prompts.append(f"{i+1}. '{title}' (연구 분야: {category})")
-            else:
-                prompts.append(f"{i+1}. '{title}'")
-        
-        # 시스템 프롬프트 작성
-        system_prompt = """
-        당신은 과학 논문 제목만으로 내용을 추론하는 도우미입니다. 중요한 규칙:
-        
-        1. 제목만 있고 실제 논문을 보지 못했다는 것을 명확히 언급할 것
-        2. 제목에 없는 구체적 방법론이나 결과는 추론하지 말 것  
-        3. 서술은 먼저 제목을 자연스럽게 번역하고, 그 내용을 바탕으로 내용을 추론한다. 설명하는 모든 서술은 "~을 다루었을 것으로 예상됩니다" 같은 추측형으로 작성할 것
-        4. 각 논문에 대해 4-6문장의 알기쉬운 구체적인 설명을 제공하고 예를 드는 설명을 보강할 할 것
-        5. 각 응답 시작에 번호를 유지할 것 (1., 2., 등)
-        
-        다음 형식으로 각 논문을 설명하세요:
-        "X. 이 연구는 [주제]에 관한 것으로 추정됩니다. 제목에서 유추하면, [예상 목적/방법]을 다루었을 것으로 보입니다. (주의: 이는 제목만을 기반으로 한 추론으로, 실제 연구 내용과 다를 수 있습니다.)"
-        나쁜 예: "전자기 유도의 특성을 활용하여 효율적인 전기 생산 방법을..."
-        좋은 예: "잎의 생체모방학과 전자기 유도를 활용한 전기 생산 연구입니다."
-        """
-        
-        # 사용자 프롬프트 작성
-        user_prompt = "다음 과학 논문 제목들의 내용을 추론해주세요:\n\n" + "\n".join(prompts)
-        
-        # Claude API 호출
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=2000,  # 여러 프로젝트 일괄 처리를 위한 충분한 토큰
-            system=system_prompt,
-            messages=[
-                {"role": "user", "content": user_prompt}
-            ]
-        )
-        
-        full_response = response.content[0].text.strip()
-        
-        # 응답 파싱
-        summaries = []
-        current_summary = ""
-        current_index = 0
-        
-        lines = full_response.split('\n')
-        for line in lines:
-            # 새로운 항목 시작 감지 (1., 2., 등)
-            match = re.match(r'^(\d+)\.', line)
-            if match:
-                # 이전 요약 저장
-                if current_summary and current_index > 0:
-                    summaries.append(current_summary.strip())
-                    
-                # 새 요약 시작
-                index = int(match.group(1))
-                current_index = index
-                current_summary = line
-            elif current_summary:  # 현재 요약에 라인 추가
-                current_summary += " " + line
-        
-        # 마지막 요약 저장
-        if current_summary:
-            summaries.append(current_summary.strip())
-        
-        # 요약 개수 확인 및 조정 
-        if len(summaries) < len(titles):
-            # 부족한 요약 추가
-            for i in range(len(summaries), len(titles)):
-                title = titles[i]
-                summaries.append(f"{i+1}. 이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (요약 생성 실패)")
-        
-        return summaries
-    
-    except Exception as e:
-        print(f"일괄 추론 오류: {e}")
-        # 에러 발생시 기본 요약 반환
-        return [f"이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (추론 오류)" for title in titles]
-
-# 개별 프로젝트 내용 추론 함수 (Claude 버전)
-@st.cache_data(show_spinner=False, ttl=3600)
-def infer_project_content(title, category=None):
-    try:
-        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
-        
-        system_prompt = """
-        당신은 과학 논문 제목만으로 내용을 추론하는 도우미입니다. 중요한 규칙:
-        
-        1. 제목만 있고 실제 논문을 보지 못했다는 것을 명확히 언급할 것
-        2. 모든 서술은 "~로 추측됩니다", "~을 다루었을 것으로 예상됩니다" 같은 추측형으로 작성할 것
-        3. 구체적인 방법론과 결과는 완전히 추측이라는 것을 명시할 것
-        4. 제목에서 유추할 수 있는 연구 주제와 예상되는 접근법 중심으로 설명할 것
-        
-        다음 형식으로 답변하세요:
-        "이 연구는 [주제]에 관한 것으로 추정됩니다. 제목에서 유추하면, [예상 목적]을 위해 [예상 방법]을 사용했을 것으로 보입니다. 이 연구는 [예상 분야]에 기여할 가능성이 있으며, [잠재적 의의]를 가질 것으로 예상됩니다. (주의: 이는 제목만을 기반으로 한 추론으로, 실제 연구 내용과 다를 수 있습니다.)"
-        """
-        
-        user_prompt = title
-        if category:
-            user_prompt = f"{title} (연구 분야: {category})"
-            
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=300,  # 개별 프로젝트 추론을 위한 적절한 토큰
-            system=system_prompt,
-            messages=[
-                {"role": "user", "content": user_prompt}
-            ]
-        )
-        
-        return response.content[0].text.strip()
-    except Exception as e:
-        return f"이 프로젝트는 '{title}'에 관한 연구로 추정됩니다. (추론 과정에서 오류가 발생했습니다.)"
 
 # 내부 DB 로드 및 정제 (기존 함수 보존)
 @st.cache_data(ttl=3600)
@@ -397,63 +298,11 @@ def load_internal_db():
         st.error(f"❌ 내부 DB 로드 실패: {e}")
         return pd.DataFrame()
 
-# 주제 관련성 검증 함수 추가
-def is_topic_relevant(title, category, search_keywords, min_match_score=0.3):
-    """검색 주제와 논문의 관련성을 검증"""
-    title_lower = title.lower()
-    category_lower = category.lower() if category else ""
-    
-    # 직접 키워드 매칭 점수 계산
-    match_score = 0
-    total_keywords = len(search_keywords)
-    
-    for keyword in search_keywords:
-        keyword_lower = keyword.lower()
-        # 제목에서 키워드 부분 매칭
-        if keyword_lower in title_lower:
-            match_score += 1.0  # 완전 매칭
-        elif any(k in keyword_lower for k in title_lower.split() if len(k) > 2):
-            match_score += 0.5  # 부분 매칭
-        
-        # 카테고리에서 키워드 매칭
-        if keyword_lower in category_lower:
-            match_score += 0.3
-    
-    relevance_score = match_score / total_keywords if total_keywords > 0 else 0
-    
-    print(f"   관련성 검증: '{title[:40]}...' = {relevance_score:.3f}")
-    return relevance_score >= min_match_score
-
-# 키워드 확장 함수 추가
-def expand_search_keywords(keywords):
-    """검색 키워드를 확장하여 관련 용어 추가"""
-    keyword_expansions = {
-        'microplastic': ['microplastic', 'plastic', 'polymer', 'pollution', 'marine', 'ocean'],
-        'plastic': ['plastic', 'polymer', 'microplastic', 'pollution', 'waste'],
-        '미세플라스틱': ['plastic', 'microplastic', 'polymer', 'pollution'],
-        'environment': ['environmental', 'ecology', 'pollution', 'marine', 'ocean'],
-        '환경': ['environmental', 'ecology', 'pollution'],
-        'pollution': ['pollution', 'contamination', 'waste', 'environmental'],
-        '오염': ['pollution', 'contamination', 'environmental'],
-        'marine': ['marine', 'ocean', 'sea', 'water', 'aquatic'],
-        '해양': ['marine', 'ocean', 'sea', 'water'],
-        'health': ['health', 'medical', 'human', 'body', 'toxicity'],
-        '건강': ['health', 'medical', 'human'],
-        'water': ['water', 'aquatic', 'marine', 'ocean', 'sea'],
-        '물': ['water', 'aquatic', 'marine']
-    }
-    
-    expanded = set(keywords)  # 원본 키워드 유지
-    
-    for keyword in keywords:
-        if keyword.lower() in keyword_expansions:
-            expanded.update(keyword_expansions[keyword.lower()])
-    
-    return list(expanded)
-
-# 메인 검색 함수 - 누락되었던 함수 추가
+# 메인 검색 함수 - 수정된 버전
 def search_similar_titles(user_input: str, max_results: int = 10):
     """메인 검색 함수 - 사용자 입력으로 유사한 논문 제목들을 검색"""
+    print(f"🚨🚨🚨 search_similar_titles 함수 호출됨: '{user_input}' 🚨🚨🚨")  # 디버깅용
+    
     global _DB_INITIALIZED, _PROCESSED_DB, _VECTORIZER, _TFIDF_MATRIX
     
     print(f"🔍 검색 시작: '{user_input}'")
@@ -550,8 +399,8 @@ def search_similar_titles(user_input: str, max_results: int = 10):
         print("   ❌ 관련 프로젝트를 찾을 수 없음")
         return []
     
-    # 5. 상위 결과 선택
-    top_df = apply_enhanced_filtering(result_df, translated_keywords, user_input, max_results)
+    # 5. 상위 결과 선택 (간단한 필터링)
+    top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
     print(f"   최종 선택: {len(top_df)}개")
     
     print("📋 선택된 논문들:")
@@ -603,42 +452,3 @@ def search_similar_titles(user_input: str, max_results: int = 10):
     
     print(f"✅ 검색 완료: {len(results)}개 결과 반환")
     return results
-
-# search_db.py에 간단히 추가할 함수 (1개만)
-
-def simple_title_length_filter(result_df, max_results):
-    """간단한 제목 길이 기반 필터링 - 너무 짧은 제목 제외"""
-    
-    print("🔍 간단 제목 길이 필터링 적용...")
-    
-    # 제목 길이 확인 및 필터링
-    filtered_rows = []
-    
-    for _, row in result_df.iterrows():
-        title = row.get('Project Title', '')
-        title_word_count = len(title.split())
-        
-        # 3단어 이하 제목은 유사도가 높을 때만 통과
-        if title_word_count <= 3:
-            if row.get('score', 0) > 0.02:  # 높은 유사도 요구
-                filtered_rows.append(row)
-                print(f"  ✅ 짧은 제목 통과: '{title}' (점수: {row.get('score', 0):.4f})")
-            else:
-                print(f"  ❌ 짧은 제목 제외: '{title}' (점수: {row.get('score', 0):.4f})")
-        else:
-            # 4단어 이상은 기존 임계값 적용
-            if row.get('score', 0) > 0.005:
-                filtered_rows.append(row)
-    
-    if filtered_rows:
-        filtered_df = pd.DataFrame(filtered_rows)
-        result = filtered_df.sort_values(by='score', ascending=False).head(max_results)
-        print(f"✅ 필터링 완료: {len(result)}개 선별")
-        return result
-    else:
-        print("⚠️ 필터링 후 결과 없음, 원본 사용")
-        return result_df.sort_values(by='score', ascending=False).head(max_results)
-
-# search_similar_titles 함수에서 이렇게 교체:
-# 기존: top_df = filtered_df.sort_values(by='score', ascending=False).head(max_results)
-# 새로: top_df = simple_title_length_filter(result_df, max_results)
