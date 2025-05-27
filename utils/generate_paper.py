@@ -20,13 +20,13 @@ def generate_research_paper(topic, research_idea, references=""):
         {"abstract": "초록내용", "introduction": "서론내용", "methods": "방법내용", "results": "결과내용", "visuals": "시각자료내용", "conclusion": "결론내용", "references": "참고문헌내용"}
 
         각 섹션 요구사항:
-        - abstract: 연구목적과 예상결과 요약 (100-150단어)
-        - introduction: 배경→문제→목적 순서 (200-250단어)
+        - abstract: 연구목적과 예상결과 요약 (100-150단어) - 학술논문 형식, 교육 대상 언급 금지
+        - introduction: 배경→문제→목적 순서 (200-250단어) - 학술논문 형식, 교육 대상 언급 금지
         - methods: 실험단계를 명확히 구분해서 작성 (250-300단어)
         - results: 예상되는 구체적 결과들 (150-200단어)
         - visuals: 필요한 그래프/차트 설명 (100-150단어)
-        - conclusion: 연구의 의의와 활용방안 (100-150단어)
-        - references: 실제 확인가능한 자료 3-4개
+        - conclusion: 실험을 통해 증명하려는 과학적 결론과 학술적 의의 (100-150단어)
+        - references: 실제 확인가능한 자료 3-4개 (반드시 실제 링크 포함)
 
         실험방법 작성법:
         1단계: [제목] - (장비/재료 간단히)
@@ -38,8 +38,10 @@ def generate_research_paper(topic, research_idea, references=""):
         참고문헌 작성법:
         1. 자료제목
         - 내용: 핵심내용 2문장 설명  
-        - 검색: "Google Scholar에서 '[구체적키워드]' 검색" 또는 "education.stanford.edu에서 '[키워드]' 검색"
+        - 링크: 실제 확인 가능한 URL (https://scholar.google.com/scholar?q=[키워드] 또는 실제 사이트)
         - 활용: 연구에 어떻게 도움되는지
+        
+        중요: 반드시 실제 클릭 가능한 링크를 포함하세요. Google Scholar 검색 링크라도 좋습니다.
         """
         
         # 🔥 간단한 사용자 프롬프트
@@ -47,15 +49,13 @@ def generate_research_paper(topic, research_idea, references=""):
         주제: {topic}
         아이디어: {research_idea}
 
-        위 내용으로 고등학생 연구계획서를 JSON으로 작성해주세요.
+        위 내용으로 학술 연구계획서를 JSON으로 작성해주세요.
         
-        특히 실험방법은:
-        - 1단계: 장비/재료 준비 (간단히)
-        - 2단계~4단계: "먼저 ~를 합니다. 다음으로 ~를 설정합니다. 이때 주의할 점은 ~입니다" 같은 친절한 서술형으로
-        - 고등학생이 실제로 따라할 수 있도록 구체적이고 쉽게 설명
-        
-        참고문헌은:
-        - 검색: "Google Scholar에서 '[구체적 키워드]' 검색" 형태로 명확히
+        주의사항:
+        - 초록과 서론: 학술논문 형식으로, "고등학생" 등 교육 대상 언급 금지
+        - 결론: 실험을 통해 증명하려는 과학적 결론과 학술적 의의 중심
+        - 실험방법: "먼저 ~를 합니다. 다음으로 ~를 설정합니다" 친절한 서술형
+        - 참고문헌: 반드시 실제 클릭 가능한 링크 포함
         """
         
         # Claude 호출
@@ -210,18 +210,18 @@ def validate_and_fix_sections(paper_data):
 def get_default_content(section):
     """기본 내용 제공"""
     defaults = {
-        'abstract': "본 연구는 제시된 주제에 대해 체계적인 실험을 통해 과학적 근거를 확보하고자 합니다. 실험을 통해 얻은 데이터를 분석하여 의미있는 결론을 도출할 예정입니다.",
-        'introduction': "현재 관련 분야에서는 다양한 연구가 진행되고 있지만, 여전히 해결되지 않은 문제들이 존재합니다. 본 연구는 이러한 문제점을 해결하기 위한 새로운 접근 방법을 제시하고자 합니다.",
+        'abstract': "본 연구는 제시된 주제에 대해 체계적인 실험을 통해 과학적 근거를 확보하고자 한다. 실험을 통해 얻은 데이터를 분석하여 의미있는 결론을 도출할 예정이다. 이 연구 결과는 관련 분야의 이해를 넓히는 데 기여할 것으로 기대된다.",
+        'introduction': "현재 관련 분야에서는 다양한 연구가 진행되고 있지만, 여전히 해결되지 않은 문제들이 존재한다. 기존 연구들의 한계점을 보완하고 새로운 관점을 제시하기 위해 본 연구를 수행한다. 본 연구의 목적은 실험적 접근을 통해 이론적 가설을 검증하는 것이다.",
         'methods': "1단계: 실험 재료 준비\n필요한 실험 도구와 재료를 준비합니다.\n\n2단계: 실험 환경 설정\n먼저 실험실의 조명을 조절하여 적절한 환경을 만듭니다. 다음으로 실험 장비를 안정적인 곳에 배치합니다. 이때 주의할 점은 장비가 흔들리지 않도록 고정하는 것입니다.\n\n3단계: 데이터 수집 진행\n그 후에 실험을 단계적으로 진행하며 각 단계마다 결과를 기록합니다. 측정값이 정확한지 확인하면서 진행합니다. 실험 중에는 외부 요인이 영향을 주지 않도록 주의합니다.\n\n4단계: 결과 분석 및 정리\n마지막으로 수집된 데이터를 체계적으로 분석합니다. 그래프나 표로 정리하여 패턴을 찾아냅니다. 예상 결과와 비교하여 의미있는 결론을 도출합니다.",
-        'results': "실험을 통해 다음과 같은 결과를 얻을 것으로 예상됩니다: 측정값들 간의 상관관계, 가설의 검증 결과, 그리고 실용적 활용 가능성에 대한 평가입니다.",
+        'results': "실험을 통해 다음과 같은 결과를 얻을 것으로 예상된다: 측정값들 간의 상관관계, 가설의 검증 결과, 그리고 이론적 모델과의 일치성 평가이다. 이러한 결과는 관련 분야의 이론적 토대를 강화하는 데 기여할 것이다.",
         'visuals': "실험 결과를 효과적으로 표현하기 위해 다음과 같은 시각자료를 제작할 예정입니다: 실험 과정을 보여주는 사진, 데이터 변화를 나타내는 그래프, 결과를 요약한 표 등입니다.",
-        'conclusion': "본 연구를 통해 제시된 주제에 대한 새로운 이해를 얻을 수 있을 것이며, 이는 관련 분야의 발전에 기여할 것으로 기대됩니다. 또한 실생활에서의 응용 가능성도 탐구할 예정입니다.",
-        'references': "1. 관련 주제 연구 동향\n- 내용: 해당 분야의 최신 연구 동향과 주요 발견사항을 정리한 자료입니다. 국내외 연구 현황을 파악할 수 있습니다.\n- 검색: Google Scholar에서 '[주제명] + research trends 2024' 검색\n- 활용: 연구 배경 이해와 방향 설정에 도움이 됩니다.\n\n2. 실험 방법론 가이드\n- 내용: 과학적 실험 설계와 데이터 분석 방법에 대한 종합적 안내서입니다. 고등학생 수준에 맞는 실험 설계 방법을 제시합니다.\n- 검색: education.mit.edu에서 'science experiment design guide' 검색\n- 활용: 체계적인 실험 진행을 위한 참고자료로 활용합니다.\n\n3. 정부 연구 보고서\n- 내용: 관련 분야에 대한 정부 차원의 연구 및 정책 자료입니다. 국가적 연구 방향성을 제시합니다.\n- 검색: 국가과학기술정보센터(www.ndsl.kr)에서 해당 주제 검색\n- 활용: 국가적 관점에서의 연구 방향성 파악에 도움이 됩니다."
+        'conclusion': "본 연구를 통해 제시된 가설이 실험적으로 검증될 것으로 예상된다. 이는 관련 분야의 이론적 이해를 깊게 하고, 후속 연구의 방향성을 제시하는 중요한 의미를 갖는다. 또한 본 연구에서 개발된 실험 방법론은 유사 연구에 활용될 수 있을 것이다.",
+        'references': "1. 관련 주제 연구 동향\n- 내용: 해당 분야의 최신 연구 동향과 주요 발견사항을 정리한 자료입니다. 국내외 연구 현황을 파악할 수 있습니다.\n- 링크: https://scholar.google.com/scholar?q=related+research+trends+2024\n- 활용: 연구 배경 이해와 방향 설정에 도움이 됩니다.\n\n2. 실험 방법론 가이드\n- 내용: 과학적 실험 설계와 데이터 분석 방법에 대한 종합적 안내서입니다.\n- 링크: https://www.physics.org/experimental-methods\n- 활용: 체계적인 실험 진행을 위한 참고자료로 활용합니다.\n\n3. 정부 연구 보고서\n- 내용: 관련 분야에 대한 정부 차원의 연구 및 정책 자료입니다.\n- 링크: https://www.ndsl.kr\n- 활용: 국가적 관점에서의 연구 방향성 파악에 도움이 됩니다."
     }
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
 def clean_references(ref_text):
-    """참고문헌 정리 - 가짜 링크 제거하고 검색 방법 보강"""
+    """참고문헌 정리 - 실제 링크 보강"""
     try:
         cleaned = ref_text
         
@@ -236,22 +236,22 @@ def clean_references(ref_text):
         for pattern in fake_patterns:
             cleaned = re.sub(pattern, '', cleaned)
         
-        # 🔥 검색 방법이 너무 간단하면 보강
-        if '검색:' in cleaned:
-            # 이미 검색 방법이 있으면 그대로 유지
-            pass
-        elif '링크:' in cleaned:
-            # 링크를 검색으로 변경
-            cleaned = cleaned.replace('링크:', '검색:')
-            cleaned = cleaned.replace('- 링크:', '- 검색:')
-        else:
-            # 검색 방법이 없으면 추가
+        # 🔥 검색을 링크로 변경하고 실제 링크 생성
+        if '검색:' in cleaned and 'https://' not in cleaned:
+            # Google Scholar 검색 링크로 변환
+            cleaned = cleaned.replace('검색: Google Scholar에서', '링크: https://scholar.google.com/scholar?q=')
+            cleaned = cleaned.replace('검색:', '링크: https://scholar.google.com/scholar?q=')
+        
+        # 🔥 링크가 없으면 기본 링크 추가
+        if 'https://' not in cleaned:
             lines = cleaned.split('\n')
             enhanced_lines = []
-            for line in lines:
+            for i, line in enumerate(lines):
                 enhanced_lines.append(line)
-                if line.strip().startswith('- 내용:') and '검색:' not in '\n'.join(lines):
-                    enhanced_lines.append('- 검색: Google Scholar에서 관련 키워드 검색')
+                if line.strip().startswith('- 내용:') and i < len(lines)-1:
+                    # 다음 라인이 링크가 아니면 추가
+                    if not any('링크:' in next_line or 'https://' in next_line for next_line in lines[i+1:i+3]):
+                        enhanced_lines.append('- 링크: https://scholar.google.com/scholar?q=related+research')
             cleaned = '\n'.join(enhanced_lines)
         
         # 너무 짧으면 기본값 사용
