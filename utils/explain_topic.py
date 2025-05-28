@@ -47,19 +47,20 @@ def explain_topic(topic: str) -> list:
     아래 링크와 키워드를 활용해서 기초 정보와 내용을 확인하세요. 이런 논문들을 활용해서 참고문헌에 활용할수 있어요.
 
     **반드시 다음 형식으로 작성해:**
-    • **"키워드1 + 키워드2 + 키워드3"**
-    - 이런 키워드로 검색하면 ~한 연구들을 많이 찾을 수 있어요.
-    - [Google Scholar](https://scholar.google.com/scholar?q=키워드1+키워드2+키워드3)
-    - [네이버 학술정보](https://academic.naver.com/search.naver?query=키워드1+키워드2+키워드3)
-    - [RISS](https://www.riss.kr/search/Search.do?queryText=키워드1+키워드2+키워드3)
-    - [DBpia](https://www.dbpia.co.kr/search/topSearch?searchOption=all&query=키워드1+키워드2+키워드3)
+    
+    **🔍 "키워드1 + 키워드2 + 키워드3"**
+    
+    　　✓ 이런 키워드로 검색하면 ~한 연구들을 많이 찾을 수 있어요.
+    
+    　　📋 검색 사이트: [Google Scholar](https://scholar.google.com/scholar?q=키워드1+키워드2+키워드3) | [네이버 학술정보](https://academic.naver.com/search.naver?query=키워드1+키워드2+키워드3) | [RISS](https://www.riss.kr/search/Search.do?queryText=키워드1+키워드2+키워드3) | [DBpia](https://www.dbpia.co.kr/search/topSearch?searchOption=all&query=키워드1+키워드2+키워드3)
 
-    • **"다른 키워드1 + 키워드2 + 키워드3"**
-    - 이런 키워드로 검색하면 ~한 연구들을 많이 찾을 수 있어요.
-    - [Google Scholar](https://scholar.google.com/scholar?q=다른키워드1+키워드2+키워드3)
-    - [네이버 학술정보](https://academic.naver.com/search.naver?query=다른키워드1+키워드2+키워드3)
-    - [RISS](https://www.riss.kr/search/Search.do?queryText=다른키워드1+키워드2+키워드3)
-    - [DBpia](https://www.dbpia.co.kr/search/topSearch?searchOption=all&query=다른키워드1+키워드2+키워드3)
+    **🔍 "다른 키워드1 + 키워드2 + 키워드3"**
+    
+    　　✓ 이런 키워드로 검색하면 ~한 연구들을 많이 찾을 수 있어요.
+    
+    　　📋 검색 사이트: [Google Scholar](https://scholar.google.com/scholar?q=다른키워드1+키워드2+키워드3) | [네이버 학술정보](https://academic.naver.com/search.naver?query=다른키워드1+키워드2+키워드3) | [RISS](https://www.riss.kr/search/Search.do?queryText=다른키워드1+키워드2+키워드3) | [DBpia](https://www.dbpia.co.kr/search/topSearch?searchOption=all&query=다른키워드1+키워드2+키워드3)
+    
+    💡 **참고:** 학위논문은 기초이론이 상세히 나와 있으며, 연구논문은 특정 주제를 바탕으로한 실험 및 고찰 내용입니다.
     ---
     ## 🎯 **확장 가능한 탐구 아이디어**
     고등학생이 실제로 연구해볼 수 있는 재미있는 아이디어들을 제시해줘:
