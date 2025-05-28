@@ -1,237 +1,405 @@
-# utils/pdf_generator.py (개선된 버전)
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
-from reportlab.lib.units import inch
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.colors import Color, black, darkblue
+# utils/pdf_generator.py (기존 fpdf 기반 수정 버전)
+from fpdf import FPDF
 import os
 import re
 import streamlit as st
 
-# 출력 디렉토리
+# 폰트 경로 (기존과 동일)
+FONT_REGULAR = os.path.join("fonts", "NanumGothic-Regular.ttf")
+FONT_BOLD = os.path.join("fonts", "NanumGothic-Bold.ttf")
+FONT_EXTRABOLD = os.path.join("fonts", "NanumGothic-ExtraBold.ttf")
 OUTPUT_DIR = "outputs"
 
-class ImprovedPDFGenerator:
+class SafeKoreanPDF(FPDF):
     def __init__(self):
-        self.setup_fonts()
-        self.setup_styles()
+        super().__init__(format='A4')
+        self.set_auto_page_break(auto=True, margin=25)
+        self.set_margins(20, 20, 20)
+        self.fonts_loaded = self.setup_fonts()
         
     def setup_fonts(self):
-        """폰트 설정 - 더 안전한 방식"""
-        self.font_loaded = False
+        """3가지 나눔고딕 폰트 안전하게 로드 - 개선된 버전"""
         try:
-            # 나눔고딕 폰트 경로들
-            font_paths = [
-                os.path.join("fonts", "NanumGothic-Regular.ttf"),
-                os.path.join("fonts", "NanumGothic-Bold.ttf"),
-                "NanumGothic.ttf",  # 시스템 폰트
-                "/System/Library/Fonts/AppleGothic.ttf",  # macOS
-                "C:/Windows/Fonts/malgun.ttf"  # Windows 맑은고딕
+            fonts_count = 0
+            
+            print("=== 폰트 로딩 시작 ===")
+            
+            # 폰트 파일 존재 확인
+            font_files = [
+                ("Regular", FONT_REGULAR, 'NanumRegular'),
+                ("Bold", FONT_BOLD, 'NanumBold'), 
+                ("ExtraBold", FONT_EXTRABOLD, 'NanumExtraBold')
             ]
             
-            for font_path in font_paths:
-                try:
-                    if os.path.exists(font_path):
-                        pdfmetrics.registerFont(TTFont('NanumGothic', font_path))
-                        self.font_loaded = True
-                        print(f"✅ 폰트 로드 성공: {font_path}")
-                        break
-                except Exception as e:
-                    print(f"폰트 로드 시도 실패: {font_path} - {e}")
-                    continue
-                    
-            if not self.font_loaded:
-                print("⚠️ 한글 폰트 로드 실패, 기본 폰트 사용")
+            for font_type, font_path, font_id in font_files:
+                if os.path.exists(font_path):
+                    try:
+                        # 파일 크기 확인 (손상된 폰트 파일 걸러내기)
+                        file_size = os.path.getsize(font_path)
+                        if file_size < 1000:  # 1KB 미만이면 손상됨
+                            print(f"⚠️ {font_type} 폰트 파일이 너무 작음: {file_size} bytes")
+                            continue
+                            
+                        self.add_font(font_id, '', font_path, uni=True)
+                        fonts_count += 1
+                        print(f"✅ {font_type} 폰트 로드 성공: {font_path}")
+                        
+                    except Exception as font_error:
+                        print(f"❌ {font_type} 폰트 로드 실패: {font_error}")
+                        continue
+                else:
+                    print(f"❌ {font_type} 폰트 파일 없음: {font_path}")
+            
+            success = fonts_count >= 1  # 최소 1개만 있어도 OK
+            print(f"=== 폰트 로딩 완료: {fonts_count}/3개 성공 ===")
+            
+            return success
                 
         except Exception as e:
-            print(f"폰트 설정 오류: {e}")
-            self.font_loaded = False
+            print(f"❌ 전체 폰트 설정 오류: {e}")
+            return False
     
-    def setup_styles(self):
-        """스타일 설정"""
-        self.styles = getSampleStyleSheet()
-        
-        # 한글 폰트가 로드되었으면 사용, 아니면 기본 폰트
-        font_name = 'NanumGothic' if self.font_loaded else 'Helvetica'
-        
-        # 커스텀 스타일 정의
-        self.styles.add(ParagraphStyle(
-            name='KoreanTitle',
-            parent=self.styles['Title'],
-            fontName=font_name,
-            fontSize=18,
-            spaceAfter=20,
-            textColor=darkblue,
-            alignment=1  # 중앙 정렬
-        ))
-        
-        self.styles.add(ParagraphStyle(
-            name='KoreanHeading1',
-            parent=self.styles['Heading1'],
-            fontName=font_name,
-            fontSize=14,
-            spaceAfter=12,
-            spaceBefore=12,
-            textColor=darkblue
-        ))
-        
-        self.styles.add(ParagraphStyle(
-            name='KoreanHeading2',
-            parent=self.styles['Heading2'],
-            fontName=font_name,
-            fontSize=12,
-            spaceAfter=8,
-            spaceBefore=8,
-            textColor=Color(0.2, 0.2, 0.6)
-        ))
-        
-        self.styles.add(ParagraphStyle(
-            name='KoreanNormal',
-            parent=self.styles['Normal'],
-            fontName=font_name,
-            fontSize=10,
-            spaceAfter=6,
-            leading=14,
-            textColor=black
-        ))
+    def header(self):
+        """헤더 - 에러 처리 강화"""
+        try:
+            if self.fonts_loaded:
+                self.set_font('NanumBold', size=14)
+            else:
+                self.set_font('Arial', 'B', 14)
+            
+            self.set_text_color(70, 70, 70)
+            self.cell(0, 12, 'LittleScienceAI 연구 보고서', align='C', ln=True)
+            self.ln(8)
+            
+        except Exception as e:
+            print(f"헤더 생성 오류: {e}")
+            # 기본 헤더라도 만들기
+            try:
+                self.set_font('Arial', 'B', 12)
+                self.cell(0, 10, 'Research Report', align='C', ln=True)
+                self.ln(5)
+            except:
+                pass
+            
+    def footer(self):
+        """푸터 - 에러 처리 강화"""
+        try:
+            self.set_y(-15)
+            
+            if self.fonts_loaded:
+                self.set_font('NanumRegular', size=9)
+            else:
+                self.set_font('Arial', '', 9)
+            
+            self.set_text_color(150, 150, 150)
+            self.cell(0, 10, f'페이지 {self.page_no()}', align='C')
+            
+        except Exception as e:
+            print(f"푸터 생성 오류: {e}")
+            try:
+                self.set_font('Arial', '', 8)
+                self.cell(0, 10, f'Page {self.page_no()}', align='C')
+            except:
+                pass
+    
+    def write_content(self, content):
+        """안전한 내용 작성 - 개선된 버전"""
+        try:
+            self.add_page()
+            
+            if not content or len(content.strip()) == 0:
+                self.add_normal_text("내용이 비어있습니다.")
+                return
+            
+            lines = content.split('\n')
+            print(f"📄 총 {len(lines)}줄 처리 시작")
+            
+            processed_lines = 0
+            error_lines = 0
+            
+            for i, line in enumerate(lines):
+                try:
+                    line = line.strip()
+                    
+                    if not line:  # 빈 줄
+                        self.ln(3)
+                        continue
+                    
+                    # 제목별 처리 - 더 안전하게
+                    if line.startswith('# '):
+                        self.add_main_title(line[2:])
+                    elif line.startswith('## '):
+                        self.add_section_title(line[3:])
+                    elif line.startswith('### '):
+                        self.add_sub_title(line[4:])
+                    else:
+                        self.add_normal_text(line)
+                        
+                    processed_lines += 1
+                    
+                    # 진행상황 출력 (큰 문서의 경우)
+                    if (i + 1) % 50 == 0:
+                        print(f"📝 {i + 1}/{len(lines)} 줄 처리 완료")
+                        
+                except Exception as line_error:
+                    error_lines += 1
+                    print(f"❌ 라인 {i+1} 처리 오류: {line_error}")
+                    print(f"   문제 라인: {repr(line[:100])}")
+                    
+                    # 에러가 너무 많으면 중단
+                    if error_lines > 10:
+                        print("⚠️ 에러가 너무 많아 처리를 중단합니다.")
+                        break
+                    
+                    continue
+            
+            print(f"✅ 처리 완료: {processed_lines}줄 성공, {error_lines}줄 실패")
+            
+        except Exception as e:
+            print(f"❌ 전체 콘텐츠 작성 오류: {e}")
+            # 최소한의 내용이라도 추가
+            try:
+                self.add_normal_text("콘텐츠 처리 중 오류가 발생했습니다.")
+            except:
+                pass
+    
+    def add_main_title(self, title):
+        """큰 제목 - 더 안전하게"""
+        try:
+            self.ln(8)
+            
+            if self.fonts_loaded:
+                self.set_font('NanumExtraBold', size=16)
+            else:
+                self.set_font('Arial', 'B', 16)
+            
+            self.set_text_color(40, 40, 40)
+            clean_title = self.clean_text(title)
+            
+            # 제목이 너무 길면 줄바꿈 처리
+            if len(clean_title) > 50:
+                self.multi_cell(0, 12, clean_title, align='L')
+            else:
+                self.cell(0, 12, clean_title, ln=True, align='L')
+                
+            self.ln(6)
+            
+        except Exception as e:
+            print(f"메인 제목 오류: {e}")
+            # 기본 제목이라도 표시
+            try:
+                self.set_font('Arial', 'B', 14)
+                self.cell(0, 10, title[:50], ln=True)
+                self.ln(4)
+            except:
+                pass
+    
+    def add_section_title(self, title):
+        """섹션 제목 - 더 안전하게"""
+        try:
+            self.ln(6)
+            
+            if self.fonts_loaded:
+                self.set_font('NanumBold', size=13)
+            else:
+                self.set_font('Arial', 'B', 13)
+            
+            self.set_text_color(60, 60, 60)
+            clean_title = self.clean_text(title)
+            
+            if len(clean_title) > 60:
+                self.multi_cell(0, 10, clean_title, align='L')
+            else:
+                self.cell(0, 10, clean_title, ln=True, align='L')
+                
+            self.ln(4)
+            
+        except Exception as e:
+            print(f"섹션 제목 오류: {e}")
+            try:
+                self.set_font('Arial', 'B', 12)
+                self.cell(0, 8, title[:50], ln=True)
+                self.ln(3)
+            except:
+                pass
+    
+    def add_sub_title(self, title):
+        """소제목 - 더 안전하게"""
+        try:
+            self.ln(4)
+            
+            if self.fonts_loaded:
+                self.set_font('NanumBold', size=11)
+            else:
+                self.set_font('Arial', 'B', 11)
+            
+            self.set_text_color(80, 80, 80)
+            clean_title = self.clean_text(title)
+            
+            if len(clean_title) > 70:
+                self.multi_cell(0, 8, clean_title, align='L')
+            else:
+                self.cell(0, 8, clean_title, ln=True, align='L')
+                
+            self.ln(3)
+            
+        except Exception as e:
+            print(f"소제목 오류: {e}")
+            try:
+                self.set_font('Arial', 'B', 10)
+                self.cell(0, 7, title[:50], ln=True)
+                self.ln(2)
+            except:
+                pass
+    
+    def add_normal_text(self, text):
+        """일반 텍스트 - 더 안전하게"""
+        try:
+            if not text or len(text.strip()) == 0:
+                return
+                
+            if self.fonts_loaded:
+                self.set_font('NanumRegular', size=10)
+            else:
+                self.set_font('Arial', '', 10)
+            
+            self.set_text_color(90, 90, 90)
+            clean_text = self.clean_text(text)
+            
+            if len(clean_text) > 0:
+                # 긴 텍스트는 multi_cell 사용
+                if len(clean_text) > 80:
+                    self.multi_cell(0, 7, clean_text, align='L')
+                else:
+                    self.cell(0, 7, clean_text, ln=True, align='L')
+                    
+                self.ln(2)
+                
+        except Exception as e:
+            print(f"일반 텍스트 오류: {e}")
+            # 영어로라도 출력 시도
+            try:
+                self.set_font('Arial', '', 9)
+                safe_text = text.encode('ascii', 'ignore').decode('ascii')[:50]
+                if safe_text:
+                    self.cell(0, 6, safe_text, ln=True)
+                    self.ln(1)
+            except:
+                pass
     
     def clean_text(self, text):
-        """텍스트 정리"""
-        # 마크다운 문법 제거
-        text = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', text)  # **굵게** → <b>굵게</b>
-        text = re.sub(r'\*([^*]+)\*', r'<i>\1</i>', text)      # *기울임* → <i>기울임</i>
-        
-        # 이모지 제거 (PDF에서 문제 될 수 있음)
-        emoji_pattern = re.compile(
-            "["
-            "\U0001F600-\U0001F64F"  # 감정
-            "\U0001F300-\U0001F5FF"  # 기호
-            "\U0001F680-\U0001F6FF"  # 교통
-            "\U0001F1E0-\U0001F1FF"  # 국기
-            "]+", flags=re.UNICODE
-        )
-        text = emoji_pattern.sub('', text)
-        
-        # 특수 문자 처리
-        text = text.replace('📘', '').replace('📄', '').replace('🌐', '')
-        text = text.replace('🔬', '').replace('💡', '').replace('⚙️', '')
-        
-        return text.strip()
-    
-    def generate_pdf(self, content, filename="research_report.pdf"):
-        """PDF 생성 메인 함수"""
+        """텍스트 정리 - 더욱 강화된 버전"""
         try:
-            print("=== 개선된 PDF 생성 시작 ===")
+            if not text:
+                return ""
             
-            # 출력 디렉토리 생성
-            os.makedirs(OUTPUT_DIR, exist_ok=True)
-            output_path = os.path.join(OUTPUT_DIR, filename)
+            # 1단계: 마크다운 기호 제거
+            text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **굵게**
+            text = re.sub(r'\*([^*]+)\*', r'\1', text)      # *기울임*
+            text = text.replace('**', '').replace('*', '')
+            text = re.sub(r'[_`]', '', text)                # _ 와 `
             
-            # PDF 문서 생성
-            doc = SimpleDocTemplate(
-                output_path,
-                pagesize=A4,
-                rightMargin=72,
-                leftMargin=72,
-                topMargin=72,
-                bottomMargin=72
-            )
+            # 2단계: 이모지 제거 (fpdf에서 문제 될 수 있음)
+            emoji_list = ['📘', '📄', '🌐', '🔬', '💡', '⚙️', '🌍', '📊', 
+                         '🎯', '📋', '📖', '🔗', '📚', '📈', '🏆', '📅', 
+                         '🔍', '✅', '❌', '⚠️', '🧪', '🤖', '🧠']
             
-            # 스토리 리스트 (PDF 내용)
-            story = []
+            for emoji in emoji_list:
+                text = text.replace(emoji, '')
             
-            # 제목 추가
-            title = Paragraph("🧪 LittleScienceAI 연구 보고서", self.styles['KoreanTitle'])
-            story.append(title)
-            story.append(Spacer(1, 20))
+            # 3단계: 특수 문자 처리
+            text = re.sub(r'[^\w\s가-힣.,!?()[\]-]', '', text)
             
-            # 내용 파싱 및 추가
-            lines = content.split('\n')
+            # 4단계: 공백 정리
+            text = re.sub(r'\s+', ' ', text)  # 연속 공백 제거
+            text = text.strip()
             
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    story.append(Spacer(1, 6))
-                    continue
-                
-                # 제목 레벨 구분
-                if line.startswith('# '):
-                    # 메인 제목
-                    clean_line = self.clean_text(line[2:])
-                    para = Paragraph(clean_line, self.styles['KoreanHeading1'])
-                    story.append(Spacer(1, 12))
-                    story.append(para)
-                    
-                elif line.startswith('## '):
-                    # 섹션 제목
-                    clean_line = self.clean_text(line[3:])
-                    para = Paragraph(clean_line, self.styles['KoreanHeading2'])
-                    story.append(Spacer(1, 10))
-                    story.append(para)
-                    
-                elif line.startswith('### '):
-                    # 소제목
-                    clean_line = self.clean_text(line[4:])
-                    para = Paragraph(f"<b>{clean_line}</b>", self.styles['KoreanNormal'])
-                    story.append(Spacer(1, 8))
-                    story.append(para)
-                    
-                else:
-                    # 일반 텍스트
-                    if line.startswith('- '):
-                        # 리스트 항목
-                        clean_line = self.clean_text(line[2:])
-                        para = Paragraph(f"• {clean_line}", self.styles['KoreanNormal'])
-                    else:
-                        clean_line = self.clean_text(line)
-                        para = Paragraph(clean_line, self.styles['KoreanNormal'])
-                    
-                    story.append(para)
+            # 5단계: 길이 제한 (fpdf 안정성 위해)
+            if len(text) > 200:
+                text = text[:197] + "..."
             
-            # PDF 빌드
-            doc.build(story)
+            return text
             
-            # 파일 검증
-            if os.path.exists(output_path):
-                file_size = os.path.getsize(output_path)
-                print(f"생성된 PDF 크기: {file_size} bytes")
-                
-                if file_size > 1000:  # 최소 1KB
-                    print(f"✅ PDF 생성 성공: {output_path}")
-                    return output_path
-                else:
-                    raise Exception(f"PDF 파일이 너무 작음 ({file_size} bytes)")
-            else:
-                raise Exception("PDF 파일이 생성되지 않음")
-                
         except Exception as e:
-            print(f"❌ PDF 생성 실패: {str(e)}")
-            return self.fallback_text_export(content, filename)
-    
-    def fallback_text_export(self, content, filename):
-        """PDF 실패시 텍스트 파일로 저장"""
-        try:
-            txt_filename = filename.replace('.pdf', '_backup.txt')
-            txt_path = os.path.join(OUTPUT_DIR, txt_filename)
-            
-            with open(txt_path, 'w', encoding='utf-8') as f:
-                f.write("=== LittleScienceAI 연구 보고서 ===\n")
-                f.write("(PDF 생성 실패로 텍스트 버전 제공)\n")
-                f.write("=" * 50 + "\n\n")
-                f.write(content)
-            
-            print(f"✅ 텍스트 파일 저장: {txt_path}")
-            return txt_path
-            
-        except Exception as txt_error:
-            print(f"❌ 텍스트 파일 저장 실패: {txt_error}")
-            return None
+            print(f"텍스트 정리 오류: {e}")
+            # 최후 수단: ASCII만 남기기
+            try:
+                return text.encode('ascii', 'ignore').decode('ascii')[:100]
+            except:
+                return "[텍스트 처리 실패]"
 
-# 기존 함수와 호환성을 위한 래퍼
 def generate_pdf(content, filename="research_report.pdf"):
-    """기존 코드와 호환되는 함수"""
-    generator = ImprovedPDFGenerator()
-    return generator.generate_pdf(content, filename)
+    """PDF 생성 메인 함수 - 개선된 버전"""
+    try:
+        print("=== PDF 생성 시작 ===")
+        
+        # 출력 디렉토리 생성
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        print(f"출력 디렉토리: {OUTPUT_DIR}")
+        
+        # 내용 검증
+        if not content or len(content.strip()) == 0:
+            print("⚠️ 빈 내용으로 기본 PDF 생성")
+            content = "# 연구 보고서\n\n내용이 생성되지 않았습니다.\n잠시 후 다시 시도해주세요."
+        
+        # PDF 생성
+        pdf = SafeKoreanPDF()
+        
+        # 폰트 로딩 확인
+        if not pdf.fonts_loaded:
+            print("⚠️ 한글 폰트 없이 PDF 생성 (영어/숫자만 표시됨)")
+            if 'st' in globals():
+                st.warning("한글 폰트를 찾을 수 없어 일부 텍스트가 영어로 표시됩니다.")
+        
+        # 내용 작성
+        pdf.write_content(content)
+        
+        # 저장
+        output_path = os.path.join(OUTPUT_DIR, filename)
+        pdf.output(output_path)
+        
+        # 파일 검증
+        if os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            print(f"생성된 파일 크기: {file_size:,} bytes")
+            
+            if file_size > 1000:  # 최소 1KB
+                print(f"✅ PDF 생성 성공: {output_path}")
+                return output_path
+            else:
+                print(f"⚠️ PDF 파일이 너무 작음 ({file_size} bytes)")
+                raise Exception(f"PDF 파일 크기 이상: {file_size} bytes")
+        else:
+            raise Exception("PDF 파일이 생성되지 않음")
+            
+    except Exception as e:
+        print(f"❌ PDF 생성 실패: {str(e)}")
+        
+        # 실패시 텍스트 파일로 저장
+        return create_fallback_file(content, filename)
+
+def create_fallback_file(content, filename):
+    """PDF 실패시 텍스트 파일 생성"""
+    try:
+        txt_filename = filename.replace('.pdf', '_fallback.txt')
+        txt_path = os.path.join(OUTPUT_DIR, txt_filename)
+        
+        with open(txt_path, 'w', encoding='utf-8') as f:
+            f.write("=" * 50 + "\n")
+            f.write("LittleScienceAI 연구 보고서\n")
+            f.write("(PDF 생성 실패로 텍스트 파일 제공)\n")
+            f.write("=" * 50 + "\n\n")
+            f.write(content)
+            f.write("\n\n" + "=" * 50)
+            f.write("\n생성 시간: " + str(os.path.getctime))
+        
+        print(f"✅ 대체 텍스트 파일 생성: {txt_path}")
+        
+        if 'st' in globals():
+            st.warning("PDF 생성에 실패하여 텍스트 파일로 저장됩니다.")
+            
+        return txt_path
+        
+    except Exception as txt_error:
+        print(f"❌ 텍스트 파일 생성도 실패: {txt_error}")
+        return None
