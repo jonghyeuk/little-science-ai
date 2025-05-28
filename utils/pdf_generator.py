@@ -16,14 +16,47 @@ class SafeKoreanPDF(FPDF):
         self.fonts_loaded = self.setup_fonts()
         
     def setup_fonts(self):
-        """3가지 나눔고딕 폰트 안전하게 로드"""
+        """폰트 설정 - 더 안전하게"""
         try:
             fonts_count = 0
             
-            print("폰트 파일 확인 중...")
-            print(f"Regular: {os.path.exists(FONT_REGULAR)} - {FONT_REGULAR}")
-            print(f"Bold: {os.path.exists(FONT_BOLD)} - {FONT_BOLD}")
-            print(f"ExtraBold: {os.path.exists(FONT_EXTRABOLD)} - {FONT_EXTRABOLD}")
+            print("폰트 설정 시작...")
+            
+            # Regular 폰트 (가장 중요)
+            if os.path.exists(FONT_REGULAR):
+                try:
+                    self.add_font('NanumRegular', '', FONT_REGULAR, uni=True)
+                    fonts_count += 1
+                    print("✅ Regular 폰트 성공")
+                except Exception as e:
+                    print(f"Regular 폰트 실패: {e}")
+            
+            # Bold 폰트
+            if os.path.exists(FONT_BOLD):
+                try:
+                    self.add_font('NanumBold', '', FONT_BOLD, uni=True)
+                    fonts_count += 1
+                    print("✅ Bold 폰트 성공")
+                except Exception as e:
+                    print(f"Bold 폰트 실패: {e}")
+                    
+            # ExtraBold는 선택사항
+            if os.path.exists(FONT_EXTRABOLD):
+                try:
+                    self.add_font('NanumExtraBold', '', FONT_EXTRABOLD, uni=True)
+                    fonts_count += 1
+                    print("✅ ExtraBold 폰트 성공")
+                except Exception as e:
+                    print(f"ExtraBold 폰트 실패: {e}")
+            
+            # 최소 1개만 있으면 성공
+            success = fonts_count >= 1
+            print(f"폰트 로딩 결과: {fonts_count}/3개, 성공: {success}")
+            return success
+                
+        except Exception as e:
+            print(f"전체 폰트 설정 실패: {e}")
+            return False_EXTRABOLD}")
             
             # Regular 폰트
             if os.path.exists(FONT_REGULAR):
