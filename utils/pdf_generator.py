@@ -103,7 +103,7 @@ class SafeKoreanPDF(FPDF):
                 pass
     
     def write_content(self, content):
-        """안전한 내용 작성 - 리스트 처리 개선"""
+        """안전한 내용 작성 - 개선된 버전"""
         try:
             self.add_page()
             
@@ -116,7 +116,6 @@ class SafeKoreanPDF(FPDF):
             
             processed_lines = 0
             error_lines = 0
-            list_counter = 0  # 리스트 번호 카운터
             
             for i, line in enumerate(lines):
                 try:
@@ -124,82 +123,43 @@ class SafeKoreanPDF(FPDF):
                     
                     if not line:  # 빈 줄
                         self.ln(3)
-                        list_counter = 0  # 리스트 카운터 리셋
                         continue
                     
-                    # 제목별 처리
+                    # 제목별 처리 - 더 안전하게
                     if line.startswith('# '):
                         self.add_main_title(line[2:])
-                        list_counter = 0
                     elif line.startswith('## '):
                         self.add_section_title(line[3:])
-                        list_counter = 0
                     elif line.startswith('### '):
                         self.add_sub_title(line[4:])
-                        list_counter = 0
-                    elif line.startswith('- ') or line.startswith('• '):
-                        # 리스트 항목 처리
-                        list_counter += 1
-                        item_text = line[2:].strip() if line.startswith('- ') else line[2:].strip()
-                        self.add_list_item(item_text, list_counter)
                     else:
                         self.add_normal_text(line)
-                        # 연속된 일반 텍스트가 아니면 리스트 카운터 리셋
-                        if not (line.startswith('- ') or line.startswith('• ')):
-                            list_counter = 0
                         
                     processed_lines += 1
                     
-                    # 진행상황 출력
+                    # 진행상황 출력 (큰 문서의 경우)
                     if (i + 1) % 50 == 0:
                         print(f"📝 {i + 1}/{len(lines)} 줄 처리 완료")
                         
                 except Exception as line_error:
                     error_lines += 1
                     print(f"❌ 라인 {i+1} 처리 오류: {line_error}")
+                    print(f"   문제 라인: {repr(line[:100])}")
                     
+                    # 에러가 너무 많으면 중단
                     if error_lines > 10:
                         print("⚠️ 에러가 너무 많아 처리를 중단합니다.")
                         break
+                    
                     continue
             
             print(f"✅ 처리 완료: {processed_lines}줄 성공, {error_lines}줄 실패")
             
         except Exception as e:
             print(f"❌ 전체 콘텐츠 작성 오류: {e}")
+            # 최소한의 내용이라도 추가
             try:
                 self.add_normal_text("콘텐츠 처리 중 오류가 발생했습니다.")
-            except:
-                pass
-    
-    def add_list_item(self, text, number=None):
-        """리스트 항목 추가 - 번호 또는 불릿 포인트 포함"""
-        try:
-            if self.fonts_loaded:
-                self.set_font('NanumRegular', size=10)
-            else:
-                self.set_font('Arial', '', 10)
-            
-            self.set_text_color(90, 90, 90)
-            clean_text = self.clean_text(text)
-            
-            if clean_text:
-                # 번호가 있으면 번호를 붙이고, 없으면 불릿 포인트
-                if number:
-                    formatted_text = f"{number}. {clean_text}"
-                else:
-                    formatted_text = f"• {clean_text}"
-                
-                self.multi_cell(0, 7, formatted_text, align='L')
-                self.ln(2)
-                
-        except Exception as e:
-            print(f"리스트 항목 오류: {e}")
-            try:
-                self.set_font('Arial', '', 9)
-                simple_text = f"• {text[:100]}"
-                self.multi_cell(0, 6, simple_text, align='L')
-                self.ln(1)
             except:
                 pass
     
