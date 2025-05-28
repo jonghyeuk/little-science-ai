@@ -19,7 +19,7 @@ FONT_BOLD = os.path.join("fonts", "NanumGothic-Bold.ttf")
 FONT_EXTRABOLD = os.path.join("fonts", "NanumGothic-ExtraBold.ttf")
 OUTPUT_DIR = "outputs"
 
-class RobustKoreanPDF(FPDF):
+class ProfessionalKoreanPDF(FPDF):
     def __init__(self, topic=""):
         super().__init__(format='A4')
         self.set_auto_page_break(auto=True, margin=25)
@@ -172,8 +172,20 @@ class RobustKoreanPDF(FPDF):
         except Exception as e:
             print(f"섹션 제목 오류: {e}")
     
+    def add_elegant_subsection(self, title):
+        """이쁜 소제목 (하이픈 없이)"""
+        try:
+            self.ln(6)
+            self.set_safe_font('bold', 11)
+            self.set_text_color(60, 60, 60)
+            clean_title = self.clean_text(title)
+            self.multi_cell(0, 7, clean_title, align='L')
+            self.ln(3)
+        except Exception as e:
+            print(f"소제목 오류: {e}")
+    
     def add_paragraph(self, text):
-        """문단 추가 (단순화)"""
+        """문단 추가"""
         try:
             self.set_safe_font('normal', 10)
             self.set_text_color(70, 70, 70)
@@ -192,10 +204,9 @@ class RobustKoreanPDF(FPDF):
                 
         except Exception as e:
             print(f"문단 추가 오류: {e}")
-            # 오류가 나도 계속 진행
     
     def add_paper_item(self, title, summary, source=""):
-        """논문 항목 추가 (단순화)"""
+        """논문 항목 추가 (카드 스타일)"""
         try:
             # 제목
             self.set_safe_font('bold', 10)
@@ -204,7 +215,7 @@ class RobustKoreanPDF(FPDF):
             if len(clean_title) > 80:
                 clean_title = clean_title[:77] + "..."
             
-            self.multi_cell(0, 7, f"• {clean_title}", align='L')
+            self.multi_cell(0, 7, f"▪ {clean_title}", align='L')
             
             # 출처
             if source:
@@ -223,10 +234,60 @@ class RobustKoreanPDF(FPDF):
             if clean_summary:
                 self.multi_cell(0, 6, f"   {clean_summary}", align='L')
             
-            self.ln(3)
+            self.ln(4)
             
         except Exception as e:
             print(f"논문 항목 오류: {e}")
+    
+    def add_paper_title_page(self, topic, selected_idea):
+        """논문용 새 페이지 (전문적 스타일)"""
+        self.add_page()
+        self.ln(20)
+        
+        try:
+            # 논문 제목
+            self.set_safe_font('bold', 18)
+            self.set_text_color(30, 30, 30)
+            paper_title = f"{topic}: {selected_idea.split(' - ')[0]}"
+            self.multi_cell(0, 12, paper_title, align='C')
+            self.ln(15)
+            
+            # 구분선
+            self.set_draw_color(150, 150, 150)
+            self.line(30, self.get_y(), 180, self.get_y())
+            self.ln(8)
+            
+            print("논문 제목 페이지 추가 완료")
+            
+        except Exception as e:
+            print(f"논문 제목 페이지 오류: {e}")
+    
+    def add_paper_section(self, title, content, section_number):
+        """논문 섹션 추가 (전문적 스타일)"""
+        try:
+            # 섹션 번호와 제목
+            self.ln(8)
+            self.set_safe_font('bold', 12)
+            self.set_text_color(40, 40, 40)
+            section_title = f"{section_number}. {title}"
+            self.multi_cell(0, 8, section_title, align='L')
+            self.ln(4)
+            
+            # 내용
+            self.set_safe_font('normal', 10)
+            self.set_text_color(70, 70, 70)
+            clean_content = self.clean_text(content)
+            
+            if clean_content:
+                # 문단별로 분리
+                paragraphs = clean_content.split('\n\n')
+                for para in paragraphs:
+                    if para.strip():
+                        self.multi_cell(0, 6, para.strip(), align='L')
+                        self.ln(3)
+            
+        except Exception as e:
+            print(f"논문 섹션 오류: {e}")
     
     def clean_text(self, text):
         """강력한 텍스트 정리"""
@@ -236,6 +297,10 @@ class RobustKoreanPDF(FPDF):
             
             # 문자열로 변환
             text = str(text)
+            
+            # 못생긴 하이픈 구분자 제거
+            text = re.sub(r'^---\s*', '', text, flags=re.MULTILINE)
+            text = re.sub(r'\s*---\s*', ' ', text)
             
             # URL 완전 제거
             text = re.sub(r'https?://[^\s\]\)\n]+', '', text)
@@ -249,9 +314,12 @@ class RobustKoreanPDF(FPDF):
             emoji_pattern = r'[📘📄🌐🔬💡⚙️🌍📊🎯📋📖🔗📚📈🏆📅🔍❗🚀✅📌🎉🔧🛠️]'
             text = re.sub(emoji_pattern, '', text)
             
+            # 빈 괄호 제거 (링크에서 남은 것들)
+            text = re.sub(r'\(\s*\)', '', text)
+            
             # 특수 문자 정리
             text = re.sub(r'DOI\s*:\s*', '', text)
-            text = re.sub(r'&[a-zA-Z]+;', '', text)  # HTML 엔티티 제거
+            text = re.sub(r'&[a-zA-Z]+;', '', text)
             
             # 여러 공백을 하나로
             text = re.sub(r'\s+', ' ', text)
@@ -272,25 +340,13 @@ def extract_topic_from_content(content):
             topic = title_match.group(1).strip()
             return topic[:50] if len(topic) > 50 else topic
         
-        # 백업: 다른 패턴들
-        patterns = [
-            r'주제.*?:\s*([^\n]+)',
-            r'제목.*?:\s*([^\n]+)',
-            r'연구.*?:\s*([^\n]+)'
-        ]
-        
-        for pattern in patterns:
-            match = re.search(pattern, content)
-            if match:
-                return match.group(1).strip()[:50]
-        
         return "과학 연구 탐색"
         
     except:
         return "과학 연구 탐색"
 
-def parse_content_safely(content):
-    """안전한 내용 파싱"""
+def parse_content_elegantly(content):
+    """이쁘게 내용 파싱"""
     result = {
         'topic_explanation': '',
         'isef_papers': [],
@@ -301,40 +357,29 @@ def parse_content_safely(content):
     try:
         print("내용 파싱 시작...")
         
-        # 1. 주제 해설 추출
-        explanation_patterns = [
-            r'# 📘[^\n]*\n(.*?)(?=## 📄|## 🌐|$)',
-            r'주제 해설[^\n]*\n(.*?)(?=## |$)',
-        ]
-        
-        for pattern in explanation_patterns:
-            match = re.search(pattern, content, re.DOTALL)
-            if match:
-                result['topic_explanation'] = match.group(1).strip()
-                break
+        # 1. 주제 해설 추출 (하이픈 제거 버전)
+        explanation_match = re.search(r'# 📘[^\n]*\n(.*?)(?=## 📄|## 🌐|$)', content, re.DOTALL)
+        if explanation_match:
+            explanation = explanation_match.group(1).strip()
+            # 하이픈 구분자들 제거하고 자연스럽게 정리
+            explanation = re.sub(r'---\s*[^\n]*\n', '', explanation)
+            result['topic_explanation'] = explanation
         
         # 2. ISEF 논문들
-        isef_section = ''
         if "ISEF" in content or "내부 DB" in content:
             isef_match = re.search(r'## 📄[^\n]*\n(.*?)(?=## 🌐|## 📄 생성|$)', content, re.DOTALL)
             if isef_match:
                 isef_section = isef_match.group(1)
-        
-        # ISEF 논문 파싱
-        if isef_section:
-            papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n([^_\n]*)', isef_section)
-            result['isef_papers'] = [(title, summary) for title, summary in papers if len(title) > 5][:3]
+                papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n([^_\n]*)', isef_section)
+                result['isef_papers'] = [(title, summary) for title, summary in papers if len(title) > 5][:3]
         
         # 3. arXiv 논문들
-        arxiv_section = ''
         if "arXiv" in content:
             arxiv_match = re.search(r'## 🌐[^\n]*\n(.*?)(?=## 📄 생성|$)', content, re.DOTALL)
             if arxiv_match:
                 arxiv_section = arxiv_match.group(1)
-        
-        if arxiv_section:
-            papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n([^[\n]*)', arxiv_section)
-            result['arxiv_papers'] = [(title, summary) for title, summary in papers if len(title) > 5][:3]
+                papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n([^[\n]*)', arxiv_section)
+                result['arxiv_papers'] = [(title, summary) for title, summary in papers if len(title) > 5][:3]
         
         # 4. 생성된 논문
         if "생성된 연구 논문" in content:
@@ -357,9 +402,9 @@ def parse_content_safely(content):
         return result
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """견고한 PDF 생성"""
+    """이쁜 PDF 생성"""
     try:
-        print("=== 견고한 PDF 생성 시작 ===")
+        print("=== 이쁜 PDF 생성 시작 ===")
         
         # 출력 디렉토리 생성
         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -369,13 +414,13 @@ def generate_pdf(content, filename="research_report.pdf"):
         print(f"추출된 주제: {topic}")
         
         # 내용 파싱
-        sections = parse_content_safely(content)
+        sections = parse_content_elegantly(content)
         
         # PDF 생성 (경고 완전 억제)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             
-            pdf = RobustKoreanPDF(topic)
+            pdf = ProfessionalKoreanPDF(topic)
             
             # 1. 표지 페이지
             pdf.add_title_page(topic)
@@ -383,15 +428,40 @@ def generate_pdf(content, filename="research_report.pdf"):
             # 2. 내용 페이지
             pdf.add_page()
             
-            # 3. 주제 개요
+            # 3. 주제 개요 (이쁘게)
             if sections['topic_explanation']:
                 pdf.add_section_title("주제 개요")
                 
-                # 문단별로 나누어 추가
-                paragraphs = sections['topic_explanation'].split('\n\n')
-                for para in paragraphs:
-                    if para.strip() and len(para.strip()) > 10:
-                        pdf.add_paragraph(para.strip())
+                # 자연스러운 소제목들 추출 및 정리
+                explanation = sections['topic_explanation']
+                
+                # 개념 정의
+                if "개념 정의" in explanation or "정의" in explanation:
+                    concept_match = re.search(r'개념.*?정의[^\n]*(.+?)(?=작동|원리|메커니즘|현재|배경|응용|사례|최신|$)', explanation, re.DOTALL)
+                    if concept_match:
+                        pdf.add_elegant_subsection("개념 정의")
+                        pdf.add_paragraph(concept_match.group(1).strip())
+                
+                # 작동 원리
+                if "작동" in explanation or "원리" in explanation or "메커니즘" in explanation:
+                    mechanism_match = re.search(r'(작동|원리|메커니즘)[^\n]*(.+?)(?=현재|배경|응용|사례|최신|$)', explanation, re.DOTALL)
+                    if mechanism_match:
+                        pdf.add_elegant_subsection("작동 원리 및 메커니즘")
+                        pdf.add_paragraph(mechanism_match.group(2).strip())
+                
+                # 현재 배경
+                if "현재" in explanation or "배경" in explanation:
+                    background_match = re.search(r'(현재|배경)[^\n]*(.+?)(?=응용|사례|최신|확장|$)', explanation, re.DOTALL)
+                    if background_match:
+                        pdf.add_elegant_subsection("현재 과학적·사회적 배경")
+                        pdf.add_paragraph(background_match.group(2).strip())
+                
+                # 응용 사례
+                if "응용" in explanation or "사례" in explanation:
+                    application_match = re.search(r'(응용|사례)[^\n]*(.+?)(?=최신|확장|$)', explanation, re.DOTALL)
+                    if application_match:
+                        pdf.add_elegant_subsection("응용 사례 및 활용 분야")
+                        pdf.add_paragraph(application_match.group(2).strip())
             
             # 4. 문헌 조사
             pdf.add_section_title("문헌 조사")
@@ -412,15 +482,30 @@ def generate_pdf(content, filename="research_report.pdf"):
             else:
                 pdf.add_paragraph("관련 arXiv 논문을 찾지 못했습니다.")
             
-            # 5. 생성된 논문 (있는 경우)
+            # 5. 생성된 논문 (새 페이지에서 전문적으로)
             if sections['generated_paper']:
-                pdf.add_section_title("연구 논문")
+                # 틈새주제 추출 시도
+                selected_idea = "선택된 연구 주제"
+                if "가정용 플라즈마" in content:
+                    selected_idea = "가정용 플라즈마 공기청정 장치 개발"
                 
-                paper_order = ['초록', '서론', '실험 방법', '예상 결과', '결론', '참고문헌']
-                for section_key in paper_order:
+                pdf.add_paper_title_page(topic, selected_idea)
+                
+                # 논문 섹션들을 전문적으로 추가
+                section_map = {
+                    '초록': ('Abstract', 1),
+                    '서론': ('Introduction', 2), 
+                    '실험 방법': ('Methods', 3),
+                    '예상 결과': ('Expected Results', 4),
+                    '결론': ('Conclusion', 5),
+                    '참고문헌': ('References', 6)
+                }
+                
+                for section_key, (english_name, num) in section_map.items():
                     if section_key in sections['generated_paper']:
-                        pdf.add_section_title(section_key, level=2)
-                        pdf.add_paragraph(sections['generated_paper'][section_key])
+                        title = f"{section_key} ({english_name})"
+                        content_text = sections['generated_paper'][section_key]
+                        pdf.add_paper_section(title, content_text, num)
             
             # 저장
             output_path = os.path.join(OUTPUT_DIR, filename)
@@ -430,9 +515,9 @@ def generate_pdf(content, filename="research_report.pdf"):
         if os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
             if file_size > 2000:
-                print(f"✅ PDF 생성 성공: {output_path} ({file_size:,} bytes)")
+                print(f"✅ 이쁜 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
                 
-                # 내용 검증 (간단히)
+                # 내용 검증
                 try:
                     with open(output_path, 'rb') as f:
                         header = f.read(10)
@@ -451,20 +536,14 @@ def generate_pdf(content, filename="research_report.pdf"):
         txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_debug.txt'))
         
         with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write(f"=== {topic} 연구보고서 (디버그 버전) ===\n\n")
+            f.write(f"=== {topic} 연구보고서 (이쁜 버전) ===\n\n")
             f.write(f"생성 시간: {datetime.now()}\n")
             f.write(f"원본 내용 길이: {len(content)} 문자\n\n")
-            
-            # 파싱된 섹션들 저장
-            f.write("=== 파싱된 섹션들 ===\n")
-            f.write(f"주제 해설: {len(sections['topic_explanation'])} 문자\n")
-            f.write(f"ISEF 논문: {len(sections['isef_papers'])}개\n")
-            f.write(f"arXiv 논문: {len(sections['arxiv_papers'])}개\n")
-            f.write(f"생성된 논문 섹션: {len(sections['generated_paper'])}개\n\n")
             
             # 정리된 원본 내용
             f.write("=== 정리된 원본 내용 ===\n")
             clean_content = re.sub(r'https?://[^\s]+', '[링크제거]', content)
+            clean_content = re.sub(r'---\s*[^\n]*\n', '', clean_content)  # 하이픈 제거
             f.write(clean_content)
         
         print(f"✅ 백업 파일 생성: {txt_path}")
