@@ -274,52 +274,46 @@ class SafeKoreanPDF(FPDF):
                 pass
     
     def clean_text(self, text):
-        """텍스트 정리 - PDF용으로 깔끔하게"""
+        """텍스트 정리 - 길이 제한 제거"""
         try:
             if not text:
                 return ""
             
-            # 1단계: 불필요한 링크 정보 제거 (PDF에서는 클릭 안되니까)
-            # 최신논문검색 섹션의 복잡한 링크들 간소화
-            if "https://" in text and ("scholar.google.com" in text or "academic.naver.com" in text):
-                # 링크가 많은 검색 가이드는 간단하게 요약
-                text = "📚 추가 연구를 위한 검색 가이드\n\n관련 키워드로 Google Scholar, 네이버 학술정보, RISS, DBpia 등에서 논문을 검색해보세요."
-            
-            # URL 링크들 제거 (PDF에서는 의미없음)
-            text = re.sub(r'https?://[^\s]+', '', text)
-            
-            # 2단계: 마크다운 기호 정리
-            text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **굵게** → 굵게
-            text = re.sub(r'\*([^*]+)\*', r'\1', text)      # *기울임* → 기울임
+            # 1단계: 마크다운 기호 제거
+            text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **굵게**
+            text = re.sub(r'\*([^*]+)\*', r'\1', text)      # *기울임*
             text = text.replace('**', '').replace('*', '')
+            text = re.sub(r'[_`]', '', text)                # _ 와 `
             
-            # 3단계: 이모지는 일부만 유지 (PDF에서 의미있는 것들)
-            # 유지할 이모지들
-            keep_emojis = ['📚', '🔍', '💡', '📊', '🎯', '📋']
+            # 2단계: 이모지 제거 (fpdf에서 문제 될 수 있음)
+            emoji_list = ['📘', '📄', '🌐', '🔬', '💡', '⚙️', '🌍', '📊', 
+                         '🎯', '📋', '📖', '🔗', '📚', '📈', '🏆', '📅', 
+                         '🔍', '✅', '❌', '⚠️', '🧪', '🤖', '🧠']
             
-            # 제거할 이모지들
-            remove_emojis = ['📘', '📄', '🌐', '🔬', '⚙️', '🌍', '📈', '🏆', '📅', '🤖', '🧠']
-            
-            for emoji in remove_emojis:
+            for emoji in emoji_list:
                 text = text.replace(emoji, '')
+            
+            # 3단계: 특수 문자 처리 (더 관대하게)
+            text = re.sub(r'[^\w\s가-힣.,!?()[\]:%/-]', '', text)
             
             # 4단계: 공백 정리
             text = re.sub(r'\s+', ' ', text)  # 연속 공백 제거
-            text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # 과도한 줄바꿈 정리
             text = text.strip()
             
+            # 길이 제한 제거! - 전체 텍스트 유지
             return text
             
         except Exception as e:
             print(f"텍스트 정리 오류: {e}")
+            # 최후 수단으로도 원본 텍스트 최대한 보존
             try:
-                # 기본적인 정리만
+                # 기본적인 정리만 수행
                 clean = text.replace('**', '').replace('*', '')
-                # URL만 제거
-                clean = re.sub(r'https?://[^\s]+', '', clean)
+                for emoji in ['📘', '📄', '🌐', '🔬', '💡']:
+                    clean = clean.replace(emoji, '')
                 return clean.strip()
             except:
-                return text if text else "[텍스트 처리 실패]"
+                return text[:500] if text else "[텍스트 처리 실패]"
 
 def generate_pdf(content, filename="research_report.pdf"):
     """PDF 생성 메인 함수 - 개선된 버전"""
