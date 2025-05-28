@@ -273,21 +273,88 @@ class ProfessionalKoreanPDF(FPDF):
             self.multi_cell(0, 8, section_title, align='L')
             self.ln(4)
             
-            # 내용
-            self.set_safe_font('normal', 10)
-            self.set_text_color(70, 70, 70)
-            clean_content = self.clean_text(content)
-            
-            if clean_content:
-                # 문단별로 분리
-                paragraphs = clean_content.split('\n\n')
-                for para in paragraphs:
-                    if para.strip():
-                        self.multi_cell(0, 6, para.strip(), align='L')
-                        self.ln(3)
+            # 참고문헌 섹션 특별 처리
+            if "참고문헌" in title or "References" in title:
+                self.add_professional_references()
+            else:
+                # 일반 내용
+                self.set_safe_font('normal', 10)
+                self.set_text_color(70, 70, 70)
+                clean_content = self.clean_text(content)
+                
+                if clean_content:
+                    # 문단별로 분리
+                    paragraphs = clean_content.split('\n\n')
+                    for para in paragraphs:
+                        if para.strip():
+                            self.multi_cell(0, 6, para.strip(), align='L')
+                            self.ln(3)
             
         except Exception as e:
             print(f"논문 섹션 오류: {e}")
+    
+    def add_professional_references(self):
+        """전문적인 참고문헌 가이드"""
+        try:
+            # 안내 메시지
+            self.set_safe_font('normal', 10)
+            self.set_text_color(70, 70, 70)
+            guide_text = """실제 연구 수행 시, 주요 학술검색 사이트를 활용하여 관련 논문들을 찾아 참고문헌에 추가하시기 바랍니다. 검색된 논문들은 다음과 같은 표준 양식으로 작성하세요."""
+            self.multi_cell(0, 6, guide_text, align='L')
+            self.ln(6)
+            
+            # 참고문헌 양식 예시
+            self.set_safe_font('bold', 10)
+            self.set_text_color(60, 60, 60)
+            self.multi_cell(0, 7, "참고문헌 작성 양식 (APA Style):", align='L')
+            self.ln(3)
+            
+            # 양식 예시들
+            self.set_safe_font('normal', 9)
+            self.set_text_color(80, 80, 80)
+            
+            examples = [
+                "【학술지 논문】",
+                "김철수, 이영희. (2024). 플라즈마 기술을 이용한 공기정화 시스템 개발. 한국과학기술학회지, 45(3), 123-135.",
+                "",
+                "Smith, J. A., & Johnson, M. B. (2023). Plasma-based air purification: Recent advances and applications. Journal of Applied Physics, 128(12), 245-258.",
+                "",
+                "【학회 발표논문】", 
+                "박민수, 정다솜. (2024). 저온 플라즈마의 살균 효과에 관한 실험적 연구. 한국물리학회 춘계학술대회 발표논문집, 54, 89-92.",
+                "",
+                "【온라인 자료】",
+                "국가과학기술정보센터. (2024). 플라즈마 기술 동향 보고서. https://www.kisti.re.kr/plasma-report-2024",
+                "",
+                "【서적】",
+                "홍길동. (2023). 현대 플라즈마 물리학. 서울: 과학기술출판사."
+            ]
+            
+            for example in examples:
+                if example.startswith('【') and example.endswith('】'):
+                    # 분류 제목
+                    self.set_safe_font('bold', 9)
+                    self.set_text_color(50, 50, 50)
+                    self.multi_cell(0, 6, example, align='L')
+                    self.ln(2)
+                elif example == "":
+                    self.ln(2)
+                else:
+                    # 예시 내용
+                    self.set_safe_font('normal', 9)
+                    self.set_text_color(80, 80, 80)
+                    self.multi_cell(0, 5, example, align='L')
+                    self.ln(1)
+            
+            self.ln(4)
+            
+            # 마무리 안내
+            self.set_safe_font('normal', 9)
+            self.set_text_color(100, 100, 100)
+            final_note = "※ 실제 연구 시에는 최소 10-15개 이상의 관련 논문을 참고하여 보다 체계적인 연구를 수행하시기 바랍니다."
+            self.multi_cell(0, 5, final_note, align='L')
+            
+        except Exception as e:
+            print(f"참고문헌 가이드 오류: {e}")
     
     def clean_text(self, text):
         """강력한 텍스트 정리"""
