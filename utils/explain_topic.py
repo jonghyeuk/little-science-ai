@@ -52,14 +52,14 @@ def explain_topic(topic: str) -> list:
     
     이런 키워드로 검색하면 ~한 연구들을 많이 찾을 수 있어요.
     
-    검색 사이트: [Google Scholar](링크) [네이버 학술정보](링크) [RISS](링크) [DBpia](링크)
+    검색 사이트: [Google Scholar](https://scholar.google.com/scholar?q=키워드1+키워드2+키워드3) | [네이버 학술정보](https://academic.naver.com/search.naver?query=키워드1+키워드2+키워드3) | [RISS](https://www.riss.kr/search/Search.do?queryText=키워드1+키워드2+키워드3) | [DBpia](https://www.dbpia.co.kr/search/topSearch?searchOption=all&query=키워드1+키워드2+키워드3)
     
     
     🔍 **키워드 조합 2:** "다른키워드1 + 키워드2 + 키워드3"
     
     이런 키워드로 검색하면 ~한 연구들을 많이 찾을 수 있어요.
     
-    검색 사이트: [Google Scholar](링크) [네이버 학술정보](링크) [RISS](링크) [DBpia](링크)
+    검색 사이트: [Google Scholar](https://scholar.google.com/scholar?q=다른키워드1+키워드2+키워드3) | [네이버 학술정보](https://academic.naver.com/search.naver?query=다른키워드1+키워드2+키워드3) | [RISS](https://www.riss.kr/search/Search.do?queryText=다른키워드1+키워드2+키워드3) | [DBpia](https://www.dbpia.co.kr/search/topSearch?searchOption=all&query=다른키워드1+키워드2+키워드3)
     
     
     💡 **참고사항:** 학위논문은 기초이론이 상세히 나와 있으며, 연구논문은 특정 주제를 바탕으로한 실험 및 고찰 내용입니다.
