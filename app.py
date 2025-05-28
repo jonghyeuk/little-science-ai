@@ -319,12 +319,18 @@ if topic:
                         # 내부 결과에서도 DOI 변환 적용
                         linked_summary = convert_doi_to_links(summary)
                         
+                        # 🔥 길이 제한 추가 (300자 이상이면 자르고 ... 추가)
+                        if len(linked_summary) > 300:
+                            display_summary = linked_summary[:297] + "..."
+                        else:
+                            display_summary = linked_summary
+                        
                         # 카드 형태로 표시
                         st.markdown(f"""
                         <div style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0;">
                             <h3 style="color: #333; margin-top: 0;">📌 {title}</h3>
                             <p style="color: #666; font-style: italic; margin-bottom: 12px;">{meta_text}</p>
-                            <p>{linked_summary}</p>
+                            <p>{display_summary}</p>
                         </div>
                         """, unsafe_allow_html=True)
                         
@@ -357,12 +363,18 @@ if topic:
                         # arXiv 결과에서도 DOI 변환 적용
                         linked_summary = convert_doi_to_links(summary)
                         
+                        # 🔥 길이 제한 추가 (300자 이상이면 자르고 ... 추가)
+                        if len(linked_summary) > 300:
+                            display_summary = linked_summary[:297] + "..."
+                        else:
+                            display_summary = linked_summary
+                        
                         # 카드 형태로 표시 (프리프린트 표시 추가)
                         st.markdown(f"""
                         <div style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0;">
                             <h3 style="color: #333; margin-top: 0;">🌐 {title}</h3>
                             <p style="color: #666; font-style: italic; margin-bottom: 12px;">출처: arXiv (프리프린트 저장소)</p>
-                            <p>{linked_summary}</p>
+                            <p>{display_summary}</p>
                             <a href="{link}" target="_blank" style="color: #0969da; text-decoration: none;">🔗 논문 링크 보기</a>
                         </div>
                         """, unsafe_allow_html=True)
@@ -412,12 +424,18 @@ if topic:
                 # 내부 결과에서도 DOI 변환 적용
                 linked_summary = convert_doi_to_links(summary)
                 
+                # 🔥 길이 제한 추가 (300자 이상이면 자르고 ... 추가)
+                if len(linked_summary) > 300:
+                    display_summary = linked_summary[:297] + "..."
+                else:
+                    display_summary = linked_summary
+                
                 # 카드 형태로 표시
                 st.markdown(f"""
                 <div style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0;">
                     <h3 style="color: #333; margin-top: 0;">📌 {title}</h3>
                     <p style="color: #666; font-style: italic; margin-bottom: 12px;">{meta_text}</p>
-                    <p>{linked_summary}</p>
+                    <p>{display_summary}</p>
                 </div>
                 """, unsafe_allow_html=True)
         
@@ -436,12 +454,18 @@ if topic:
                 # arXiv 결과에서도 DOI 변환 적용
                 linked_summary = convert_doi_to_links(summary)
                 
+                # 🔥 길이 제한 추가 (300자 이상이면 자르고 ... 추가)
+                if len(linked_summary) > 300:
+                    display_summary = linked_summary[:297] + "..."
+                else:
+                    display_summary = linked_summary
+                
                 # 카드 형태로 표시 (프리프린트 표시 추가)
                 st.markdown(f"""
                 <div style="background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0;">
                     <h3 style="color: #333; margin-top: 0;">🌐 {title}</h3>
                     <p style="color: #666; font-style: italic; margin-bottom: 12px;">출처: arXiv (프리프린트 저장소)</p>
-                    <p>{linked_summary}</p>
+                    <p>{display_summary}</p>
                     <a href="{link}" target="_blank" style="color: #0969da; text-decoration: none;">🔗 논문 링크 보기</a>
                 </div>
                 """, unsafe_allow_html=True)
