@@ -67,13 +67,13 @@ def generate_research_paper(topic, research_idea, references=""):
         
         # JSON 추출
         if paper_data:
-            paper_data = validate_and_fix_sections(paper_data)
+            paper_data = validate_and_fix_sections(paper_data, topic)
         
-        return paper_data if paper_data else create_error_response()
+        return paper_data if paper_data else create_error_response(topic)
         
     except Exception as e:
         print(f"❌ 전체 논문 생성 오류: {e}")
-        return create_error_response()
+        return create_error_response(topic)
 
 def extract_json_robust(text):
     """간소화된 JSON 추출"""
@@ -154,14 +154,14 @@ def manual_parse_sections(text):
     except:
         return None
 
-def validate_and_fix_sections(paper_data):
+def validate_and_fix_sections(paper_data, topic):
     """섹션별 검증 및 수정"""
     try:
         required_sections = ['abstract', 'introduction', 'methods', 'results', 'visuals', 'conclusion', 'references']
         
         for section in required_sections:
             if section not in paper_data or not paper_data[section] or len(paper_data[section].strip()) < 20:
-                paper_data[section] = get_default_content(section)
+                paper_data[section] = get_default_content(section, topic)
         
         return paper_data
         
@@ -194,8 +194,8 @@ PubMed: https://pubmed.ncbi.nlm.nih.gov/
 
 💡 **검색 팁:** "{topic}"와 함께 "실험", "분석", "응용", "최신 연구" 등의 키워드를 조합해서 검색해보세요."""
 
-def get_default_content(section):
-    """기본 내용 제공 (레퍼런스 제외)"""
+def get_default_content(section, topic):
+    """기본 내용 제공"""
     defaults = {
         'abstract': "본 연구는 제시된 주제에 대해 체계적인 실험을 통해 과학적 근거를 확보하고자 한다. 실험을 통해 얻은 데이터를 분석하여 의미있는 결론을 도출할 예정이다. 이 연구 결과는 관련 분야의 이해를 넓히는 데 기여할 것으로 기대된다.",
         'introduction': "현재 관련 분야에서는 다양한 연구가 진행되고 있지만, 여전히 해결되지 않은 문제들이 존재한다. 기존 연구들의 한계점을 보완하고 새로운 관점을 제시하기 위해 본 연구를 수행한다. 본 연구의 목적은 실험적 접근을 통해 이론적 가설을 검증하는 것이다.",
@@ -203,11 +203,11 @@ def get_default_content(section):
         'results': "실험을 통해 다음과 같은 결과를 얻을 것으로 예상된다: 측정값들 간의 상관관계, 가설의 검증 결과, 그리고 이론적 모델과의 일치성 평가이다. 이러한 결과는 관련 분야의 이론적 토대를 강화하는 데 기여할 것이다.",
         'visuals': "실험 결과를 효과적으로 표현하기 위해 다음과 같은 시각자료를 제작할 예정입니다: 실험 과정을 보여주는 사진, 데이터 변화를 나타내는 그래프, 결과를 요약한 표 등입니다.",
         'conclusion': "본 연구를 통해 제시된 가설이 실험적으로 검증될 것으로 예상된다. 이는 관련 분야의 이론적 이해를 깊게 하고, 후속 연구의 방향성을 제시하는 중요한 의미를 갖는다.",
-        'references': "1. 관련 주제 연구 동향\n\n- 내용: 해당 분야의 최신 연구 동향과 주요 발견사항을 정리한 자료입니다. 국내외 연구 현황을 파악할 수 있습니다.\n\n- 링크: https://scholar.google.com/scholar?q=related+research+trends+2024\n\n- 활용: 연구 배경 이해와 방향 설정에 도움이 됩니다.\n\n\n2. 실험 방법론 가이드\n\n- 내용: 과학적 실험 설계와 데이터 분석 방법에 대한 종합적 안내서입니다.\n\n- 링크: https://www.physics.org/experimental-methods\n\n- 활용: 체계적인 실험 진행을 위한 참고자료로 활용합니다.\n\n\n3. 정부 연구 보고서\n\n- 내용: 관련 분야에 대한 정부 차원의 연구 및 정책 자료입니다.\n\n- 링크: https://www.ndsl.kr\n\n- 활용: 국가적 관점에서의 연구 방향성 파악에 도움이 됩니다."
+        'references': get_search_guide_template(topic)
     }
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
-def create_error_response():
+def create_error_response(topic):
     """에러 발생 시 기본 응답"""
     return {
         "abstract": "논문 초록 생성 중 오류가 발생했습니다. 주제를 더 구체적으로 입력하고 다시 시도해주세요.",
@@ -216,5 +216,5 @@ def create_error_response():
         "results": "예상 결과 생성 중 오류가 발생했습니다. 네트워크 상태를 확인해주세요.",
         "visuals": "시각자료 제안 생성 중 오류가 발생했습니다.",
         "conclusion": "결론 생성 중 오류가 발생했습니다.",
-        "references": get_search_guide_template(topic) if topic else "참고문헌 생성 중 오류가 발생했습니다."
+        "references": get_search_guide_template(topic)
     }
