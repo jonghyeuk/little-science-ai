@@ -17,7 +17,7 @@ def generate_research_paper(topic, research_idea, references=""):
         고등학생 연구 계획서를 JSON 형식으로 작성해주세요.
 
         반드시 이 JSON 형식만 사용:
-        {"abstract": "초록내용", "introduction": "서론내용", "methods": "방법내용", "results": "결과내용", "visuals": "시각자료내용", "conclusion": "결론내용", "references": "참고문헌내용"}
+        {"abstract": "초록내용", "introduction": "서론내용", "methods": "방법내용", "results": "결과내용", "visuals": "시각자료내용", "conclusion": "결론내용", "references": "검색가이드"}
 
         각 섹션 요구사항:
         - abstract: 연구목적과 예상결과 요약 (100-150단어) - 학술논문 형식
@@ -26,7 +26,7 @@ def generate_research_paper(topic, research_idea, references=""):
         - results: 예상되는 구체적 결과들 (150-200단어)
         - visuals: 필요한 그래프/차트 설명 (100-150단어)
         - conclusion: 실험을 통해 증명하려는 과학적 결론과 학술적 의의 (100-150단어)
-        - references: 실제 확인가능한 자료 3-4개 (반드시 실제 링크 포함)
+        - references: "참고문헌은 자동으로 검색 가이드가 제공됩니다" (간단히 한 문장만)
 
         실험방법 작성법:
         1단계: [제목] - (장비/재료 간단히)
@@ -44,7 +44,7 @@ def generate_research_paper(topic, research_idea, references=""):
         주의사항:
         - 초록과 서론: 학술논문 형식으로 작성
         - 실험방법: "먼저 ~를 합니다. 다음으로 ~를 설정합니다" 친절한 서술형
-        - 참고문헌: 반드시 실제 클릭 가능한 링크 포함
+        - 참고문헌: 간단한 한 문장만 작성
         """
         
         # Claude 호출
@@ -160,7 +160,10 @@ def validate_and_fix_sections(paper_data, topic):
         required_sections = ['abstract', 'introduction', 'methods', 'results', 'visuals', 'conclusion', 'references']
         
         for section in required_sections:
-            if section not in paper_data or not paper_data[section] or len(paper_data[section].strip()) < 20:
+            if section == 'references':
+                # references는 무조건 검색 가이드로 대체
+                paper_data[section] = get_search_guide_template(topic)
+            elif section not in paper_data or not paper_data[section] or len(paper_data[section].strip()) < 20:
                 paper_data[section] = get_default_content(section, topic)
         
         return paper_data
