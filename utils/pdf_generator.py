@@ -164,7 +164,7 @@ class SafeKoreanPDF(FPDF):
                 pass
     
     def add_main_title(self, title):
-        """큰 제목 - 더 안전하게"""
+        """큰 제목 - 길이 제한 없음"""
         try:
             self.ln(8)
             
@@ -176,12 +176,8 @@ class SafeKoreanPDF(FPDF):
             self.set_text_color(40, 40, 40)
             clean_title = self.clean_text(title)
             
-            # 제목이 너무 길면 줄바꿈 처리
-            if len(clean_title) > 50:
-                self.multi_cell(0, 12, clean_title, align='L')
-            else:
-                self.cell(0, 12, clean_title, ln=True, align='L')
-                
+            # 길이에 관계없이 multi_cell 사용
+            self.multi_cell(0, 12, clean_title, align='L')
             self.ln(6)
             
         except Exception as e:
@@ -189,13 +185,13 @@ class SafeKoreanPDF(FPDF):
             # 기본 제목이라도 표시
             try:
                 self.set_font('Arial', 'B', 14)
-                self.cell(0, 10, title[:50], ln=True)
+                self.multi_cell(0, 10, title, align='L')
                 self.ln(4)
             except:
                 pass
     
     def add_section_title(self, title):
-        """섹션 제목 - 더 안전하게"""
+        """섹션 제목 - 길이 제한 없음"""
         try:
             self.ln(6)
             
@@ -207,24 +203,21 @@ class SafeKoreanPDF(FPDF):
             self.set_text_color(60, 60, 60)
             clean_title = self.clean_text(title)
             
-            if len(clean_title) > 60:
-                self.multi_cell(0, 10, clean_title, align='L')
-            else:
-                self.cell(0, 10, clean_title, ln=True, align='L')
-                
+            # 길이에 관계없이 multi_cell 사용
+            self.multi_cell(0, 10, clean_title, align='L')
             self.ln(4)
             
         except Exception as e:
             print(f"섹션 제목 오류: {e}")
             try:
                 self.set_font('Arial', 'B', 12)
-                self.cell(0, 8, title[:50], ln=True)
+                self.multi_cell(0, 8, title, align='L')
                 self.ln(3)
             except:
                 pass
     
     def add_sub_title(self, title):
-        """소제목 - 더 안전하게"""
+        """소제목 - 길이 제한 없음"""
         try:
             self.ln(4)
             
@@ -236,24 +229,21 @@ class SafeKoreanPDF(FPDF):
             self.set_text_color(80, 80, 80)
             clean_title = self.clean_text(title)
             
-            if len(clean_title) > 70:
-                self.multi_cell(0, 8, clean_title, align='L')
-            else:
-                self.cell(0, 8, clean_title, ln=True, align='L')
-                
+            # 길이에 관계없이 multi_cell 사용
+            self.multi_cell(0, 8, clean_title, align='L')
             self.ln(3)
             
         except Exception as e:
             print(f"소제목 오류: {e}")
             try:
                 self.set_font('Arial', 'B', 10)
-                self.cell(0, 7, title[:50], ln=True)
+                self.multi_cell(0, 7, title, align='L')
                 self.ln(2)
             except:
                 pass
     
     def add_normal_text(self, text):
-        """일반 텍스트 - 더 안전하게"""
+        """일반 텍스트 - 긴 텍스트 완전 지원"""
         try:
             if not text or len(text.strip()) == 0:
                 return
@@ -267,28 +257,24 @@ class SafeKoreanPDF(FPDF):
             clean_text = self.clean_text(text)
             
             if len(clean_text) > 0:
-                # 긴 텍스트는 multi_cell 사용
-                if len(clean_text) > 80:
-                    self.multi_cell(0, 7, clean_text, align='L')
-                else:
-                    self.cell(0, 7, clean_text, ln=True, align='L')
-                    
+                # 긴 텍스트는 무조건 multi_cell 사용 (길이 제한 없음)
+                self.multi_cell(0, 7, clean_text, align='L')
                 self.ln(2)
                 
         except Exception as e:
             print(f"일반 텍스트 오류: {e}")
-            # 영어로라도 출력 시도
+            # 영어로라도 출력 시도 (길이 제한 늘림)
             try:
                 self.set_font('Arial', '', 9)
-                safe_text = text.encode('ascii', 'ignore').decode('ascii')[:50]
+                safe_text = text.encode('ascii', 'ignore').decode('ascii')
                 if safe_text:
-                    self.cell(0, 6, safe_text, ln=True)
+                    self.multi_cell(0, 6, safe_text, align='L')
                     self.ln(1)
             except:
                 pass
     
     def clean_text(self, text):
-        """텍스트 정리 - 더욱 강화된 버전"""
+        """텍스트 정리 - 길이 제한 제거"""
         try:
             if not text:
                 return ""
@@ -307,26 +293,27 @@ class SafeKoreanPDF(FPDF):
             for emoji in emoji_list:
                 text = text.replace(emoji, '')
             
-            # 3단계: 특수 문자 처리
-            text = re.sub(r'[^\w\s가-힣.,!?()[\]-]', '', text)
+            # 3단계: 특수 문자 처리 (더 관대하게)
+            text = re.sub(r'[^\w\s가-힣.,!?()[\]:%/-]', '', text)
             
             # 4단계: 공백 정리
             text = re.sub(r'\s+', ' ', text)  # 연속 공백 제거
             text = text.strip()
             
-            # 5단계: 길이 제한 (fpdf 안정성 위해)
-            if len(text) > 200:
-                text = text[:197] + "..."
-            
+            # 길이 제한 제거! - 전체 텍스트 유지
             return text
             
         except Exception as e:
             print(f"텍스트 정리 오류: {e}")
-            # 최후 수단: ASCII만 남기기
+            # 최후 수단으로도 원본 텍스트 최대한 보존
             try:
-                return text.encode('ascii', 'ignore').decode('ascii')[:100]
+                # 기본적인 정리만 수행
+                clean = text.replace('**', '').replace('*', '')
+                for emoji in ['📘', '📄', '🌐', '🔬', '💡']:
+                    clean = clean.replace(emoji, '')
+                return clean.strip()
             except:
-                return "[텍스트 처리 실패]"
+                return text[:500] if text else "[텍스트 처리 실패]"
 
 def generate_pdf(content, filename="research_report.pdf"):
     """PDF 생성 메인 함수 - 개선된 버전"""
