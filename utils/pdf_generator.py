@@ -103,7 +103,7 @@ class SafeKoreanPDF(FPDF):
                 pass
     
     def write_content(self, content):
-        """안전한 내용 작성 - 개선된 버전"""
+        """안전한 내용 작성 - 리스트 처리 개선"""
         try:
             self.add_page()
             
@@ -116,6 +116,7 @@ class SafeKoreanPDF(FPDF):
             
             processed_lines = 0
             error_lines = 0
+            list_counter = 0  # 리스트 번호 카운터
             
             for i, line in enumerate(lines):
                 try:
@@ -123,43 +124,82 @@ class SafeKoreanPDF(FPDF):
                     
                     if not line:  # 빈 줄
                         self.ln(3)
+                        list_counter = 0  # 리스트 카운터 리셋
                         continue
                     
-                    # 제목별 처리 - 더 안전하게
+                    # 제목별 처리
                     if line.startswith('# '):
                         self.add_main_title(line[2:])
+                        list_counter = 0
                     elif line.startswith('## '):
                         self.add_section_title(line[3:])
+                        list_counter = 0
                     elif line.startswith('### '):
                         self.add_sub_title(line[4:])
+                        list_counter = 0
+                    elif line.startswith('- ') or line.startswith('• '):
+                        # 리스트 항목 처리
+                        list_counter += 1
+                        item_text = line[2:].strip() if line.startswith('- ') else line[2:].strip()
+                        self.add_list_item(item_text, list_counter)
                     else:
                         self.add_normal_text(line)
+                        # 연속된 일반 텍스트가 아니면 리스트 카운터 리셋
+                        if not (line.startswith('- ') or line.startswith('• ')):
+                            list_counter = 0
                         
                     processed_lines += 1
                     
-                    # 진행상황 출력 (큰 문서의 경우)
+                    # 진행상황 출력
                     if (i + 1) % 50 == 0:
                         print(f"📝 {i + 1}/{len(lines)} 줄 처리 완료")
                         
                 except Exception as line_error:
                     error_lines += 1
                     print(f"❌ 라인 {i+1} 처리 오류: {line_error}")
-                    print(f"   문제 라인: {repr(line[:100])}")
                     
-                    # 에러가 너무 많으면 중단
                     if error_lines > 10:
                         print("⚠️ 에러가 너무 많아 처리를 중단합니다.")
                         break
-                    
                     continue
             
             print(f"✅ 처리 완료: {processed_lines}줄 성공, {error_lines}줄 실패")
             
         except Exception as e:
             print(f"❌ 전체 콘텐츠 작성 오류: {e}")
-            # 최소한의 내용이라도 추가
             try:
                 self.add_normal_text("콘텐츠 처리 중 오류가 발생했습니다.")
+            except:
+                pass
+    
+    def add_list_item(self, text, number=None):
+        """리스트 항목 추가 - 번호 또는 불릿 포인트 포함"""
+        try:
+            if self.fonts_loaded:
+                self.set_font('NanumRegular', size=10)
+            else:
+                self.set_font('Arial', '', 10)
+            
+            self.set_text_color(90, 90, 90)
+            clean_text = self.clean_text(text)
+            
+            if clean_text:
+                # 번호가 있으면 번호를 붙이고, 없으면 불릿 포인트
+                if number:
+                    formatted_text = f"{number}. {clean_text}"
+                else:
+                    formatted_text = f"• {clean_text}"
+                
+                self.multi_cell(0, 7, formatted_text, align='L')
+                self.ln(2)
+                
+        except Exception as e:
+            print(f"리스트 항목 오류: {e}")
+            try:
+                self.set_font('Arial', '', 9)
+                simple_text = f"• {text[:100]}"
+                self.multi_cell(0, 6, simple_text, align='L')
+                self.ln(1)
             except:
                 pass
     
@@ -274,46 +314,52 @@ class SafeKoreanPDF(FPDF):
                 pass
     
     def clean_text(self, text):
-        """텍스트 정리 - 길이 제한 제거"""
+        """텍스트 정리 - PDF용으로 깔끔하게"""
         try:
             if not text:
                 return ""
             
-            # 1단계: 마크다운 기호 제거
-            text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **굵게**
-            text = re.sub(r'\*([^*]+)\*', r'\1', text)      # *기울임*
+            # 1단계: 불필요한 링크 정보 제거 (PDF에서는 클릭 안되니까)
+            # 최신논문검색 섹션의 복잡한 링크들 간소화
+            if "https://" in text and ("scholar.google.com" in text or "academic.naver.com" in text):
+                # 링크가 많은 검색 가이드는 간단하게 요약
+                text = "📚 추가 연구를 위한 검색 가이드\n\n관련 키워드로 Google Scholar, 네이버 학술정보, RISS, DBpia 등에서 논문을 검색해보세요."
+            
+            # URL 링크들 제거 (PDF에서는 의미없음)
+            text = re.sub(r'https?://[^\s]+', '', text)
+            
+            # 2단계: 마크다운 기호 정리
+            text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **굵게** → 굵게
+            text = re.sub(r'\*([^*]+)\*', r'\1', text)      # *기울임* → 기울임
             text = text.replace('**', '').replace('*', '')
-            text = re.sub(r'[_`]', '', text)                # _ 와 `
             
-            # 2단계: 이모지 제거 (fpdf에서 문제 될 수 있음)
-            emoji_list = ['📘', '📄', '🌐', '🔬', '💡', '⚙️', '🌍', '📊', 
-                         '🎯', '📋', '📖', '🔗', '📚', '📈', '🏆', '📅', 
-                         '🔍', '✅', '❌', '⚠️', '🧪', '🤖', '🧠']
+            # 3단계: 이모지는 일부만 유지 (PDF에서 의미있는 것들)
+            # 유지할 이모지들
+            keep_emojis = ['📚', '🔍', '💡', '📊', '🎯', '📋']
             
-            for emoji in emoji_list:
+            # 제거할 이모지들
+            remove_emojis = ['📘', '📄', '🌐', '🔬', '⚙️', '🌍', '📈', '🏆', '📅', '🤖', '🧠']
+            
+            for emoji in remove_emojis:
                 text = text.replace(emoji, '')
-            
-            # 3단계: 특수 문자 처리 (더 관대하게)
-            text = re.sub(r'[^\w\s가-힣.,!?()[\]:%/-]', '', text)
             
             # 4단계: 공백 정리
             text = re.sub(r'\s+', ' ', text)  # 연속 공백 제거
+            text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # 과도한 줄바꿈 정리
             text = text.strip()
             
-            # 길이 제한 제거! - 전체 텍스트 유지
             return text
             
         except Exception as e:
             print(f"텍스트 정리 오류: {e}")
-            # 최후 수단으로도 원본 텍스트 최대한 보존
             try:
-                # 기본적인 정리만 수행
+                # 기본적인 정리만
                 clean = text.replace('**', '').replace('*', '')
-                for emoji in ['📘', '📄', '🌐', '🔬', '💡']:
-                    clean = clean.replace(emoji, '')
+                # URL만 제거
+                clean = re.sub(r'https?://[^\s]+', '', clean)
                 return clean.strip()
             except:
-                return text[:500] if text else "[텍스트 처리 실패]"
+                return text if text else "[텍스트 처리 실패]"
 
 def generate_pdf(content, filename="research_report.pdf"):
     """PDF 생성 메인 함수 - 개선된 버전"""
