@@ -3,6 +3,7 @@ import streamlit as st
 import time
 import re
 import logging
+import os
 from utils.layout import load_css
 from utils.search_db import search_similar_titles, initialize_db  # initialize_db 추가
 from utils.search_arxiv import search_arxiv
@@ -577,15 +578,30 @@ if topic:
             st.session_state.generated_paper = {}
             st.rerun()
     
-    # PDF 저장 버튼 (기존 위치 유지)
-    if st.session_state.full_text:
-        st.markdown("---")
-        if st.button("📥 이 내용 PDF로 저장하기"):
-            path = generate_pdf(st.session_state.full_text)
-            with open(path, "rb") as f:
-                st.download_button(
-                    "📄 PDF 다운로드", 
-                    f, 
-                    file_name="little_science_ai_research.pdf",
-                    mime="application/pdf"
-                )
+    # PDF 저장 버튼 - 논문 완성 후에만 활성화
+    st.markdown("---")
+    st.subheader("📄 PDF 저장")
+
+    # 논문이 완성되었는지 확인
+    paper_completed = bool(st.session_state.generated_paper and 
+                          isinstance(st.session_state.generated_paper, dict) and
+                          st.session_state.generated_paper.get("abstract"))
+
+    if paper_completed:
+        if st.button("📥 완성된 연구보고서 PDF로 저장하기", type="primary"):
+            if st.session_state.full_text:
+                path = generate_pdf(st.session_state.full_text)
+                if path and os.path.exists(path):
+                    with open(path, "rb") as f:
+                        st.download_button(
+                            "📄 PDF 다운로드", 
+                            f, 
+                            file_name="little_science_ai_research.pdf",
+                            mime="application/pdf"
+                        )
+                else:
+                    st.error("PDF 생성에 실패했습니다.")
+    else:
+        st.button("📥 연구보고서 PDF로 저장하기", 
+                 disabled=True, 
+                 help="논문 생성을 완료한 후 PDF 저장이 가능합니다.")
