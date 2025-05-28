@@ -44,17 +44,22 @@ def explain_topic(topic: str) -> list:
     실제로 어디에서, 어떻게 사용되고 있는지 구체적인 예시들을 들어서 설명해줘. 현재 상용화된 기술들과 미래에 가능할 것들을 자연스럽게 섞어서 이야기해. 어떤 회사들이 이 기술을 사용하는지, 일상생활에서 접할 수 있는 사례들은 무엇인지 친근하게 설명해. "여러분도 혹시 이런 걸 써봤을 거예요" 같은 식으로 친근하게 접근해줘.
     ---
     ## 📊 **효과적인 논문 검색 키워드**
-    이 분야의 논문을 효과적으로 찾을 수 있는 검색 키워드 조합을 2-3개 제시해줘. 각 키워드 조합으로 검색하면 어떤 종류의 연구들을 많이 볼 수 있는지, 왜 이 키워드들이 효과적인지를 자연스럽게 설명해줘.
+    이 분야의 논문을 효과적으로 찾을 수 있는 검색 키워드 조합을 2-3개 제시해줘. 각 키워드 조합으로 검색하면 어떤 종류의 연구들을 많이 볼 수 있는지 설명해줘.
 
-    **⚠️ 검색 키워드 제공 규칙:**
-    **구체적인 논문 제목이 아닌 검색에 최적화된 키워드 조합을 제시해라**
-    - 형식: "키워드1 + 키워드2 + 키워드3" 
-    - [Google Scholar에서 검색](https://scholar.google.com/scholar?q=키워드1+키워드2+키워드3)
-    - [네이버 학술정보에서 검색](https://academic.naver.com/search.naver?query=키워드1+키워드2+키워드3)
-    - [RISS에서 검색](https://www.riss.kr/search/Search.do?queryText=키워드1+키워드2+키워드3)
-    - [DBpia에서 검색](https://www.dbpia.co.kr/search/topSearch?searchOption=all&query=키워드1+키워드2+키워드3)
-    - 각 키워드 조합마다 "이런 키워드로 검색하면 ~한 연구들을 많이 찾을 수 있어요"라고 설명
-    - 영어 키워드와 한국어 키워드를 적절히 조합해서 제시
+    **반드시 다음 형식으로 작성해:**
+    • **"키워드1 + 키워드2 + 키워드3"**
+    - 이런 키워드로 검색하면 ~한 연구들을 많이 찾을 수 있어요.
+    - [Google Scholar](https://scholar.google.com/scholar?q=키워드1+키워드2+키워드3)
+    - [네이버 학술정보](https://academic.naver.com/search.naver?query=키워드1+키워드2+키워드3)
+    - [RISS](https://www.riss.kr/search/Search.do?queryText=키워드1+키워드2+키워드3)
+    - [DBpia](https://www.dbpia.co.kr/search/topSearch?searchOption=all&query=키워드1+키워드2+키워드3)
+
+    • **"다른 키워드1 + 키워드2 + 키워드3"**
+    - 이런 키워드로 검색하면 ~한 연구들을 많이 찾을 수 있어요.
+    - [Google Scholar](https://scholar.google.com/scholar?q=다른키워드1+키워드2+키워드3)
+    - [네이버 학술정보](https://academic.naver.com/search.naver?query=다른키워드1+키워드2+키워드3)
+    - [RISS](https://www.riss.kr/search/Search.do?queryText=다른키워드1+키워드2+키워드3)
+    - [DBpia](https://www.dbpia.co.kr/search/topSearch?searchOption=all&query=다른키워드1+키워드2+키워드3)
     ---
     ## 🎯 **확장 가능한 탐구 아이디어**
     고등학생이 실제로 연구해볼 수 있는 재미있는 아이디어들을 제시해줘:
