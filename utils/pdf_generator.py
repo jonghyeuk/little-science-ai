@@ -1,127 +1,183 @@
 from fpdf import FPDF
 import os
+import re
 
-# 📁 경로 설정
-FONT_PATH = os.path.join("fonts", "NanumGothic-Regular.ttf")
+# 폰트 경로
+FONT_DIR = "fonts"
 OUTPUT_DIR = "outputs"
 
-class PDF(FPDF):
-    def __init__(self):  # ✅ 수정: **init** → __init__
-        super().__init__()
-        self.add_page()
-        self.set_auto_page_break(auto=True, margin=15)
+class LittleSciencePDF(FPDF):
+    def __init__(self):
+        super().__init__(format='A4')
+        self.set_auto_page_break(auto=True, margin=25)
+        self.set_margins(20, 20, 20)
+        self.fonts_ready = False
+        self.setup_fonts()
         
-        # 🔧 폰트 등록 (안전하게 처리)
+    def setup_fonts(self):
         try:
-            if os.path.exists(FONT_PATH):
-                # Regular 폰트 등록
-                self.add_font('Nanum', '', FONT_PATH, uni=True)
-                # Bold 폰트는 같은 파일 사용 (NanumGothic은 하나의 파일로 처리)
-                self.add_font('Nanum', 'B', FONT_PATH, uni=True)
-                self.font_available = True
-                print("✅ 한글 폰트 로드 성공")
-            else:
-                print(f"❌ 폰트 파일 없음: {FONT_PATH}")
-                self.font_available = False
+            # 3가지 폰트 등록
+            regular_path = os.path.join(FONT_DIR, "NanumGothic-Regular.ttf")
+            bold_path = os.path.join(FONT_DIR, "NanumGothic-Bold.ttf")
+            extrabold_path = os.path.join(FONT_DIR, "NanumGothic-ExtraBold.ttf")
+            
+            if os.path.exists(regular_path):
+                self.add_font('NanumRegular', '', regular_path, uni=True)
+                
+            if os.path.exists(bold_path):
+                self.add_font('NanumBold', '', bold_path, uni=True)
+                
+            if os.path.exists(extrabold_path):
+                self.add_font('NanumExtra', '', extrabold_path, uni=True)
+                
+            self.fonts_ready = True
+            print("✅ 폰트 로드 완료")
+            
         except Exception as e:
-            print(f"❌ 폰트 등록 실패: {e}")
-            self.font_available = False
-        
-        # 폰트 설정
-        if self.font_available:
-            self.set_font("Nanum", size=12)
-        else:
-            self.set_font("Arial", size=12)  # 대체 폰트
-        
-        self.set_margins(left=20, top=25, right=20)
-
+            print(f"❌ 폰트 로드 실패: {e}")
+            self.fonts_ready = False
+    
     def header(self):
-        if self.font_available:
-            self.set_font("Nanum", 'B', 14)
+        # 헤더 - 간단하게
+        if self.fonts_ready:
+            self.set_font('NanumBold', size=12)
         else:
-            self.set_font("Arial", 'B', 14)
-        self.cell(0, 10, 'LittleScienceAI 연구 리포트', ln=True, align='C')
-        self.ln(10)
-
-    def footer(self):
+            self.set_font('Arial', 'B', 12)
+        
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 10, 'LittleScienceAI Research Report', align='C', ln=True)
+        self.ln(5)
+        
+    def footer(self):  
         self.set_y(-15)
-        if self.font_available:
-            self.set_font("Nanum", '', 10)
+        if self.fonts_ready:
+            self.set_font('NanumRegular', size=9)
         else:
-            self.set_font("Arial", '', 10)
-        self.cell(0, 10, f"Page {self.page_no()}", align='C')
-
-    def write_content(self, text):
-        lines = text.split('\n')
+            self.set_font('Arial', '', 9)
+        
+        self.set_text_color(150, 150, 150)
+        self.cell(0, 10, f'Page {self.page_no()}', align='C')
+    
+    def write_content(self, content):
+        self.add_page()
+        
+        # 텍스트를 줄 단위로 분리
+        lines = content.split('\n')
         
         for line in lines:
             line = line.strip()
-            if not line:
+            
+            if not line:  # 빈 줄
                 self.ln(4)
                 continue
                 
-            # 📌 제목 스타일 처리
-            if line.startswith("# "):
-                if self.font_available:
-                    self.set_font("Nanum", 'B', 16)
-                else:
-                    self.set_font("Arial", 'B', 16)
-                self.multi_cell(0, 10, line.replace("# ", ""))
-                self.ln(2)
+            # 제목 처리
+            if line.startswith('# '):
+                self.add_main_title(line[2:])
                 
-            elif line.startswith("## "):
-                if self.font_available:
-                    self.set_font("Nanum", 'B', 14)
-                else:
-                    self.set_font("Arial", 'B', 14)
-                self.multi_cell(0, 9, line.replace("## ", ""))
-                self.ln(1)
+            elif line.startswith('## '):
+                self.add_section_title(line[3:])
                 
-            elif line.startswith("- **") and "**" in line[4:]:
-                if self.font_available:
-                    self.set_font("Nanum", 'B', 12)
-                else:
-                    self.set_font("Arial", 'B', 12)
-                clean = line.replace("**", "").replace("- ", "")
-                self.multi_cell(0, 8, f"▶ {clean}")
-                # 다음 줄을 위해 regular 폰트로 복원
-                if self.font_available:
-                    self.set_font("Nanum", '', 12)
-                else:
-                    self.set_font("Arial", '', 12)
-                    
-            elif line.startswith("🔗"):
-                self.set_text_color(0, 102, 204)  # 파란색
-                if self.font_available:
-                    self.set_font("Nanum", '', 12)
-                else:
-                    self.set_font("Arial", '', 12)
-                self.multi_cell(0, 8, line)
-                self.set_text_color(0, 0, 0)  # 검은색으로 복원
+            elif line.startswith('### '):
+                self.add_sub_title(line[4:])
                 
+            # 볼드 텍스트 처리
+            elif line.startswith('**') and line.endswith('**'):
+                self.add_bold_text(line[2:-2])
+                
+            # 일반 텍스트
             else:
-                if self.font_available:
-                    self.set_font("Nanum", '', 12)
-                else:
-                    self.set_font("Arial", '', 12)
-                self.multi_cell(0, 8, line)
-
-def generate_pdf(content: str, filename="research_output.pdf") -> str:
-    """PDF 생성 함수 - 에러 처리 강화"""
-    try:
-        pdf = PDF()
-        pdf.write_content(content)
+                self.add_normal_text(line)
+    
+    def add_main_title(self, title):
+        self.ln(8)
+        if self.fonts_ready:
+            self.set_font('NanumExtra', size=16)
+        else:
+            self.set_font('Arial', 'B', 16)
         
+        self.set_text_color(30, 30, 30)
+        self.multi_cell(0, 12, title, align='L')
+        self.ln(6)
+    
+    def add_section_title(self, title):
+        self.ln(6)
+        if self.fonts_ready:
+            self.set_font('NanumBold', size=13)
+        else:
+            self.set_font('Arial', 'B', 13)
+        
+        self.set_text_color(50, 50, 50)
+        self.multi_cell(0, 10, title, align='L')
+        self.ln(4)
+    
+    def add_sub_title(self, title):
+        self.ln(4)
+        if self.fonts_ready:
+            self.set_font('NanumBold', size=11)
+        else:
+            self.set_font('Arial', 'B', 11)
+        
+        self.set_text_color(70, 70, 70)
+        self.multi_cell(0, 8, title, align='L')
+        self.ln(3)
+    
+    def add_bold_text(self, text):
+        if self.fonts_ready:
+            self.set_font('NanumBold', size=10)
+        else:
+            self.set_font('Arial', 'B', 10)
+        
+        self.set_text_color(60, 60, 60)
+        self.multi_cell(0, 7, text, align='L')
+        self.ln(2)
+    
+    def add_normal_text(self, text):
+        if self.fonts_ready:
+            self.set_font('NanumRegular', size=10)
+        else:
+            self.set_font('Arial', '', 10)
+        
+        self.set_text_color(80, 80, 80)
+        
+        # 긴 텍스트는 자동 줄바꿈
+        self.multi_cell(0, 6, text, align='L')
+        self.ln(2)
+
+def generate_pdf(content, filename="research_report.pdf"):
+    """PDF 생성 메인 함수"""
+    try:
         # 출력 디렉토리 생성
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        path = os.path.join(OUTPUT_DIR, filename)
         
-        # PDF 저장
-        pdf.output(path)
-        print(f"✅ PDF 생성 완료: {path}")
-        return path
+        # PDF 생성
+        pdf = LittleSciencePDF()
+        pdf.write_content(content)
         
+        # 저장
+        output_path = os.path.join(OUTPUT_DIR, filename)
+        pdf.output(output_path)
+        
+        # 파일 존재 확인
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            print(f"✅ PDF 생성 성공: {output_path}")
+            return output_path
+        else:
+            raise Exception("PDF 파일이 생성되지 않음")
+            
     except Exception as e:
         print(f"❌ PDF 생성 실패: {e}")
-        # 에러가 나도 기본 경로 반환 (앱이 완전히 멈추지 않도록)
-        return os.path.join(OUTPUT_DIR, filename)
+        
+        # 실패시 텍스트 파일로 저장
+        try:
+            txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '.txt'))
+            with open(txt_path, 'w', encoding='utf-8') as f:
+                f.write("=== LittleScienceAI 연구 보고서 ===\n\n")
+                f.write(content)
+            
+            print(f"✅ 텍스트 파일로 저장: {txt_path}")
+            return txt_path
+            
+        except Exception as txt_error:
+            print(f"❌ 텍스트 파일 저장도 실패: {txt_error}")
+            return None
