@@ -405,6 +405,7 @@ def parse_content_elegantly(content):
         'working_principle': '',
         'current_background': '',
         'applications': '',
+        'research_ideas': '',
         'isef_papers': [],
         'arxiv_papers': [],
         'generated_paper': {}
