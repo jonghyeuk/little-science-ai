@@ -5,7 +5,7 @@ import warnings
 from datetime import datetime
 import logging
 
-# 로깅 레벨 조정 (httpx 로그 억제)
+# 로깅 레벨 조정
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("anthropic").setLevel(logging.WARNING)
 
@@ -28,10 +28,8 @@ class ProfessionalKoreanPDF(FPDF):
         self.font_status = self.setup_fonts_robustly()
         self.section_number = 0
         self.subsection_number = 0
-        print(f"PDF 초기화 완료 - 주제: {self.topic}")
         
     def setup_fonts_robustly(self):
-        """견고한 폰트 설정"""
         font_status = {'korean_available': False, 'fallback_only': False}
         
         try:
@@ -64,7 +62,6 @@ class ProfessionalKoreanPDF(FPDF):
             return {'korean_available': False, 'fallback_only': True}
     
     def set_safe_font(self, weight='normal', size=10):
-        """안전한 폰트 설정"""
         try:
             if self.font_status['korean_available']:
                 if weight == 'bold':
@@ -82,7 +79,6 @@ class ProfessionalKoreanPDF(FPDF):
             self.set_font('Arial', '', size)
     
     def header(self):
-        """헤더"""
         if self.page_no() > 1:
             try:
                 self.set_safe_font('normal', 9)
@@ -94,7 +90,6 @@ class ProfessionalKoreanPDF(FPDF):
                 pass
             
     def footer(self):
-        """푸터"""
         try:
             self.set_y(-15)
             self.set_safe_font('normal', 9)
@@ -104,24 +99,20 @@ class ProfessionalKoreanPDF(FPDF):
             pass
     
     def add_title_page(self, topic):
-        """표지 페이지"""
         self.add_page()
         self.ln(30)
         
         try:
-            # 메인 제목
             self.set_safe_font('bold', 20)
             self.set_text_color(40, 40, 40)
             self.multi_cell(0, 12, topic, align='C')
             self.ln(8)
             
-            # 부제목
             self.set_safe_font('normal', 14)
             self.set_text_color(80, 80, 80)
             self.multi_cell(0, 10, '연구 탐색 보고서', align='C')
             self.ln(30)
             
-            # 생성 정보
             self.set_safe_font('normal', 10)
             self.set_text_color(120, 120, 120)
             today = datetime.now().strftime("%Y년 %m월 %d일")
@@ -129,13 +120,10 @@ class ProfessionalKoreanPDF(FPDF):
             self.ln(3)
             self.multi_cell(0, 8, 'LittleScienceAI', align='C')
             
-            print("표지 페이지 추가 완료")
-            
         except Exception as e:
             print(f"표지 페이지 오류: {e}")
     
     def add_section_title(self, title, level=1):
-        """섹션 제목"""
         try:
             clean_title = self.clean_text(title)
             
@@ -158,13 +146,11 @@ class ProfessionalKoreanPDF(FPDF):
             
             self.multi_cell(0, 8, title_text, align='L')
             self.ln(4)
-            print(f"섹션 제목 추가: {title_text}")
             
         except Exception as e:
             print(f"섹션 제목 오류: {e}")
     
     def add_elegant_subsection(self, title):
-        """이쁜 소제목"""
         try:
             self.ln(6)
             self.set_safe_font('bold', 11)
@@ -176,7 +162,6 @@ class ProfessionalKoreanPDF(FPDF):
             print(f"소제목 오류: {e}")
     
     def add_paragraph(self, text):
-        """문단 추가"""
         try:
             self.set_safe_font('normal', 10)
             self.set_text_color(70, 70, 70)
@@ -196,9 +181,7 @@ class ProfessionalKoreanPDF(FPDF):
             print(f"문단 추가 오류: {e}")
     
     def add_paper_item(self, title, summary, source=""):
-        """논문 항목 추가"""
         try:
-            # 제목
             self.set_safe_font('bold', 10)
             self.set_text_color(40, 40, 40)
             clean_title = self.clean_text(title)
@@ -207,13 +190,11 @@ class ProfessionalKoreanPDF(FPDF):
             
             self.multi_cell(0, 7, f"▪ {clean_title}", align='L')
             
-            # 출처
             if source:
                 self.set_safe_font('normal', 8)
                 self.set_text_color(120, 120, 120)
                 self.multi_cell(0, 5, f"   {source}", align='L')
             
-            # 요약
             self.set_safe_font('normal', 9)
             self.set_text_color(80, 80, 80)
             clean_summary = self.clean_text(summary)
@@ -230,32 +211,25 @@ class ProfessionalKoreanPDF(FPDF):
             print(f"논문 항목 오류: {e}")
     
     def add_paper_title_page(self, topic, selected_idea):
-        """논문용 새 페이지"""
         self.add_page()
         self.ln(20)
         
         try:
-            # 논문 제목
             self.set_safe_font('bold', 18)
             self.set_text_color(30, 30, 30)
             paper_title = f"{topic}: {selected_idea.split(' - ')[0]}"
             self.multi_cell(0, 12, paper_title, align='C')
             self.ln(15)
             
-            # 구분선
             self.set_draw_color(150, 150, 150)
             self.line(30, self.get_y(), 180, self.get_y())
             self.ln(8)
-            
-            print("논문 제목 페이지 추가 완료")
             
         except Exception as e:
             print(f"논문 제목 페이지 오류: {e}")
     
     def add_paper_section(self, title, content, section_number):
-        """논문 섹션 추가"""
         try:
-            # 섹션 번호와 제목
             self.ln(8)
             self.set_safe_font('bold', 12)
             self.set_text_color(40, 40, 40)
@@ -263,11 +237,9 @@ class ProfessionalKoreanPDF(FPDF):
             self.multi_cell(0, 8, section_title, align='L')
             self.ln(4)
             
-            # 참고문헌 섹션 특별 처리
             if "참고문헌" in title or "References" in title:
                 self.add_professional_references()
             else:
-                # 일반 내용
                 self.set_safe_font('normal', 10)
                 self.set_text_color(70, 70, 70)
                 clean_content = self.clean_text(content)
@@ -283,22 +255,18 @@ class ProfessionalKoreanPDF(FPDF):
             print(f"논문 섹션 오류: {e}")
     
     def add_professional_references(self):
-        """전문적인 참고문헌 가이드"""
         try:
-            # 안내 메시지
             self.set_safe_font('normal', 10)
             self.set_text_color(70, 70, 70)
-            guide_text = """실제 연구 수행 시, 주요 학술검색 사이트를 활용하여 관련 논문들을 찾아 참고문헌에 추가하시기 바랍니다. 검색된 논문들은 다음과 같은 표준 양식으로 작성하세요."""
+            guide_text = "실제 연구 수행 시, 주요 학술검색 사이트를 활용하여 관련 논문들을 찾아 참고문헌에 추가하시기 바랍니다. 검색된 논문들은 다음과 같은 표준 양식으로 작성하세요."
             self.multi_cell(0, 6, guide_text, align='L')
             self.ln(6)
             
-            # 참고문헌 양식 예시
             self.set_safe_font('bold', 10)
             self.set_text_color(60, 60, 60)
             self.multi_cell(0, 7, "참고문헌 작성 양식 (APA Style):", align='L')
             self.ln(3)
             
-            # 양식 예시들
             self.set_safe_font('normal', 9)
             self.set_text_color(80, 80, 80)
             
@@ -320,7 +288,6 @@ class ProfessionalKoreanPDF(FPDF):
             
             for example in examples:
                 if example.startswith('【') and example.endswith('】'):
-                    # 분류 제목
                     self.set_safe_font('bold', 9)
                     self.set_text_color(50, 50, 50)
                     self.multi_cell(0, 6, example, align='L')
@@ -328,7 +295,6 @@ class ProfessionalKoreanPDF(FPDF):
                 elif example == "":
                     self.ln(2)
                 else:
-                    # 예시 내용
                     self.set_safe_font('normal', 9)
                     self.set_text_color(80, 80, 80)
                     self.multi_cell(0, 5, example, align='L')
@@ -336,7 +302,6 @@ class ProfessionalKoreanPDF(FPDF):
             
             self.ln(4)
             
-            # 마무리 안내
             self.set_safe_font('normal', 9)
             self.set_text_color(100, 100, 100)
             final_note = "※ 실제 연구 시에는 최소 10-15개 이상의 관련 논문을 참고하여 보다 체계적인 연구를 수행하시기 바랍니다."
@@ -346,37 +311,29 @@ class ProfessionalKoreanPDF(FPDF):
             print(f"참고문헌 가이드 오류: {e}")
     
     def clean_text(self, text):
-        """텍스트 정리"""
         try:
             if not text:
                 return ""
             
             text = str(text)
             
-            # 하이픈 구분자 제거
             text = re.sub(r'^---\s*', '', text, flags=re.MULTILINE)
             text = re.sub(r'\s*---\s*', ' ', text)
             
-            # URL 제거
             text = re.sub(r'https?://[^\s\]\)\n]+', '', text)
             text = re.sub(r'www\.[^\s\]\)\n]+', '', text)
             
-            # 마크다운 제거
             text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
             text = re.sub(r'[*_`#\[\]<>]', '', text)
             
-            # 이모지 제거 (PDF 출력용)
             emoji_pattern = r'[📘📄🌐🔬💡⚙️🌍📊🎯📋📖🔗📚📈🏆📅🔍❗🚀✅📌🎉🔧🛠️🧬]'
             text = re.sub(emoji_pattern, '', text)
             
-            # 빈 괄호 제거
             text = re.sub(r'\(\s*\)', '', text)
             
-            # 특수 문자 정리
             text = re.sub(r'DOI\s*:\s*', '', text)
             text = re.sub(r'&[a-zA-Z]+;', '', text)
             
-            # 여러 공백을 하나로
             text = re.sub(r'\s+', ' ', text)
             text = re.sub(r'\n+', '\n', text)
             
@@ -387,7 +344,6 @@ class ProfessionalKoreanPDF(FPDF):
             return str(text)[:50] if text else ""
 
 def extract_topic_from_content(content):
-    """내용에서 주제 추출"""
     try:
         title_match = re.search(r'# 📘\s*([^\n-]+)', content)
         if title_match:
@@ -397,13 +353,36 @@ def extract_topic_from_content(content):
     except:
         return "과학 연구 탐색"
 
-def parse_content_elegantly(content):
-    """이모지 기반 내용 파싱"""
+def debug_content_structure(content):
+    """Content 구조 디버깅"""
+    print("=" * 60)
+    print("📋 CONTENT 구조 분석 시작")
+    print("=" * 60)
+    print(f"📏 총 길이: {len(content):,} 문자")
+    print(f"🔍 처음 1000자:")
+    print("-" * 40)
+    print(content[:1000])
+    print("-" * 40)
+    
+    print(f"\n🧬 이모지 존재 여부:")
+    emojis = ['🧬', '⚙️', '🌍', '💡']
+    for emoji in emojis:
+        exists = emoji in content
+        print(f"  {emoji}: {'✅' if exists else '❌'}")
+    
+    print(f"\n📝 핵심 키워드 존재 여부:")
+    keywords = ['응용 사례', '확장 가능한 탐구', '최신논문검색', '개념 정의', '작동 원리']
+    for keyword in keywords:
+        exists = keyword in content
+        print(f"  '{keyword}': {'✅' if exists else '❌'}")
+    
+    print("=" * 60)
+    return content
+
+def parse_content_simple(content):
+    """단순하고 확실한 파싱"""
     result = {
         'topic_explanation': '',
-        'concept_definition': '',
-        'working_principle': '',
-        'current_background': '',
         'applications': '',
         'research_ideas': '',
         'isef_papers': [],
@@ -412,42 +391,51 @@ def parse_content_elegantly(content):
     }
     
     try:
-        print("내용 파싱 시작...")
-        
-        # 1. 주제 해설 전체 추출
+        # 1. 전체 주제 해설 추출
         explanation_match = re.search(r'# 📘[^\n]*\n(.*?)(?=## 📄|## 🌐|$)', content, re.DOTALL)
         if explanation_match:
             full_explanation = explanation_match.group(1).strip()
             result['topic_explanation'] = full_explanation
             
-            # 2. 이모지 기반으로 각 섹션 분리
-            # 개념 정의 (🧬)
-            concept_match = re.search(r'🧬[^\n]*개념[^\n]*\n(.*?)(?=⚙️|🌍|💡|$)', full_explanation, re.DOTALL)
-            if concept_match:
-                result['concept_definition'] = concept_match.group(1).strip()
+            # 2. 응용 사례 추출 (최신논문검색 이전까지)
+            if '응용 사례' in full_explanation:
+                # 응용 사례 시작점 찾기
+                app_start = full_explanation.find('응용 사례')
+                if app_start != -1:
+                    app_section = full_explanation[app_start:]
+                    
+                    # 최신논문검색이나 확장 가능한 탐구까지만
+                    end_markers = ['최신논문검색', '확장 가능한 탐구', '키워드 조합']
+                    app_end = len(app_section)
+                    
+                    for marker in end_markers:
+                        marker_pos = app_section.find(marker)
+                        if marker_pos != -1 and marker_pos < app_end:
+                            app_end = marker_pos
+                    
+                    app_content = app_section[:app_end].strip()
+                    # 제목 라인 제거
+                    app_lines = app_content.split('\n')[1:]  # 첫 번째 라인 제거
+                    result['applications'] = '\n'.join(app_lines).strip()
             
-            # 작동 원리 (⚙️)  
-            principle_match = re.search(r'⚙️[^\n]*작동[^\n]*\n(.*?)(?=🌍|💡|$)', full_explanation, re.DOTALL)
-            if principle_match:
-                result['working_principle'] = principle_match.group(1).strip()
-            
-            # 현재 배경 (🌍)
-            background_match = re.search(r'🌍[^\n]*배경[^\n]*\n(.*?)(?=💡|$)', full_explanation, re.DOTALL)
-            if background_match:
-                result['current_background'] = background_match.group(1).strip()
-            
-            # 응용 사례 (💡) - 최신논문검색 제외
-            application_match = re.search(r'💡[^\n]*응용[^\n]*\n(.*?)(?=최신논문검색|확장 가능한 탐구|$)', full_explanation, re.DOTALL)
-            if application_match:
-                clean_applications = application_match.group(1).strip()
-                # 키워드 조합 부분 제거
-                clean_applications = re.sub(r'키워드 조합.*?(?=확장|$)', '', clean_applications, flags=re.DOTALL)
-                result['applications'] = clean_applications
-            
-            # 확장 가능한 탐구 아이디어 별도 추출
-            ideas_match = re.search(r'확장 가능한 탐구 아이디어(.*?)
+            # 3. 확장 가능한 탐구 아이디어 추출
+            if '확장 가능한 탐구' in full_explanation:
+                ideas_start = full_explanation.find('확장 가능한 탐구')
+                if ideas_start != -1:
+                    ideas_section = full_explanation[ideas_start:]
+                    # 제목 라인 제거
+                    ideas_lines = ideas_section.split('\n')[1:]  # 첫 번째 라인 제거
+                    clean_ideas = []
+                    
+                    for line in ideas_lines:
+                        line = line.strip()
+                        # 검색 관련 내용 제외
+                        if line and not any(skip in line for skip in ['키워드', 'Google Scholar', 'RISS', 'DBpia']):
+                            clean_ideas.append(line)
+                    
+                    result['research_ideas'] = '\n'.join(clean_ideas).strip()
         
-        # 3. ISEF 논문들
+        # 4. ISEF/arXiv 파싱 (기존 로직 유지)
         if "ISEF" in content or "내부 DB" in content:
             isef_match = re.search(r'## 📄[^\n]*\n(.*?)(?=## 🌐|## 📄 생성|$)', content, re.DOTALL)
             if isef_match:
@@ -455,7 +443,6 @@ def parse_content_elegantly(content):
                 papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n([^_\n]*)', isef_section)
                 result['isef_papers'] = [(title, summary) for title, summary in papers if len(title) > 5][:3]
         
-        # 4. arXiv 논문들
         if "arXiv" in content:
             arxiv_match = re.search(r'## 🌐[^\n]*\n(.*?)(?=## 📄 생성|$)', content, re.DOTALL)
             if arxiv_match:
@@ -476,37 +463,18 @@ def parse_content_elegantly(content):
                     if len(content_text) > 10:
                         result['generated_paper'][section] = content_text
         
-        print(f"파싱 완료 - 개념정의: {bool(result.get('concept_definition'))}, 작동원리: {bool(result.get('working_principle'))}")
-        print(f"배경: {bool(result.get('current_background'))}, 응용: {bool(result.get('applications'))}, 탐구아이디어: {bool(result.get('research_ideas'))}")
-        print(f"응용 내용 길이: {len(result.get('applications', ''))}, 탐구아이디어 내용 길이: {len(result.get('research_ideas', ''))}")
-        print(f"ISEF: {len(result['isef_papers'])}, arXiv: {len(result['arxiv_papers'])}, 논문: {len(result['generated_paper'])}")
+        print(f"파싱 결과 - 응용사례: {len(result.get('applications', ''))}, 탐구아이디어: {len(result.get('research_ideas', ''))}")
         return result
         
     except Exception as e:
-        print(f"내용 파싱 오류: {e}")
+        print(f"파싱 오류: {e}")
         return result
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """이쁜 PDF 생성"""
+    """Import 오류 없는 안전한 PDF 생성"""
     try:
-        print("=== 📋 CONTENT 디버깅 시작 ===")
-        print(f"📏 Content 총 길이: {len(content)} 문자")
-        print(f"🔍 처음 1000자 내용:")
-        print("-" * 50)
-        print(content[:1000])
-        print("-" * 50)
-        print(f"🧬 이모지 체크:")
-        print(f"  - 🧬 개념정의: {'🧬' in content}")
-        print(f"  - ⚙️ 작동원리: {'⚙️' in content}")
-        print(f"  - 🌍 배경: {'🌍' in content}")
-        print(f"  - 💡 응용사례: {'💡' in content}")
-        print(f"📝 키워드 체크:")
-        print(f"  - '응용 사례': {'응용 사례' in content}")
-        print(f"  - '확장 가능한 탐구': {'확장 가능한 탐구' in content}")
-        print(f"  - '최신논문검색': {'최신논문검색' in content}")
-        print("=== 📋 디버깅 끝 ===\n")
-        
-        print("=== 이쁜 PDF 생성 시작 ===")
+        # 디버깅
+        content = debug_content_structure(content)
         
         # 출력 디렉토리 생성
         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -516,9 +484,9 @@ def generate_pdf(content, filename="research_report.pdf"):
         print(f"추출된 주제: {topic}")
         
         # 내용 파싱
-        sections = parse_content_elegantly(content)
+        sections = parse_content_simple(content)
         
-        # PDF 생성 (경고 완전 억제)
+        # PDF 생성
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             
@@ -530,26 +498,21 @@ def generate_pdf(content, filename="research_report.pdf"):
             # 2. 내용 페이지
             pdf.add_page()
             
-            # 3. 주제 개요 (이모지 기반 정확한 섹션 분리)
+            # 3. 주제 개요
             if sections['topic_explanation']:
                 pdf.add_section_title("주제 개요")
                 
-                # 개념 정의
-                if sections.get('concept_definition'):
-                    pdf.add_elegant_subsection("개념 정의")
-                    pdf.add_paragraph(sections['concept_definition'])
+                # 전체 설명에서 각 부분 추출하여 소제목으로 구분
+                explanation = sections['topic_explanation']
                 
-                # 작동 원리 및 메커니즘
-                if sections.get('working_principle'):
-                    pdf.add_elegant_subsection("작동 원리 및 메커니즘")
-                    pdf.add_paragraph(sections['working_principle'])
+                # 개념 정의 부분
+                if '개념' in explanation or '정의' in explanation:
+                    concept_part = explanation.split('작동')[0] if '작동' in explanation else explanation[:500]
+                    if len(concept_part) > 50:
+                        pdf.add_elegant_subsection("개념 정의")
+                        pdf.add_paragraph(concept_part)
                 
-                # 현재 과학적·사회적 배경
-                if sections.get('current_background'):
-                    pdf.add_elegant_subsection("현재 과학적·사회적 배경")
-                    pdf.add_paragraph(sections['current_background'])
-                
-                # 응용 사례 및 활용 분야
+                # 응용 사례
                 if sections.get('applications'):
                     pdf.add_elegant_subsection("응용 사례 및 활용 분야")
                     pdf.add_paragraph(sections['applications'])
@@ -562,7 +525,7 @@ def generate_pdf(content, filename="research_report.pdf"):
             # 4. 문헌 조사
             pdf.add_section_title("문헌 조사")
             
-            # 4.1 ISEF 연구
+            # ISEF 연구
             pdf.add_section_title("ISEF 관련 연구", level=2)
             if sections['isef_papers']:
                 for title, summary in sections['isef_papers']:
@@ -570,7 +533,7 @@ def generate_pdf(content, filename="research_report.pdf"):
             else:
                 pdf.add_paragraph("관련 ISEF 프로젝트를 찾지 못했습니다.")
             
-            # 4.2 arXiv 연구
+            # arXiv 연구
             pdf.add_section_title("arXiv 최신 연구", level=2)
             if sections['arxiv_papers']:
                 for title, summary in sections['arxiv_papers']:
@@ -578,16 +541,14 @@ def generate_pdf(content, filename="research_report.pdf"):
             else:
                 pdf.add_paragraph("관련 arXiv 논문을 찾지 못했습니다.")
             
-            # 5. 생성된 논문 (새 페이지에서 전문적으로)
+            # 5. 생성된 논문
             if sections['generated_paper']:
-                # 틈새주제 추출 시도
                 selected_idea = "선택된 연구 주제"
                 if "가정용 플라즈마" in content:
                     selected_idea = "가정용 플라즈마 공기청정 장치 개발"
                 
                 pdf.add_paper_title_page(topic, selected_idea)
                 
-                # 논문 섹션들을 전문적으로 추가
                 section_map = {
                     '초록': ('Abstract', 1),
                     '서론': ('Introduction', 2), 
@@ -611,221 +572,27 @@ def generate_pdf(content, filename="research_report.pdf"):
         if os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
             if file_size > 2000:
-                print(f"✅ 이쁜 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
+                print(f"✅ PDF 생성 성공: {output_path} ({file_size:,} bytes)")
                 
-                # 내용 검증
                 try:
                     with open(output_path, 'rb') as f:
                         header = f.read(10)
                         if header.startswith(b'%PDF'):
                             print("✅ PDF 형식 검증 통과")
                             return output_path
-                        else:
-                            print("❌ PDF 형식 오류")
                 except:
-                    print("❌ PDF 읽기 오류")
-            else:
-                print(f"❌ PDF 파일이 너무 작음: {file_size} bytes")
+                    pass
         
-        # 실패시 텍스트 파일 생성
-        print("PDF 생성 실패, 백업 텍스트 파일 생성...")
-        txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_debug.txt'))
-        
+        # 실패시 텍스트 파일
+        txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
         with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write(f"=== {topic} 연구보고서 (이쁜 버전) ===\n\n")
-            f.write(f"생성 시간: {datetime.now()}\n")
-            f.write(f"원본 내용 길이: {len(content)} 문자\n\n")
-            
-            # 정리된 내용
-            f.write("=== 정리된 원본 내용 ===\n")
-            clean_content = re.sub(r'https?://[^\s]+', '[링크제거]', content)
-            clean_content = re.sub(r'---\s*[^\n]*\n', '', clean_content)
-            f.write(clean_content)
+            f.write(f"=== {topic} 연구보고서 ===\n\n")
+            f.write(f"생성 시간: {datetime.now()}\n\n")
+            f.write(content)
         
         print(f"✅ 백업 파일 생성: {txt_path}")
         return txt_path
             
     except Exception as e:
-        print(f"❌ PDF 생성 중 치명적 오류: {e}")
-        return None, full_explanation, re.DOTALL)
-            if ideas_match:
-                result['research_ideas'] = ideas_match.group(1).strip()
-        
-        # 3. ISEF 논문들
-        if "ISEF" in content or "내부 DB" in content:
-            isef_match = re.search(r'## 📄[^\n]*\n(.*?)(?=## 🌐|## 📄 생성|$)', content, re.DOTALL)
-            if isef_match:
-                isef_section = isef_match.group(1)
-                papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n([^_\n]*)', isef_section)
-                result['isef_papers'] = [(title, summary) for title, summary in papers if len(title) > 5][:3]
-        
-        # 4. arXiv 논문들
-        if "arXiv" in content:
-            arxiv_match = re.search(r'## 🌐[^\n]*\n(.*?)(?=## 📄 생성|$)', content, re.DOTALL)
-            if arxiv_match:
-                arxiv_section = arxiv_match.group(1)
-                papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n([^[\n]*)', arxiv_section)
-                result['arxiv_papers'] = [(title, summary) for title, summary in papers if len(title) > 5][:3]
-        
-        # 5. 생성된 논문
-        if "생성된 연구 논문" in content:
-            paper_section = content[content.find("생성된 연구 논문"):]
-            
-            sections = ['초록', '서론', '실험 방법', '예상 결과', '결론', '참고문헌']
-            for section in sections:
-                pattern = f"### {section}[^\n]*\n(.*?)(?=###|$)"
-                match = re.search(pattern, paper_section, re.DOTALL)
-                if match:
-                    content_text = match.group(1).strip()
-                    if len(content_text) > 10:
-                        result['generated_paper'][section] = content_text
-        
-        print(f"파싱 완료 - 개념정의: {bool(result.get('concept_definition'))}, 작동원리: {bool(result.get('working_principle'))}")
-        print(f"배경: {bool(result.get('current_background'))}, 응용: {bool(result.get('applications'))}")
-        print(f"ISEF: {len(result['isef_papers'])}, arXiv: {len(result['arxiv_papers'])}, 논문: {len(result['generated_paper'])}")
-        return result
-        
-    except Exception as e:
-        print(f"내용 파싱 오류: {e}")
-        return result
-
-def generate_pdf(content, filename="research_report.pdf"):
-    """이쁜 PDF 생성"""
-    try:
-        print("=== 이쁜 PDF 생성 시작 ===")
-        
-        # 출력 디렉토리 생성
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-        
-        # 주제 추출
-        topic = extract_topic_from_content(content)
-        print(f"추출된 주제: {topic}")
-        
-        # 내용 파싱
-        sections = parse_content_elegantly(content)
-        
-        # PDF 생성 (경고 완전 억제)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            
-            pdf = ProfessionalKoreanPDF(topic)
-            
-            # 1. 표지 페이지
-            pdf.add_title_page(topic)
-            
-            # 2. 내용 페이지
-            pdf.add_page()
-            
-            # 3. 주제 개요 (이모지 기반 정확한 섹션 분리)
-            if sections['topic_explanation']:
-                pdf.add_section_title("주제 개요")
-                
-                # 개념 정의
-                if sections.get('concept_definition'):
-                    pdf.add_elegant_subsection("개념 정의")
-                    pdf.add_paragraph(sections['concept_definition'])
-                
-                # 작동 원리 및 메커니즘
-                if sections.get('working_principle'):
-                    pdf.add_elegant_subsection("작동 원리 및 메커니즘")
-                    pdf.add_paragraph(sections['working_principle'])
-                
-                # 현재 과학적·사회적 배경
-                if sections.get('current_background'):
-                    pdf.add_elegant_subsection("현재 과학적·사회적 배경")
-                    pdf.add_paragraph(sections['current_background'])
-                
-                # 응용 사례 및 활용 분야
-                if sections.get('applications'):
-                    pdf.add_elegant_subsection("응용 사례 및 활용 분야")
-                    pdf.add_paragraph(sections['applications'])
-            
-            # 4. 문헌 조사
-            pdf.add_section_title("문헌 조사")
-            
-            # 4.1 ISEF 연구
-            pdf.add_section_title("ISEF 관련 연구", level=2)
-            if sections['isef_papers']:
-                for title, summary in sections['isef_papers']:
-                    pdf.add_paper_item(title, summary, "출처: ISEF 프로젝트")
-            else:
-                pdf.add_paragraph("관련 ISEF 프로젝트를 찾지 못했습니다.")
-            
-            # 4.2 arXiv 연구
-            pdf.add_section_title("arXiv 최신 연구", level=2)
-            if sections['arxiv_papers']:
-                for title, summary in sections['arxiv_papers']:
-                    pdf.add_paper_item(title, summary, "출처: arXiv (프리프린트)")
-            else:
-                pdf.add_paragraph("관련 arXiv 논문을 찾지 못했습니다.")
-            
-            # 5. 생성된 논문 (새 페이지에서 전문적으로)
-            if sections['generated_paper']:
-                # 틈새주제 추출 시도
-                selected_idea = "선택된 연구 주제"
-                if "가정용 플라즈마" in content:
-                    selected_idea = "가정용 플라즈마 공기청정 장치 개발"
-                
-                pdf.add_paper_title_page(topic, selected_idea)
-                
-                # 논문 섹션들을 전문적으로 추가
-                section_map = {
-                    '초록': ('Abstract', 1),
-                    '서론': ('Introduction', 2), 
-                    '실험 방법': ('Methods', 3),
-                    '예상 결과': ('Expected Results', 4),
-                    '결론': ('Conclusion', 5),
-                    '참고문헌': ('References', 6)
-                }
-                
-                for section_key, (english_name, num) in section_map.items():
-                    if section_key in sections['generated_paper']:
-                        title = f"{section_key} ({english_name})"
-                        content_text = sections['generated_paper'][section_key]
-                        pdf.add_paper_section(title, content_text, num)
-            
-            # 저장
-            output_path = os.path.join(OUTPUT_DIR, filename)
-            pdf.output(output_path)
-        
-        # 파일 검증
-        if os.path.exists(output_path):
-            file_size = os.path.getsize(output_path)
-            if file_size > 2000:
-                print(f"✅ 이쁜 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
-                
-                # 내용 검증
-                try:
-                    with open(output_path, 'rb') as f:
-                        header = f.read(10)
-                        if header.startswith(b'%PDF'):
-                            print("✅ PDF 형식 검증 통과")
-                            return output_path
-                        else:
-                            print("❌ PDF 형식 오류")
-                except:
-                    print("❌ PDF 읽기 오류")
-            else:
-                print(f"❌ PDF 파일이 너무 작음: {file_size} bytes")
-        
-        # 실패시 텍스트 파일 생성
-        print("PDF 생성 실패, 백업 텍스트 파일 생성...")
-        txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_debug.txt'))
-        
-        with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write(f"=== {topic} 연구보고서 (이쁜 버전) ===\n\n")
-            f.write(f"생성 시간: {datetime.now()}\n")
-            f.write(f"원본 내용 길이: {len(content)} 문자\n\n")
-            
-            # 정리된 내용
-            f.write("=== 정리된 원본 내용 ===\n")
-            clean_content = re.sub(r'https?://[^\s]+', '[링크제거]', content)
-            clean_content = re.sub(r'---\s*[^\n]*\n', '', clean_content)
-            f.write(clean_content)
-        
-        print(f"✅ 백업 파일 생성: {txt_path}")
-        return txt_path
-            
-    except Exception as e:
-        print(f"❌ PDF 생성 중 치명적 오류: {e}")
+        print(f"❌ PDF 생성 오류: {e}")
         return None
