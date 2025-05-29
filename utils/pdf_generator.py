@@ -489,6 +489,23 @@ def parse_content_elegantly(content):
 def generate_pdf(content, filename="research_report.pdf"):
     """이쁜 PDF 생성"""
     try:
+        print("=== 📋 CONTENT 디버깅 시작 ===")
+        print(f"📏 Content 총 길이: {len(content)} 문자")
+        print(f"🔍 처음 1000자 내용:")
+        print("-" * 50)
+        print(content[:1000])
+        print("-" * 50)
+        print(f"🧬 이모지 체크:")
+        print(f"  - 🧬 개념정의: {'🧬' in content}")
+        print(f"  - ⚙️ 작동원리: {'⚙️' in content}")
+        print(f"  - 🌍 배경: {'🌍' in content}")
+        print(f"  - 💡 응용사례: {'💡' in content}")
+        print(f"📝 키워드 체크:")
+        print(f"  - '응용 사례': {'응용 사례' in content}")
+        print(f"  - '확장 가능한 탐구': {'확장 가능한 탐구' in content}")
+        print(f"  - '최신논문검색': {'최신논문검색' in content}")
+        print("=== 📋 디버깅 끝 ===\n")
+        
         print("=== 이쁜 PDF 생성 시작 ===")
         
         # 출력 디렉토리 생성
