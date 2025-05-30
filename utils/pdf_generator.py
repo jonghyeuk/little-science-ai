@@ -475,6 +475,17 @@ def parse_content_simple(content):
                         result['generated_paper'][section] = content_text
         
         print(f"파싱 결과 - 응용사례: {len(result.get('applications', ''))}, 탐구아이디어: {len(result.get('research_ideas', ''))}")
+        
+        # 디버깅: 탐구 아이디어 내용 확인
+        if result.get('research_ideas'):
+            print("=== 탐구 아이디어 파싱 결과 ===")
+            print(repr(result['research_ideas']))
+            print("=== 라인별 분리 ===")
+            lines = result['research_ideas'].split('\n')
+            for i, line in enumerate(lines):
+                print(f"라인 {i}: {repr(line)}")
+            print("=======================")
+        
         return result
         
     except Exception as e:
@@ -528,10 +539,20 @@ def generate_pdf(content, filename="research_report.pdf"):
                     pdf.add_elegant_subsection("응용 사례 및 활용 분야")
                     pdf.add_paragraph(sections['applications'])
                 
-                # 확장 가능한 탐구 아이디어 (별도 소제목)
+                # 확장 가능한 탐구 아이디어 (별도 소제목, 각 아이디어 개별 처리)
                 if sections.get('research_ideas'):
                     pdf.add_elegant_subsection("확장 가능한 탐구 아이디어")
-                    pdf.add_paragraph(sections['research_ideas'])
+                    
+                    # 각 아이디어를 개별 라인으로 처리
+                    ideas_text = sections['research_ideas']
+                    if ideas_text:
+                        # 줄바꿈으로 분리하여 각각 개별 처리
+                        idea_lines = ideas_text.split('\n')
+                        for line in idea_lines:
+                            line = line.strip()
+                            if line and len(line) > 5:
+                                # 각 아이디어를 개별 문단으로 추가
+                                pdf.add_paragraph(line)
             
             # 4. 문헌 조사
             pdf.add_section_title("문헌 조사")
