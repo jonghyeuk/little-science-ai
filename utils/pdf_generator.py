@@ -418,7 +418,7 @@ def parse_content_simple(content):
                     app_lines = app_content.split('\n')[1:]  # 첫 번째 라인 제거
                     result['applications'] = '\n'.join(app_lines).strip()
             
-            # 3. 확장 가능한 탐구 아이디어 추출 (점 정렬 개선)
+            # 3. 확장 가능한 탐구 아이디어 추출 (각 아이디어 개별 분리)
             if '확장 가능한 탐구' in full_explanation:
                 ideas_start = full_explanation.find('확장 가능한 탐구')
                 if ideas_start != -1:
@@ -431,9 +431,16 @@ def parse_content_simple(content):
                         line = line.strip()
                         # 검색 관련 내용 제외
                         if line and not any(skip in line for skip in ['키워드', 'Google Scholar', 'RISS', 'DBpia']):
-                            # • 불렛 포인트가 있으면 그대로 유지, 없으면 추가
-                            if line.startswith('•') or line.startswith('-'):
-                                clean_ideas.append(line)
+                            # • 기호로 시작하는 각 아이디어를 개별적으로 분리
+                            if line.startswith('•'):
+                                # • 기호가 여러 개 연결된 경우 분리
+                                ideas_in_line = line.split('•')
+                                for idea in ideas_in_line:
+                                    idea = idea.strip()
+                                    if len(idea) > 10:  # 의미 있는 내용만
+                                        clean_ideas.append(f"• {idea}")
+                            elif line.startswith('-'):
+                                clean_ideas.append(line.replace('-', '•', 1))
                             elif len(line) > 10:  # 의미 있는 내용이면 • 추가
                                 clean_ideas.append(f"• {line}")
                     
