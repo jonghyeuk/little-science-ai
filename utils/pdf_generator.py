@@ -418,7 +418,7 @@ def parse_content_simple(content):
                     app_lines = app_content.split('\n')[1:]  # 첫 번째 라인 제거
                     result['applications'] = '\n'.join(app_lines).strip()
             
-            # 3. 확장 가능한 탐구 아이디어 추출 (제목과 설명 구분)
+            # 3. 확장 가능한 탐구 아이디어 추출 (• · 패턴 정확히 처리)
             if '확장 가능한 탐구' in full_explanation:
                 ideas_start = full_explanation.find('확장 가능한 탐구')
                 if ideas_start != -1:
@@ -431,22 +431,21 @@ def parse_content_simple(content):
                         line = line.strip()
                         # 검색 관련 내용 제외
                         if line and not any(skip in line for skip in ['키워드', 'Google Scholar', 'RISS', 'DBpia']):
-                            # • 기호로 시작하는 각 아이디어를 개별적으로 분리
-                            if line.startswith('•'):
-                                # • 기호가 여러 개 연결된 경우 분리
-                                ideas_in_line = line.split('•')
-                                for idea in ideas_in_line:
-                                    idea = idea.strip()
-                                    if len(idea) > 10:  # 의미 있는 내용만
-                                        # · 로 시작하는 설명은 들여쓰기로 변경
-                                        if idea.strip().startswith('·'):
-                                            clean_ideas.append(f"  {idea.strip()[1:].strip()}")
-                                        else:
-                                            clean_ideas.append(f"• {idea}")
-                            elif line.startswith('-'):
-                                clean_ideas.append(line.replace('-', '•', 1))
-                            elif len(line) > 10:  # 의미 있는 내용이면 • 추가
-                                clean_ideas.append(f"• {line}")
+                            if len(line) > 5:
+                                # • · 패턴 (설명): 들여쓰기로 처리
+                                if line.startswith('• ·') or line.startswith('•·'):
+                                    desc_text = line.replace('• ·', '').replace('•·', '').strip()
+                                    clean_ideas.append(f"  {desc_text}")
+                                # • 패턴 (제목): bullet point 유지  
+                                elif line.startswith('•'):
+                                    title_text = line[1:].strip()  # • 제거
+                                    clean_ideas.append(f"• {title_text}")
+                                # - 패턴: bullet point로 변경
+                                elif line.startswith('-'):
+                                    clean_ideas.append(line.replace('-', '•', 1))
+                                # 일반 텍스트: bullet point 추가
+                                else:
+                                    clean_ideas.append(f"• {line}")
                     
                     result['research_ideas'] = '\n'.join(clean_ideas).strip()
         
