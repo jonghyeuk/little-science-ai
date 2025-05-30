@@ -418,7 +418,7 @@ def parse_content_simple(content):
                     app_lines = app_content.split('\n')[1:]  # 첫 번째 라인 제거
                     result['applications'] = '\n'.join(app_lines).strip()
             
-            # 3. 확장 가능한 탐구 아이디어 추출 (각 아이디어 개별 분리)
+            # 3. 확장 가능한 탐구 아이디어 추출 (제목과 설명 구분)
             if '확장 가능한 탐구' in full_explanation:
                 ideas_start = full_explanation.find('확장 가능한 탐구')
                 if ideas_start != -1:
@@ -438,7 +438,11 @@ def parse_content_simple(content):
                                 for idea in ideas_in_line:
                                     idea = idea.strip()
                                     if len(idea) > 10:  # 의미 있는 내용만
-                                        clean_ideas.append(f"• {idea}")
+                                        # · 로 시작하는 설명은 들여쓰기로 변경
+                                        if idea.strip().startswith('·'):
+                                            clean_ideas.append(f"  {idea.strip()[1:].strip()}")
+                                        else:
+                                            clean_ideas.append(f"• {idea}")
                             elif line.startswith('-'):
                                 clean_ideas.append(line.replace('-', '•', 1))
                             elif len(line) > 10:  # 의미 있는 내용이면 • 추가
