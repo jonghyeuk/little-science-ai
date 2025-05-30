@@ -4,6 +4,8 @@ import time
 import re
 import logging
 import os
+import json
+from datetime import datetime, timedelta
 from utils.layout import load_css
 from utils.search_db import search_similar_titles, initialize_db  # initialize_db 추가
 from utils.search_arxiv import search_arxiv
@@ -17,6 +19,118 @@ logger = logging.getLogger(__name__)
 
 # 앱 시작 시 DB 초기화 (성능 최적화)
 initialize_db()
+
+# ==================== 🔥 이용권 시스템 추가 ====================
+
+def load_user_sessions():
+    """사용자 세션 데이터 로드"""
+    try:
+        if os.path.exists('user_sessions.json'):
+            with open('user_sessions.json', 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    except:
+        return {}
+
+def save_user_sessions(sessions):
+    """사용자 세션 데이터 저장"""
+    try:
+        with open('user_sessions.json', 'w', encoding='utf-8') as f:
+            json.dump(sessions, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"세션 저장 오류: {e}")
+
+def check_license_validity(user_key):
+    """이용권 유효성 체크"""
+    ACCESS_KEYS = st.secrets["general"]["access_keys"]
+    
+    # 1. 코드가 존재하는지 확인
+    if user_key not in ACCESS_KEYS:
+        return False, "잘못된 인증 키입니다."
+    
+    # 2. 세션 데이터 로드
+    sessions = load_user_sessions()
+    current_time = datetime.now()
+    
+    # 3. 이용권 정보 가져오기
+    license_info = ACCESS_KEYS[user_key]
+    
+    # 4. 최초 사용인지 확인
+    if user_key not in sessions:
+        # 최초 사용 - 활성화 시간 기록
+        sessions[user_key] = {
+            'first_used': current_time.isoformat(),
+            'license_type': license_info['type'],
+            'duration_days': license_info.get('duration_days'),
+            'duration_minutes': license_info.get('duration_minutes')
+        }
+        save_user_sessions(sessions)
+        return True, f"이용권이 활성화되었습니다! ({license_info['type']})"
+    
+    # 5. 기존 사용자 - 만료 체크
+    session_data = sessions[user_key]
+    first_used = datetime.fromisoformat(session_data['first_used'])
+    
+    # 6. 만료 시간 계산
+    if session_data.get('duration_days'):
+        expire_time = first_used + timedelta(days=session_data['duration_days'])
+    elif session_data.get('duration_minutes'):
+        expire_time = first_used + timedelta(minutes=session_data['duration_minutes'])
+    else:
+        return False, "이용권 정보가 올바르지 않습니다."
+    
+    # 7. 만료 여부 확인
+    if current_time > expire_time:
+        return False, f"이용권이 만료되었습니다. (만료일: {expire_time.strftime('%Y-%m-%d %H:%M')})"
+    
+    return True, "유효한 이용권입니다."
+
+def get_license_info(user_key):
+    """현재 사용자의 이용권 정보 반환"""
+    sessions = load_user_sessions()
+    if user_key not in sessions:
+        return None
+    
+    session_data = sessions[user_key]
+    first_used = datetime.fromisoformat(session_data['first_used'])
+    current_time = datetime.now()
+    
+    # 만료 시간 계산
+    if session_data.get('duration_days'):
+        expire_time = first_used + timedelta(days=session_data['duration_days'])
+    elif session_data.get('duration_minutes'):
+        expire_time = first_used + timedelta(minutes=session_data['duration_minutes'])
+    else:
+        return None
+    
+    # 남은 시간 계산
+    time_left = expire_time - current_time
+    
+    return {
+        'license_type': session_data['license_type'],
+        'first_used': first_used,
+        'expire_time': expire_time,
+        'time_left': time_left,
+        'is_expired': time_left.total_seconds() <= 0
+    }
+
+def format_time_left(time_left):
+    """남은 시간을 보기 좋게 포맷팅"""
+    if time_left.total_seconds() <= 0:
+        return "만료됨"
+    
+    days = time_left.days
+    hours, remainder = divmod(time_left.seconds, 3600)
+    minutes, _ = divmod(remainder, 60)
+    
+    if days > 0:
+        return f"{days}일 {hours}시간 {minutes}분"
+    elif hours > 0:
+        return f"{hours}시간 {minutes}분"
+    else:
+        return f"{minutes}분"
+
+# ==================== 🔥 이용권 시스템 끝 ====================
 
 # 틈새주제 파싱 함수 (수정된 버전)
 def parse_niche_topics(explanation_lines):
@@ -116,7 +230,7 @@ def convert_doi_to_links(text):
 st.set_page_config(page_title="LittleScienceAI", layout="wide")
 load_css()
 
-# 중앙 정렬 CSS
+# 중앙 정렬 CSS + 🔥 이용권 정보 CSS 추가
 st.markdown("""
 <style>
 section.main > div.block-container {
@@ -148,6 +262,25 @@ section.main > div.block-container {
     color: #2e7d32;
 }
 
+.license-info-box {
+    background-color: #f0f8ff;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+    font-size: 0.9em;
+}
+
+.license-info-box.warning {
+    background-color: #fff8e1;
+    border-left-color: #ff9800;
+}
+
+.license-info-box.expired {
+    background-color: #ffebee;
+    border-left-color: #f44336;
+}
+
 .paper-subsection {
     background-color: #f8f9fa;
     border-radius: 8px;
@@ -165,20 +298,25 @@ section.main > div.block-container {
 </style>
 """, unsafe_allow_html=True)
 
-# 인증 시스템
-ACCESS_KEYS = st.secrets["general"]["access_keys"]
+# 🔥 인증 시스템 (이용권 시스템으로 교체)
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
+if "user_license_key" not in st.session_state:
+    st.session_state.user_license_key = ""
 
 if not st.session_state.authenticated:
     st.markdown("## LittleScienceAI 로그인")
     user_key = st.text_input("🔑 인증 키를 입력하세요", type="password")
     
-    if user_key in ACCESS_KEYS:
-        st.session_state.authenticated = True
-        st.rerun()
-    elif user_key:
-        st.warning("🚫 올바른 인증 키를 입력하세요.")
+    if user_key:
+        is_valid, message = check_license_validity(user_key)
+        if is_valid:
+            st.session_state.authenticated = True
+            st.session_state.user_license_key = user_key
+            st.success(message)
+            st.rerun()
+        else:
+            st.error(f"🚫 {message}")
     st.stop()
 
 # 세션 상태 초기화 (🔥 캐싱용 상태 추가)
@@ -193,6 +331,44 @@ if 'cached_internal_results' not in st.session_state:
     st.session_state.cached_internal_results = []
 if 'cached_arxiv_results' not in st.session_state:
     st.session_state.cached_arxiv_results = []
+
+# 🔥 사이드바에 이용권 정보 표시
+license_info = get_license_info(st.session_state.user_license_key)
+if license_info:
+    # 남은 시간에 따른 스타일 결정
+    time_left_total_minutes = license_info['time_left'].total_seconds() / 60
+    
+    if license_info['is_expired']:
+        box_class = "expired"
+        icon = "❌"
+        status_text = "만료됨"
+    elif time_left_total_minutes <= 60:  # 1시간 이하
+        box_class = "warning"
+        icon = "⚠️"
+        status_text = "곧 만료"
+    else:
+        box_class = ""
+        icon = "✅"
+        status_text = "이용중"
+    
+    st.sidebar.markdown(f"""
+    <div class="license-info-box {box_class}">
+    <h4>{icon} 이용권 정보</h4>
+    <p><strong>타입:</strong> {license_info['license_type']}</p>
+    <p><strong>상태:</strong> {status_text}</p>
+    <p><strong>남은 시간:</strong> {format_time_left(license_info['time_left'])}</p>
+    <p><strong>만료 예정:</strong> {license_info['expire_time'].strftime('%m/%d %H:%M')}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 만료된 경우 접근 차단
+    if license_info['is_expired']:
+        st.error("🚫 이용권이 만료되었습니다. 새로운 인증 키가 필요합니다.")
+        if st.button("🔄 다시 로그인"):
+            st.session_state.authenticated = False
+            st.session_state.user_license_key = ""
+            st.rerun()
+        st.stop()
 
 # 사이드바
 st.sidebar.title("🧭 탐색 단계")
