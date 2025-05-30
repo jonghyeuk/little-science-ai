@@ -380,6 +380,33 @@ st.sidebar.markdown("""
 5. 논문 형식 작성
 6. PDF 저장
 """)
+# 🔥 바로 여기에 서비스 가이드 추가!
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📖 서비스 가이드")
+
+guide_pdf_path = "assets/LittleScienceAI_사용가이드.pdf"
+
+try:
+    with open(guide_pdf_path, "rb") as pdf_file:
+        st.sidebar.download_button(
+            label="📚 필독! 사용법 가이드 다운로드",
+            data=pdf_file,
+            file_name="LittleScienceAI_사용가이드.pdf",
+            mime="application/pdf",
+            type="primary"
+        )
+except FileNotFoundError:
+    st.sidebar.error("📄 가이드 파일을 찾을 수 없습니다.")
+
+st.sidebar.markdown("""
+<div class="sidebar-info-box">
+<h4>💡 가이드 활용법</h4>
+<p>
+- 처음 사용하시나요? 가이드를 먼저 꼭 읽어보세요<br>
+- 각 단계별 상세한 설명과 팁 포함<br>
+</p>
+</div>
+""", unsafe_allow_html=True)
 
 # 사이드바에 학술 자료 설명 추가
 st.sidebar.markdown("---")
@@ -390,7 +417,7 @@ st.sidebar.markdown("""
 <div class="sidebar-info-box">
 <h4>📊 ISEF</h4>
 <p>
-세계 최대 규모의 고등학생 과학 경진대회로, 80여 개국에서 1,800명 이상의 학생들이 참가하여 혁신적인 연구 프로젝트를 발표합니다. 1950년부터 시작된 이 대회는 과학, 기술, 공학, 수학(STEM) 분야의 차세대 인재를 발굴합니다.
+1950년대부터 시작한 세계 최대 규모의 고등학생 과학 경진대회로, 80여 개국에서 1,800명 이상의 학생들이 참가하여 혁신적인 연구 프로젝트를 발표합니다.
 </p>
 </div>
 """, unsafe_allow_html=True)
@@ -400,7 +427,7 @@ st.sidebar.markdown("""
 <div class="sidebar-info-box arxiv">
 <h4>📑 arXiv</h4>
 <p>
-물리학, 수학, 컴퓨터 과학 등의 분야에서 연구자들이 논문을 정식 출판 전에 공유하는 플랫폼입니다. 코넬 대학에서 운영하며, 최신 연구 동향을 빠르게 접할 수 있지만 일부는 아직 peer review를 거치지 않은 상태일 수 있습니다.
+과학계 연구자들이 논문을 정식 출판 전에 공유하는 플랫폼으로 현재 코넬 대학에서 운영하며, 최신 연구 동향을 빠르게 접할 수 있지만 일부는 아직 peer review를 거치지 않은 상태일 수 있습니다.
 </p>
 </div>
 """, unsafe_allow_html=True)
