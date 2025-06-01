@@ -551,27 +551,14 @@ if topic:
         st.subheader("📘 주제 해설")
         
         try:
-            # 전체 내용 생성 (기존과 동일)
-            with st.spinner("⚡ AI가 주제 분석 중..."):
-                explanation_lines = explain_topic(topic)
-                explanation_text = "\n\n".join(explanation_lines)
-                
-                # 틈새주제 파싱 및 저장
-                st.session_state.niche_topics = parse_niche_topics(explanation_lines)
+            # 1단계: 빠른 요약 생성 및 애니메이션 (5초)
+            from utils.explain_topic import explain_topic_quick
             
-            # 섹션별로 분할 (확장 가능한 탐구 아이디어까지 vs 나머지)
-            full_text = explanation_text
-            if "## 📊 **최신논문검색**" in full_text:
-                # 애니메이션 부분: 확장 가능한 탐구 아이디어까지
-                animation_part = full_text.split("## 📊 **최신논문검색**")[0]
-                # 즉시 표시 부분: 최신논문검색부터
-                remaining_part = "## 📊 **최신논문검색**" + full_text.split("## 📊 **최신논문검색**")[1]
-            else:
-                # 분할점을 찾지 못하면 전체를 애니메이션으로
-                animation_part = full_text
-                remaining_part = ""
+            with st.spinner("⚡ 핵심 내용 분석 중..."):
+                quick_content = explain_topic_quick(topic)
+                quick_linked = convert_doi_to_links(quick_content)
             
-            # 타이핑 애니메이션 함수 (스킵 버튼 없음)
+            # 타이핑 애니메이션 함수
             def typewriter_animation(text, speed=0.002):
                 placeholder = st.empty()
                 displayed_text = ""
@@ -581,19 +568,27 @@ if topic:
                     time.sleep(speed)
                 placeholder.markdown(text, unsafe_allow_html=True)
             
-            # 1단계: 확장 가능한 탐구 아이디어까지 애니메이션
-            animation_linked = convert_doi_to_links(animation_part)
-            typewriter_animation(animation_linked)
+            # 애니메이션으로 표시
+            typewriter_animation(quick_linked)
             
-            # 2단계: 나머지 즉시 표시
-            if remaining_part:
-                st.markdown("---")
-                remaining_linked = convert_doi_to_links(remaining_part)
-                st.markdown(remaining_linked, unsafe_allow_html=True)
-            
-            # PDF용 텍스트 저장 (전체 내용)
-            st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
-            
+            # 2단계: 전체 내용 생성 및 나머지 표시
+            with st.spinner("🔍 상세 분석 완료 중..."):
+                explanation_lines = explain_topic(topic)
+                explanation_text = "\n\n".join(explanation_lines)
+                
+                # 틈새주제 파싱 및 저장
+                st.session_state.niche_topics = parse_niche_topics(explanation_lines)
+                
+                # 빠른 내용을 제외한 나머지가 있다면 표시
+                if len(explanation_text) > len(quick_content) + 100:  # 충분한 추가 내용이 있을 때만
+                    st.markdown("---")
+                    st.markdown("### 📊 상세 분석 결과")
+                    detailed_linked = convert_doi_to_links(explanation_text)
+                    st.markdown(detailed_linked, unsafe_allow_html=True)
+                
+                # PDF용 텍스트 저장
+                st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
+                
         except Exception as e:
             st.error(f"주제 해설 생성 중 오류: {str(e)}")
             st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n생성 중 오류 발생\n\n"
