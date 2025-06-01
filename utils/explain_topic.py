@@ -108,3 +108,46 @@ def explain_topic_with_links(topic: str) -> str:
     explanation_lines = explain_topic(topic)
     explanation_text = "\n\n".join(explanation_lines)
     return convert_doi_to_links(explanation_text)
+
+
+# 기존 코드는 그대로 유지하고, 아래 함수들만 추가
+
+def split_explanation_by_sections(explanation_lines):
+    """
+    설명을 애니메이션 부분과 즉시표시 부분으로 분할
+    """
+    quick_sections = []  # 애니메이션 할 부분 (응용 사례까지)
+    remaining_sections = []  # 한번에 표시할 부분
+    
+    current_section = ""
+    is_quick_section = True
+    
+    for line in explanation_lines:
+        # 섹션 구분자 찾기
+        if line.startswith("## 📊 **최신논문검색**"):
+            is_quick_section = False
+            
+        if is_quick_section:
+            quick_sections.append(line)
+        else:
+            remaining_sections.append(line)
+    
+    quick_text = "\n\n".join(quick_sections)
+    remaining_text = "\n\n".join(remaining_sections)
+    
+    return quick_text, remaining_text
+
+def explain_topic_split(topic: str):
+    """
+    주제 설명을 빠른 부분과 나머지로 분할해서 반환
+    
+    Returns:
+        tuple: (quick_content, remaining_content, full_lines)
+    """
+    # 기존 함수 사용 (캐시 유지)
+    explanation_lines = explain_topic(topic)
+    
+    # 섹션별로 분할
+    quick_content, remaining_content = split_explanation_by_sections(explanation_lines)
+    
+    return quick_content, remaining_content, explanation_lines
