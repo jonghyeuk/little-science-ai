@@ -547,38 +547,52 @@ if topic:
         st.session_state.last_searched_topic = topic
         st.session_state.generated_paper = {}  # 논문 초기화
         
-        # 주제 해설 표시
+# 주제 해설 표시
         st.subheader("📘 주제 해설")
         
-        # 즉시 해설 생성 및 표시 (DOI 링크 변환 추가)
-        with st.spinner("🤖 AI가 주제 분석 중..."):
-            try:
+        try:
+            # 1단계: 빠른 요약 생성 및 애니메이션 (5초)
+            from utils.explain_topic import explain_topic_quick
+            
+            with st.spinner("⚡ 핵심 내용 분석 중..."):
+                quick_content = explain_topic_quick(topic)
+                quick_linked = convert_doi_to_links(quick_content)
+            
+            # 타이핑 애니메이션 함수 (스킵 버튼 없음)
+            def typewriter_animation(text, speed=0.003):
+                placeholder = st.empty()
+                displayed_text = ""
+                for char in text:
+                    displayed_text += char
+                    placeholder.markdown(displayed_text + "▌", unsafe_allow_html=True)
+                    time.sleep(speed)
+                placeholder.markdown(text, unsafe_allow_html=True)
+            
+            # 애니메이션으로 표시
+            typewriter_animation(quick_linked)
+            
+            # 2단계: 전체 내용 생성 및 나머지 표시
+            with st.spinner("🔍 상세 분석 완료 중..."):
                 explanation_lines = explain_topic(topic)
                 explanation_text = "\n\n".join(explanation_lines)
                 
                 # 틈새주제 파싱 및 저장
-                print("=== 디버깅: explanation_lines 구조 ===")
-                for i, line in enumerate(explanation_lines):
-                    print(f"라인 {i}: {repr(line[:100])}...")  # 처음 100자만 출력
-                    if "확장 가능한 탐구 아이디어" in line:
-                        print(f"*** 찾았다! 라인 {i}에 확장 가능한 탐구 아이디어 있음 ***")
-                        print(f"전체 내용: {repr(line)}")
-                        break
-                print("=== 디버깅 끝 ===")
-
                 st.session_state.niche_topics = parse_niche_topics(explanation_lines)
                 
-                # DOI 패턴을 링크로 변환 (화면 표시용)
-                linked_explanation = convert_doi_to_links(explanation_text)
+                # 빠른 내용을 제외한 나머지 찾기
+                remaining_text = explanation_text.replace(quick_content, "").strip()
                 
-                # 링크가 포함된 설명 표시
-                st.markdown(linked_explanation, unsafe_allow_html=True)
-                
-                # PDF용 텍스트는 원본 형식으로 저장 (마크다운 형식)
-                st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
-            except Exception as e:
-                st.error(f"주제 해설 생성 중 오류: {str(e)}")
-                st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n생성 중 오류 발생\n\n"
+                if remaining_text and remaining_text != explanation_text:
+                    st.markdown("---")
+                    remaining_linked = convert_doi_to_links(remaining_text)
+                    st.markdown(remaining_linked, unsafe_allow_html=True)
+            
+            # PDF용 텍스트 저장
+            st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
+            
+        except Exception as e:
+            st.error(f"주제 해설 생성 중 오류: {str(e)}")
+            st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n생성 중 오류 발생\n\n"
         
         # 🔥 내부 DB 검색 결과 (검색 실행 + 결과 저장)
         st.subheader("📄 ISEF (International Science and Engineering Fair) 출품논문")
