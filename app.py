@@ -228,6 +228,65 @@ def format_time_left(time_left):
 
 # ==================== 🔥 강화된 이용권 시스템 끝 ====================
 
+def typewriter_animation(text, speed=0.008):
+    """
+    스킵 가능한 타이핑 애니메이션
+    """
+    placeholder = st.empty()
+    col1, col2 = st.columns([5, 1])
+    
+    # 스킵 버튼
+    with col2:
+        skip_key = f"skip_{hash(text)}"
+        if st.button("⏭️ 스킵", key=skip_key, help="즉시 전체 보기"):
+            with col1:
+                placeholder.markdown(text)
+            return
+    
+    # 애니메이션 실행
+    with col1:
+        displayed_text = ""
+        for char in text:
+            displayed_text += char
+            placeholder.markdown(displayed_text + "▌")
+            time.sleep(speed)
+            
+            # 중간에 스킵 체크 (session_state 사용)
+            if st.session_state.get(skip_key, False):
+                break
+        
+        # 최종 표시 (커서 제거)
+        placeholder.markdown(text)
+
+def optimized_explanation_display(topic):
+    """
+    최적화된 주제 해설 표시 (응용사례까지 애니메이션)
+    """
+    from utils.explain_topic import explain_topic_split, convert_doi_to_links
+    
+    st.subheader("📘 주제 해설")
+    
+    # 전체 내용 생성 (기존 캐시 사용)
+    with st.spinner("🤖 AI가 주제 분석 중..."):
+        quick_content, remaining_content, full_lines = explain_topic_split(topic)
+        
+        # DOI 링크 변환
+        quick_content_linked = convert_doi_to_links(quick_content)
+        remaining_content_linked = convert_doi_to_links(remaining_content)
+    
+    # 1단계: 응용사례까지 애니메이션으로 표시
+    if quick_content_linked:
+        typewriter_animation(quick_content_linked, speed=0.006)  # 빠른 타이핑
+    
+    # 2단계: 나머지 내용 즉시 표시
+    if remaining_content_linked:
+        st.markdown("---")  # 구분선
+        st.markdown(remaining_content_linked, unsafe_allow_html=True)
+    
+    # 전체 텍스트 반환 (PDF용)
+    full_text = quick_content + "\n\n" + remaining_content
+    return full_lines, full_text
+    
 # 틈새주제 파싱 함수 (수정된 버전)
 def parse_niche_topics(explanation_lines):
     """explain_topic 결과에서 확장 가능한 탐구 아이디어 섹션을 파싱"""
@@ -547,38 +606,18 @@ if topic:
         st.session_state.last_searched_topic = topic
         st.session_state.generated_paper = {}  # 논문 초기화
         
-        # 주제 해설 표시
-        st.subheader("📘 주제 해설")
-        
-        # 즉시 해설 생성 및 표시 (DOI 링크 변환 추가)
-        with st.spinner("🤖 AI가 주제 분석 중..."):
-            try:
-                explanation_lines = explain_topic(topic)
-                explanation_text = "\n\n".join(explanation_lines)
-                
-                # 틈새주제 파싱 및 저장
-                print("=== 디버깅: explanation_lines 구조 ===")
-                for i, line in enumerate(explanation_lines):
-                    print(f"라인 {i}: {repr(line[:100])}...")  # 처음 100자만 출력
-                    if "확장 가능한 탐구 아이디어" in line:
-                        print(f"*** 찾았다! 라인 {i}에 확장 가능한 탐구 아이디어 있음 ***")
-                        print(f"전체 내용: {repr(line)}")
-                        break
-                print("=== 디버깅 끝 ===")
-
-                st.session_state.niche_topics = parse_niche_topics(explanation_lines)
-                
-                # DOI 패턴을 링크로 변환 (화면 표시용)
-                linked_explanation = convert_doi_to_links(explanation_text)
-                
-                # 링크가 포함된 설명 표시
-                st.markdown(linked_explanation, unsafe_allow_html=True)
-                
-                # PDF용 텍스트는 원본 형식으로 저장 (마크다운 형식)
-                st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
-            except Exception as e:
-                st.error(f"주제 해설 생성 중 오류: {str(e)}")
-                st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n생성 중 오류 발생\n\n"
+# 최적화된 주제 해설 표시
+        try:
+            explanation_lines, explanation_text = optimized_explanation_display(topic)
+            
+            # 틈새주제 파싱 및 저장
+            st.session_state.niche_topics = parse_niche_topics(explanation_lines)
+            
+            # PDF용 텍스트 저장
+            st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
+        except Exception as e:
+            st.error(f"주제 해설 생성 중 오류: {str(e)}")
+            st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n생성 중 오류 발생\n\n"
         
         # 🔥 내부 DB 검색 결과 (검색 실행 + 결과 저장)
         st.subheader("📄 ISEF (International Science and Engineering Fair) 출품논문")
