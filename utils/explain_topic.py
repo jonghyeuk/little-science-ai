@@ -151,3 +151,38 @@ def explain_topic_split(topic: str):
     quick_content, remaining_content = split_explanation_by_sections(explanation_lines)
     
     return quick_content, remaining_content, explanation_lines
+
+# 기존 코드는 그대로 두고, 파일 맨 아래에 이것만 추가하세요
+
+@st.cache_data(show_spinner="⚡ 핵심 내용 생성 중...", ttl=3600)
+def explain_topic_quick(topic: str) -> str:
+    """빠른 요약 생성 (5초 이내)"""
+    try:
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
+    except KeyError:
+        st.error("❌ Claude API 키가 설정되지 않았습니다.")
+        st.stop()
+    
+    system_prompt = """
+    고등학생에게 과학 주제를 간결하게 설명하는 도우미입니다.
+    다음 4개 섹션만 간단명료하게 작성하세요 (각 섹션 2-3문장):
+    
+    ## 🔬 개념 정의
+    ## ⚙️ 작동 원리  
+    ## 🌍 현재 배경
+    ## 💡 응용 사례
+    """
+    
+    user_prompt = f"주제: {topic}\n간결하게 핵심만 설명해주세요."
+    
+    try:
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1500,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}]
+        )
+        return response.content[0].text.strip()
+    except Exception as e:
+        st.error(f"❌ 빠른 설명 생성 오류: {e}")
+        return f"## 🔬 개념 정의\n{topic}에 대한 설명을 생성 중입니다..."
