@@ -440,7 +440,7 @@ if license_info:
         status_text = "만료됨"
     elif time_left_total_minutes <= 60:  # 1시간 이하
         box_class = "warning"
-        icon = ⚠️"
+        icon = "⚠️"
         status_text = "곧 만료"
     else:
         box_class = ""
