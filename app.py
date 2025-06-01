@@ -276,32 +276,36 @@ def typewriter_animation(text, speed=0.008):
 
 def optimized_explanation_display(topic):
     """
-    최적화된 주제 해설 표시 (응용사례까지 애니메이션)
+    최적화된 주제 해설 표시 (5초 내 시작!)
     """
-    from utils.explain_topic import explain_topic_split
+    from utils.explain_topic import explain_topic_quick, explain_topic
     
     st.subheader("📘 주제 해설")
     
-    # 전체 내용 생성 (기존 캐시 사용)
-    with st.spinner("🤖 AI가 주제 분석 중..."):
-        quick_content, remaining_content, full_lines = explain_topic_split(topic)
-        
-        # DOI 링크 변환
+    # 1단계: 빠른 요약 생성 및 애니메이션 (5초)
+    with st.spinner("⚡ 핵심 내용 분석 중..."):
+        quick_content = explain_topic_quick(topic)  # ← 🚀 5초만!
         quick_content_linked = convert_doi_to_links(quick_content)
-        remaining_content_linked = convert_doi_to_links(remaining_content)
     
-    # 1단계: 응용사례까지 애니메이션으로 표시
-    if quick_content_linked:
-        typewriter_animation(quick_content_linked, speed=0.006)  # 빠른 타이핑
+    # 애니메이션으로 표시 (3초)
+    typewriter_animation(quick_content_linked, speed=0.004)
     
-    # 2단계: 나머지 내용 즉시 표시
-    if remaining_content_linked:
-        st.markdown("---")  # 구분선
-        st.markdown(remaining_content_linked, unsafe_allow_html=True)
+    # 2단계: 상세 내용 생성 및 표시
+    with st.spinner("🔍 상세 분석 완료 중..."):
+        explanation_lines = explain_topic(topic)  # ← 나머지 25초
+        explanation_text = "\n\n".join(explanation_lines)
+        
+        # 빠른 내용 제외한 나머지 찾기
+        remaining_text = explanation_text.replace(quick_content, "").strip()
+        
+        if remaining_text:
+            st.markdown("---")
+            remaining_linked = convert_doi_to_links(remaining_text)
+            st.markdown(remaining_linked, unsafe_allow_html=True)
     
     # 전체 텍스트 반환 (PDF용)
-    full_text = quick_content + "\n\n" + remaining_content
-    return full_lines, full_text
+    full_text = explanation_text
+    return explanation_lines, full_text
     
 # 틈새주제 파싱 함수 (수정된 버전)
 def parse_niche_topics(explanation_lines):
