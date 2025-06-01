@@ -278,7 +278,7 @@ def optimized_explanation_display(topic):
     """
     최적화된 주제 해설 표시 (응용사례까지 애니메이션)
     """
-    from utils.explain_topic import explain_topic_split, convert_doi_to_links
+    from utils.explain_topic import explain_topic_split
     
     st.subheader("📘 주제 해설")
     
