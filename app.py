@@ -20,6 +20,22 @@ logger = logging.getLogger(__name__)
 
 # 앱 시작 시 DB 초기화 (성능 최적화)
 initialize_db()
+# 🔥 여기에 추가! 🔥
+import time
+
+def typewriter_animation(text, speed=0.005):
+    """빠른 타이핑 애니메이션"""
+    placeholder = st.empty()
+    displayed_text = ""
+    
+    for char in text:
+        displayed_text += char
+        placeholder.markdown(displayed_text + "▌")
+        time.sleep(speed)
+    
+    placeholder.markdown(text)
+
+# 🔥 여기까지 추가! 🔥
 
 # ==================== 🔥 강화된 이용권 시스템 ====================
 
