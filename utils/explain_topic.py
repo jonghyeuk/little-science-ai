@@ -108,3 +108,41 @@ def explain_topic_with_links(topic: str) -> str:
     explanation_lines = explain_topic(topic)
     explanation_text = "\n\n".join(explanation_lines)
     return convert_doi_to_links(explanation_text)
+
+# 기존 코드는 그대로 두고, 파일 맨 아래에 이것만 추가
+
+@st.cache_data(show_spinner="⚡ 핵심 내용 생성 중...", ttl=3600)
+def explain_topic_quick(topic: str) -> str:
+    """빠른 요약 생성 (확장 가능한 탐구 아이디어까지만)"""
+    try:
+        client = anthropic.Anthropic(api_key=st.secrets["api"]["claude_key"])
+    except KeyError:
+        st.error("❌ Claude API 키가 설정되지 않았습니다.")
+        st.stop()
+    
+    system_prompt = """
+    너는 'LittleScienceAI 도우미'로, 고등학생에게 과학 주제를 쉽고 재미있게 설명하는 친근한 전문가야.
+    다음 5개 섹션만 간결하고 자연스럽게 작성해줘:
+    
+    ## 🔬 **개념 정의**
+    ## ⚙️ **작동 원리 & 메커니즘**  
+    ## 🌍 **현재 과학적·사회적 배경**
+    ## 💡 **응용 사례 & 활용 분야**
+    ## 🎯 **확장 가능한 탐구 아이디어**
+    
+    각 섹션은 2-3문장으로 핵심만 설명하되, 친근하고 이해하기 쉽게 써줘.
+    """
+    
+    user_prompt = f"주제: {topic}\n핵심 내용만 간결하게 설명해주세요."
+    
+    try:
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=2000,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}]
+        )
+        return response.content[0].text.strip()
+    except Exception as e:
+        st.error(f"❌ 빠른 설명 생성 오류: {e}")
+        return f"## 🔬 개념 정의\n{topic}에 대한 설명을 생성 중입니다..."
