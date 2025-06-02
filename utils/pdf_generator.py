@@ -181,12 +181,15 @@ class ProfessionalKoreanPDF(FPDF):
             print(f"문단 추가 오류: {e}")
     
     def add_paper_item(self, title, summary, source=""):
+        """🔧 수정: 길이 제한 대폭 늘림"""
         try:
             self.set_safe_font('bold', 10)
             self.set_text_color(40, 40, 40)
             clean_title = self.clean_text(title)
-            if len(clean_title) > 80:
-                clean_title = clean_title[:77] + "..."
+            
+            # 🔧 제목 길이 제한: 80 → 150으로 늘림
+            if len(clean_title) > 150:
+                clean_title = clean_title[:147] + "..."
             
             self.multi_cell(0, 7, f"▪ {clean_title}", align='L')
             
@@ -199,8 +202,9 @@ class ProfessionalKoreanPDF(FPDF):
             self.set_text_color(80, 80, 80)
             clean_summary = self.clean_text(summary)
             
-            if len(clean_summary) > 200:
-                clean_summary = clean_summary[:197] + "..."
+            # 🔧 요약 길이 제한: 200 → 800으로 대폭 늘림
+            if len(clean_summary) > 800:
+                clean_summary = clean_summary[:797] + "..."
             
             if clean_summary:
                 self.multi_cell(0, 6, f"   {clean_summary}", align='L')
@@ -311,29 +315,36 @@ class ProfessionalKoreanPDF(FPDF):
             print(f"참고문헌 가이드 오류: {e}")
     
     def clean_text(self, text):
+        """🔧 수정: 덜 공격적인 텍스트 정리"""
         try:
             if not text:
                 return ""
             
             text = str(text)
             
+            # 기본적인 마크다운 정리 (덜 공격적으로)
             text = re.sub(r'^---\s*', '', text, flags=re.MULTILINE)
             text = re.sub(r'\s*---\s*', ' ', text)
             
-            text = re.sub(r'https?://[^\s\]\)\n]+', '', text)
-            text = re.sub(r'www\.[^\s\]\)\n]+', '', text)
+            # 🔧 URL 제거를 더 신중하게 (논문 링크 보존)
+            text = re.sub(r'https?://[^\s\]\)\n]+(?:\s|$)', '', text)
             
-            text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
-            text = re.sub(r'[*_`#\[\]<>]', '', text)
+            # 🔧 마크다운 제거를 덜 공격적으로
+            text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **굵은글씨** → 굵은글씨
+            text = re.sub(r'[`#\[\]<>]', '', text)  # 일부 문자만 제거 (*_는 보존)
             
-            emoji_pattern = r'[📘📄🌐🔬💡⚙️🌍📊🎯📋📖🔗📚📈🏆📅🔍❗🚀✅📌🎉🔧🛠️🧬]'
-            text = re.sub(emoji_pattern, '', text)
+            # 🔧 이모지 제거를 선택적으로 (섹션 구분에 중요한 것은 보존)
+            common_emojis = r'[📘📄🌐🔬💡⚙️🌍📊🎯📋📖🔗📚📈🏆📅🔍❗🚀✅📌🎉🔧🛠️🧬]'
+            text = re.sub(common_emojis, '', text)
             
+            # 빈 괄호 제거
             text = re.sub(r'\(\s*\)', '', text)
             
+            # DOI 정리
             text = re.sub(r'DOI\s*:\s*', '', text)
             text = re.sub(r'&[a-zA-Z]+;', '', text)
             
+            # 공백 정리
             text = re.sub(r'\s+', ' ', text)
             text = re.sub(r'\n+', '\n', text)
             
@@ -341,7 +352,7 @@ class ProfessionalKoreanPDF(FPDF):
             
         except Exception as e:
             print(f"텍스트 정리 오류: {e}")
-            return str(text)[:50] if text else ""
+            return str(text)[:100] if text else ""  # 더 긴 fallback
 
 def extract_topic_from_content(content):
     try:
@@ -376,11 +387,27 @@ def debug_content_structure(content):
         exists = keyword in content
         print(f"  '{keyword}': {'✅' if exists else '❌'}")
     
+    # 🔧 ISEF/arXiv 섹션 디버깅 강화
+    print(f"\n📄 ISEF/arXiv 섹션 분석:")
+    if "ISEF" in content:
+        isef_start = content.find("ISEF")
+        isef_snippet = content[isef_start:isef_start+200]
+        print(f"  ISEF 발견: {isef_snippet[:100]}...")
+    else:
+        print("  ISEF 섹션 없음")
+        
+    if "arXiv" in content:
+        arxiv_start = content.find("arXiv")
+        arxiv_snippet = content[arxiv_start:arxiv_start+200]
+        print(f"  arXiv 발견: {arxiv_snippet[:100]}...")
+    else:
+        print("  arXiv 섹션 없음")
+    
     print("=" * 60)
     return content
 
-def parse_content_simple(content):
-    """단순하고 확실한 파싱"""
+def parse_content_enhanced(content):
+    """🔧 수정: 향상된 파싱 로직"""
     result = {
         'topic_explanation': '',
         'applications': '',
@@ -397,14 +424,11 @@ def parse_content_simple(content):
             full_explanation = explanation_match.group(1).strip()
             result['topic_explanation'] = full_explanation
             
-            # 2. 응용 사례 추출 (최신논문검색 이전까지)
+            # 2. 응용 사례 추출
             if '응용 사례' in full_explanation:
-                # 응용 사례 시작점 찾기
                 app_start = full_explanation.find('응용 사례')
                 if app_start != -1:
                     app_section = full_explanation[app_start:]
-                    
-                    # 최신논문검색이나 확장 가능한 탐구까지만
                     end_markers = ['최신논문검색', '확장 가능한 탐구', '키워드 조합']
                     app_end = len(app_section)
                     
@@ -414,57 +438,87 @@ def parse_content_simple(content):
                             app_end = marker_pos
                     
                     app_content = app_section[:app_end].strip()
-                    # 제목 라인 제거
-                    app_lines = app_content.split('\n')[1:]  # 첫 번째 라인 제거
+                    app_lines = app_content.split('\n')[1:]
                     result['applications'] = '\n'.join(app_lines).strip()
             
-            # 3. 확장 가능한 탐구 아이디어 추출 (• · 패턴 정확히 처리)
+            # 3. 확장 가능한 탐구 아이디어 추출
             if '확장 가능한 탐구' in full_explanation:
                 ideas_start = full_explanation.find('확장 가능한 탐구')
                 if ideas_start != -1:
                     ideas_section = full_explanation[ideas_start:]
-                    # 제목 라인 제거
-                    ideas_lines = ideas_section.split('\n')[1:]  # 첫 번째 라인 제거
+                    ideas_lines = ideas_section.split('\n')[1:]
                     clean_ideas = []
                     
                     for line in ideas_lines:
                         line = line.strip()
-                        # 검색 관련 내용 제외
                         if line and not any(skip in line for skip in ['키워드', 'Google Scholar', 'RISS', 'DBpia']):
                             if len(line) > 5:
-                                # • · 패턴 (설명): 들여쓰기로 처리
                                 if line.startswith('• ·') or line.startswith('•·'):
                                     desc_text = line.replace('• ·', '').replace('•·', '').strip()
                                     clean_ideas.append(f"  {desc_text}")
-                                # • 패턴 (제목): bullet point 유지  
                                 elif line.startswith('•'):
-                                    title_text = line[1:].strip()  # • 제거
+                                    title_text = line[1:].strip()
                                     clean_ideas.append(f"• {title_text}")
-                                # - 패턴: bullet point로 변경
                                 elif line.startswith('-'):
                                     clean_ideas.append(line.replace('-', '•', 1))
-                                # 일반 텍스트: bullet point 추가
                                 else:
                                     clean_ideas.append(f"• {line}")
                     
                     result['research_ideas'] = '\n'.join(clean_ideas).strip()
         
-        # 4. ISEF/arXiv 파싱 (기존 로직 유지)
+        # 🔧 4. ISEF/arXiv 파싱 개선 - 여러 패턴 시도
+        print("🔍 ISEF/arXiv 파싱 시작...")
+        
+        # ISEF 파싱 - 여러 패턴 시도
         if "ISEF" in content or "내부 DB" in content:
+            print("  📄 ISEF 섹션 파싱 중...")
+            # 패턴 1: 기존 방식
             isef_match = re.search(r'## 📄[^\n]*\n(.*?)(?=## 🌐|## 📄 생성|$)', content, re.DOTALL)
             if isef_match:
                 isef_section = isef_match.group(1)
-                papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n([^_\n]*)', isef_section)
-                result['isef_papers'] = [(title, summary) for title, summary in papers if len(title) > 5][:3]
+                print(f"     ISEF 섹션 길이: {len(isef_section)} 문자")
+                print(f"     ISEF 섹션 미리보기: {isef_section[:200]}...")
+                
+                # 여러 패턴으로 시도
+                patterns = [
+                    r'- \*\*([^*\n]+)\*\*[^\n]*\n([^_\n]*)',  # 기존 패턴
+                    r'▪ ([^\n]+)\n[^\n]*출처[^\n]*\n([^▪\n]+)',  # 새 패턴 1
+                    r'([A-Za-z][^\n]+)\n[^\n]*출처[^\n]*\n([^▪\n]+)',  # 새 패턴 2
+                ]
+                
+                for i, pattern in enumerate(patterns):
+                    papers = re.findall(pattern, isef_section)
+                    print(f"     패턴 {i+1} 결과: {len(papers)}개")
+                    if papers:
+                        result['isef_papers'] = [(title.strip(), summary.strip()) for title, summary in papers if len(title.strip()) > 5][:3]
+                        print(f"     선택된 ISEF 논문: {len(result['isef_papers'])}개")
+                        break
         
+        # arXiv 파싱 - 여러 패턴 시도
         if "arXiv" in content:
+            print("  🌐 arXiv 섹션 파싱 중...")
             arxiv_match = re.search(r'## 🌐[^\n]*\n(.*?)(?=## 📄 생성|$)', content, re.DOTALL)
             if arxiv_match:
                 arxiv_section = arxiv_match.group(1)
-                papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n([^[\n]*)', arxiv_section)
-                result['arxiv_papers'] = [(title, summary) for title, summary in papers if len(title) > 5][:3]
+                print(f"     arXiv 섹션 길이: {len(arxiv_section)} 문자")
+                print(f"     arXiv 섹션 미리보기: {arxiv_section[:200]}...")
+                
+                # 여러 패턴으로 시도
+                patterns = [
+                    r'- \*\*([^*\n]+)\*\*[^\n]*\n([^[\n]*)',  # 기존 패턴
+                    r'▪ ([^\n]+)\n[^\n]*출처[^\n]*\n([^▪\n]+)',  # 새 패턴 1
+                    r'([A-Za-z][^\n]+)\n[^\n]*arXiv[^\n]*\n([^▪\n]+)',  # 새 패턴 2
+                ]
+                
+                for i, pattern in enumerate(patterns):
+                    papers = re.findall(pattern, arxiv_section)
+                    print(f"     패턴 {i+1} 결과: {len(papers)}개")
+                    if papers:
+                        result['arxiv_papers'] = [(title.strip(), summary.strip()) for title, summary in papers if len(title.strip()) > 5][:3]
+                        print(f"     선택된 arXiv 논문: {len(result['arxiv_papers'])}개")
+                        break
         
-        # 5. 생성된 논문
+        # 5. 생성된 논문 파싱 (기존 로직 유지)
         if "생성된 연구 논문" in content:
             paper_section = content[content.find("생성된 연구 논문"):]
             
@@ -477,17 +531,7 @@ def parse_content_simple(content):
                     if len(content_text) > 10:
                         result['generated_paper'][section] = content_text
         
-        print(f"파싱 결과 - 응용사례: {len(result.get('applications', ''))}, 탐구아이디어: {len(result.get('research_ideas', ''))}")
-        
-        # 디버깅: 탐구 아이디어 내용 확인
-        if result.get('research_ideas'):
-            print("=== 탐구 아이디어 파싱 결과 ===")
-            print(repr(result['research_ideas']))
-            print("=== 라인별 분리 ===")
-            lines = result['research_ideas'].split('\n')
-            for i, line in enumerate(lines):
-                print(f"라인 {i}: {repr(line)}")
-            print("=======================")
+        print(f"🔚 파싱 완료 - ISEF: {len(result['isef_papers'])}개, arXiv: {len(result['arxiv_papers'])}개")
         
         return result
         
@@ -496,7 +540,7 @@ def parse_content_simple(content):
         return result
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """Import 오류 없는 안전한 PDF 생성"""
+    """🔧 수정: 향상된 PDF 생성"""
     try:
         # 디버깅
         content = debug_content_structure(content)
@@ -508,8 +552,8 @@ def generate_pdf(content, filename="research_report.pdf"):
         topic = extract_topic_from_content(content)
         print(f"추출된 주제: {topic}")
         
-        # 내용 파싱
-        sections = parse_content_simple(content)
+        # 🔧 향상된 파싱 사용
+        sections = parse_content_enhanced(content)
         
         # PDF 생성
         with warnings.catch_warnings():
@@ -527,7 +571,6 @@ def generate_pdf(content, filename="research_report.pdf"):
             if sections['topic_explanation']:
                 pdf.add_section_title("주제 개요")
                 
-                # 전체 설명에서 각 부분 추출하여 소제목으로 구분
                 explanation = sections['topic_explanation']
                 
                 # 개념 정의 부분
@@ -542,19 +585,16 @@ def generate_pdf(content, filename="research_report.pdf"):
                     pdf.add_elegant_subsection("응용 사례 및 활용 분야")
                     pdf.add_paragraph(sections['applications'])
                 
-                # 확장 가능한 탐구 아이디어 (별도 소제목, 각 아이디어 개별 처리)
+                # 확장 가능한 탐구 아이디어
                 if sections.get('research_ideas'):
                     pdf.add_elegant_subsection("확장 가능한 탐구 아이디어")
                     
-                    # 각 아이디어를 개별 라인으로 처리
                     ideas_text = sections['research_ideas']
                     if ideas_text:
-                        # 줄바꿈으로 분리하여 각각 개별 처리
                         idea_lines = ideas_text.split('\n')
                         for line in idea_lines:
                             line = line.strip()
                             if line and len(line) > 5:
-                                # 각 아이디어를 개별 문단으로 추가
                                 pdf.add_paragraph(line)
             
             # 4. 문헌 조사
@@ -563,17 +603,23 @@ def generate_pdf(content, filename="research_report.pdf"):
             # ISEF 연구
             pdf.add_section_title("ISEF 관련 연구", level=2)
             if sections['isef_papers']:
+                print(f"📄 PDF에 ISEF 논문 {len(sections['isef_papers'])}개 추가")
                 for title, summary in sections['isef_papers']:
+                    print(f"   - {title[:50]}... ({len(summary)}자)")
                     pdf.add_paper_item(title, summary, "출처: ISEF 프로젝트")
             else:
+                print("📄 ISEF 논문 없음")
                 pdf.add_paragraph("관련 ISEF 프로젝트를 찾지 못했습니다.")
             
             # arXiv 연구
             pdf.add_section_title("arXiv 최신 연구", level=2)
             if sections['arxiv_papers']:
+                print(f"🌐 PDF에 arXiv 논문 {len(sections['arxiv_papers'])}개 추가")
                 for title, summary in sections['arxiv_papers']:
+                    print(f"   - {title[:50]}... ({len(summary)}자)")
                     pdf.add_paper_item(title, summary, "출처: arXiv (프리프린트)")
             else:
+                print("🌐 arXiv 논문 없음")
                 pdf.add_paragraph("관련 arXiv 논문을 찾지 못했습니다.")
             
             # 5. 생성된 논문
