@@ -181,15 +181,15 @@ class ProfessionalKoreanPDF(FPDF):
             print(f"문단 추가 오류: {e}")
     
     def add_paper_item(self, title, summary, source=""):
-        """🔧 수정: 안전한 텍스트 잘림 처리"""
+        """🔧 수정: 안전한 텍스트 잘림 처리 - 더 긴 텍스트 허용"""
         try:
             self.set_safe_font('bold', 10)
             self.set_text_color(40, 40, 40)
             clean_title = self.clean_text(title)
             
-            # 🔧 제목 안전하게 자르기
-            if len(clean_title) > 150:
-                clean_title = self.safe_text_truncate(clean_title, 147) + "..."
+            # 🔧 제목 길이 제한 완화: 150 → 200
+            if len(clean_title) > 200:
+                clean_title = self.safe_text_truncate(clean_title, 197) + "..."
             
             self.multi_cell(0, 7, f"▪ {clean_title}", align='L')
             
@@ -202,9 +202,9 @@ class ProfessionalKoreanPDF(FPDF):
             self.set_text_color(80, 80, 80)
             clean_summary = self.clean_text(summary)
             
-            # 🔧 요약 안전하게 자르기 (문장 단위로)
-            if len(clean_summary) > 800:
-                clean_summary = self.safe_text_truncate(clean_summary, 800)
+            # 🔧 요약 길이 제한 대폭 완화: 800 → 1500
+            if len(clean_summary) > 1500:
+                clean_summary = self.safe_text_truncate(clean_summary, 1500)
             
             if clean_summary:
                 self.multi_cell(0, 6, f"   {clean_summary}", align='L')
@@ -215,7 +215,7 @@ class ProfessionalKoreanPDF(FPDF):
             print(f"논문 항목 오류: {e}")
     
     def safe_text_truncate(self, text, max_length=500):
-        """🔧 새로 추가: 텍스트를 안전하게 자르기 (문장 단위로)"""
+        """🔧 수정: 텍스트를 안전하게 자르기 (문장 단위로) - 더 관대하게"""
         try:
             if len(text) <= max_length:
                 return text
@@ -223,8 +223,9 @@ class ProfessionalKoreanPDF(FPDF):
             # 마지막 완전한 문장 찾기
             truncated = text[:max_length]
             
-            # 마지막 문장 구분자 찾기
-            sentence_endings = ['.', '!', '?', '다.', '요.', '다!', '요!', '다?', '요?', '습니다.', '입니다.']
+            # 마지막 문장 구분자 찾기 (한국어 우선)
+            sentence_endings = ['다.', '요.', '다!', '요!', '다?', '요?', '습니다.', '입니다.', 
+                              '됩니다.', '합니다.', '.', '!', '?']
             last_sentence_end = -1
             
             for ending in sentence_endings:
@@ -232,15 +233,21 @@ class ProfessionalKoreanPDF(FPDF):
                 if pos > last_sentence_end:
                     last_sentence_end = pos
             
-            if last_sentence_end > max_length * 0.5:  # 50% 이상에서 문장이 끝나면 사용
-                return text[:last_sentence_end + len([e for e in sentence_endings if truncated[last_sentence_end:last_sentence_end+len(e)] == e][0])]
+            # 🔧 문장 끝을 찾았고, 전체 길이의 30% 이상에서 끝나면 사용
+            if last_sentence_end > max_length * 0.3:
+                # 완전한 문장 구분자의 끝까지 포함
+                for ending in sentence_endings:
+                    if truncated[last_sentence_end:last_sentence_end+len(ending)] == ending:
+                        return text[:last_sentence_end + len(ending)]
+                return text[:last_sentence_end + 1]
             else:
                 # 문장 구분자가 너무 앞에 있으면 마지막 공백까지만
                 last_space = truncated.rfind(' ')
-                if last_space > max_length * 0.7:
+                if last_space > max_length * 0.5:
                     return text[:last_space]
                 else:
-                    return text[:max_length]
+                    # 🔧 그냥 자르지 말고 좀 더 허용
+                    return text[:max_length + 50] if len(text) > max_length + 50 else text
                     
         except Exception as e:
             print(f"텍스트 자르기 오류: {e}")
@@ -439,7 +446,7 @@ def debug_content_structure(content):
     return content
 
 def parse_niche_topics_enhanced(text):
-    """🔧 새로 추가: 향상된 틈새주제 파싱"""
+    """🔧 수정: 향상된 틈새주제 파싱 - PDF 포맷 개선"""
     try:
         topics = []
         
@@ -459,9 +466,10 @@ def parse_niche_topics_enhanced(text):
                     # 이전 주제가 있다면 저장
                     if current_topic:
                         if current_description:
-                            full_topic = f"{current_topic}\n  {current_description}"
+                            # 🔧 PDF용 포맷: 제목과 설명을 명확히 구분
+                            full_topic = f"• {current_topic.replace('•', '').strip()}\n  {current_description}"
                         else:
-                            full_topic = current_topic
+                            full_topic = f"• {current_topic.replace('•', '').strip()}"
                         topics.append(full_topic)
                     
                     # 새 주제 시작
@@ -477,24 +485,34 @@ def parse_niche_topics_enhanced(text):
             # 마지막 주제 저장
             if current_topic:
                 if current_description:
-                    full_topic = f"{current_topic}\n  {current_description}"
+                    full_topic = f"• {current_topic.replace('•', '').strip()}\n  {current_description}"
                 else:
-                    full_topic = current_topic
+                    full_topic = f"• {current_topic.replace('•', '').strip()}"
                 topics.append(full_topic)
         
-        return topics if len(topics) >= 3 else [
-            "기존 연구의 한계점 개선\n  현재 연구에서 부족한 부분을 찾아 개선방안 제시",
-            "실용적 응용 방안 탐구\n  실생활에 적용할 수 있는 구체적 방법 연구", 
-            "다른 분야와의 융합 연구\n  타 학문 분야와 연결한 새로운 접근법"
-        ]
+        # 🔧 PDF용으로 전체 텍스트를 하나로 합치기
+        if topics:
+            return '\n\n'.join(topics)
+        else:
+            return """• 기존 연구의 한계점 개선
+  현재 연구에서 부족한 부분을 찾아 개선방안 제시
+
+• 실용적 응용 방안 탐구
+  실생활에 적용할 수 있는 구체적 방법 연구
+
+• 다른 분야와의 융합 연구
+  타 학문 분야와 연결한 새로운 접근법"""
         
     except Exception as e:
         print(f"틈새주제 파싱 오류: {e}")
-        return [
-            "기존 연구의 한계점 개선\n  현재 연구에서 부족한 부분을 찾아 개선방안 제시",
-            "실용적 응용 방안 탐구\n  실생활에 적용할 수 있는 구체적 방법 연구",
-            "다른 분야와의 융합 연구\n  타 학문 분야와 연결한 새로운 접근법"
-        ]
+        return """• 기존 연구의 한계점 개선
+  현재 연구에서 부족한 부분을 찾아 개선방안 제시
+
+• 실용적 응용 방안 탐구
+  실생활에 적용할 수 있는 구체적 방법 연구
+
+• 다른 분야와의 융합 연구
+  타 학문 분야와 연결한 새로운 접근법"""
 
 def parse_content_enhanced(content):
     """🔧 수정: 향상된 파싱 로직"""
@@ -531,8 +549,8 @@ def parse_content_enhanced(content):
                     app_lines = app_content.split('\n')[1:]
                     result['applications'] = '\n'.join(app_lines).strip()
             
-            # 🔧 3. 향상된 틈새주제 파싱
-            result['research_ideas'] = '\n'.join(parse_niche_topics_enhanced(full_explanation))
+            # 🔧 3. 향상된 틸새주제 파싱 - PDF용 포맷
+            result['research_ideas'] = parse_niche_topics_enhanced(full_explanation)
         
         # 🔧 4. ISEF/arXiv 파싱 개선 - 여러 패턴 시도
         print("🔍 ISEF/arXiv 파싱 시작...")
@@ -681,13 +699,27 @@ def generate_pdf(content, filename="research_report.pdf"):
                     ideas_text = sections['research_ideas']
                     if ideas_text:
                         idea_lines = ideas_text.split('\n')
+                        current_topic = ""
+                        
                         for line in idea_lines:
                             line = line.strip()
                             if line and len(line) > 5:
-                                # 들여쓰기 처리 유지
-                                if line.startswith('  '):
-                                    pdf.add_paragraph(f"    {line}")
+                                # 🔧 제목 vs 설명 구분 처리
+                                if line.startswith('•'):
+                                    # 새 주제 제목
+                                    if current_topic:  # 이전 주제가 있으면 줄바꿈
+                                        pdf.ln(3)
+                                    current_topic = line
+                                    pdf.add_paragraph(line)
+                                elif line.startswith('  ') and current_topic:
+                                    # 설명 부분 (들여쓰기)
+                                    description = line.strip()
+                                    pdf.set_safe_font('normal', 9)
+                                    pdf.set_text_color(90, 90, 90)
+                                    pdf.multi_cell(0, 5, f"    {description}", align='L')
+                                    pdf.ln(2)
                                 else:
+                                    # 일반 텍스트
                                     pdf.add_paragraph(line)
             
             # 4. 문헌 조사
