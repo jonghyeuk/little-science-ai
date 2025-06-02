@@ -639,8 +639,8 @@ if topic:
                         # 내부 결과에서도 DOI 변환 적용
                         linked_summary = convert_doi_to_links(summary)
                         
-                        # 🔥 길이 제한 추가 (300자 이상이면 자르고 ... 추가)
-                        if len(linked_summary) > 300:
+                        # 🔥 길이 제한 추가 (400자 이상이면 자르고 ... 추가)
+                        if len(linked_summary) > 400:
                             display_summary = linked_summary[:297] + "..."
                         else:
                             display_summary = linked_summary
@@ -683,8 +683,8 @@ if topic:
                         # arXiv 결과에서도 DOI 변환 적용
                         linked_summary = convert_doi_to_links(summary)
                         
-                        # 🔥 길이 제한 추가 (300자 이상이면 자르고 ... 추가)
-                        if len(linked_summary) > 300:
+                        # 🔥 길이 제한 추가 (400자 이상이면 자르고 ... 추가)
+                        if len(linked_summary) > 400:
                             display_summary = linked_summary[:297] + "..."
                         else:
                             display_summary = linked_summary
@@ -744,8 +744,8 @@ if topic:
                 # 내부 결과에서도 DOI 변환 적용
                 linked_summary = convert_doi_to_links(summary)
                 
-                # 🔥 길이 제한 추가 (300자 이상이면 자르고 ... 추가)
-                if len(linked_summary) > 300:
+                # 🔥 길이 제한 추가 (400자 이상이면 자르고 ... 추가)
+                if len(linked_summary) > 400:
                     display_summary = linked_summary[:297] + "..."
                 else:
                     display_summary = linked_summary
@@ -774,8 +774,8 @@ if topic:
                 # arXiv 결과에서도 DOI 변환 적용
                 linked_summary = convert_doi_to_links(summary)
                 
-                # 🔥 길이 제한 추가 (300자 이상이면 자르고 ... 추가)
-                if len(linked_summary) > 300:
+                # 🔥 길이 제한 추가 (400자 이상이면 자르고 ... 추가)
+                if len(linked_summary) > 400:
                     display_summary = linked_summary[:297] + "..."
                 else:
                     display_summary = linked_summary
