@@ -511,7 +511,7 @@ def parse_content_enhanced(content):
                 ]
                 
                 for i, pattern in enumerate(patterns):
-                    papers = re.findall(pattern, arxiv_section)
+                    papers = re.findall(r'- \*\*([^*\n]+)\*\*[^\n]*\n(.*?)(?=\[링크\]|$)', arxiv_section, re.DOTALL)
                     print(f"     패턴 {i+1} 결과: {len(papers)}개")
                     if papers:
                         result['arxiv_papers'] = [(title.strip(), summary.strip()) for title, summary in papers if len(title.strip()) > 5][:3]
