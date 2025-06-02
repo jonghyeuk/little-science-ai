@@ -423,7 +423,7 @@ def extract_topic_from_content(content):
         return "과학 연구 탐색"
 
 def parse_content_enhanced(content):
-    """향상된 파싱 로직"""
+    """🔥 완전히 새로운 파싱 로직 - 문제 해결"""
     result = {
         'topic_explanation': '',
         'applications': '',
@@ -434,97 +434,142 @@ def parse_content_enhanced(content):
     }
     
     try:
+        print("🔍 새로운 파싱 로직 시작...")
+        print(f"전체 콘텐츠 길이: {len(content)}")
+        
         # 전체 주제 해설 추출
         explanation_match = re.search(r'# 📘[^\n]*\n(.*?)(?=## 📄|## 🌐|$)', content, re.DOTALL)
         if explanation_match:
             full_explanation = explanation_match.group(1).strip()
             result['topic_explanation'] = full_explanation
+            print(f"주제 해설 추출 성공: {len(full_explanation)}자")
             
-            # 응용 사례 추출
-            if '응용 사례' in full_explanation:
-                app_start = full_explanation.find('응용 사례')
-                if app_start != -1:
-                    app_section = full_explanation[app_start:]
-                    end_markers = ['최신논문검색', '확장 가능한 탐구', '키워드 조합']
-                    app_end = len(app_section)
-                    
-                    for marker in end_markers:
-                        marker_pos = app_section.find(marker)
-                        if marker_pos != -1 and marker_pos < app_end:
-                            app_end = marker_pos
-                    
-                    app_content = app_section[:app_end].strip()
-                    app_lines = app_content.split('\n')[1:]
-                    result['applications'] = '\n'.join(app_lines).strip()
-            
-            # 확장 가능한 탐구 아이디어 추출
+            # 🔥 틈새주제 완전히 새로운 파싱
             if '확장 가능한 탐구' in full_explanation:
                 ideas_start = full_explanation.find('확장 가능한 탐구')
-                if ideas_start != -1:
-                    ideas_section = full_explanation[ideas_start:]
-                    ideas_lines = ideas_section.split('\n')[1:]
-                    clean_ideas = []
-                    
-                    for line in ideas_lines:
-                        line = line.strip()
-                        if line and not any(skip in line for skip in ['키워드', 'Google Scholar']):
-                            if len(line) > 5:
-                                clean_ideas.append(line)
-                    
-                    result['research_ideas'] = '\n'.join(clean_ideas).strip()
-        
-        # ISEF 파싱
-        if "ISEF" in content or "내부 DB" in content:
-            isef_match = re.search(r'## 📄[^\n]*\n(.*?)(?=## 🌐|## 📄 생성|$)', content, re.DOTALL)
-            if isef_match:
-                isef_section = isef_match.group(1)
-                patterns = [
-                    r'<h3[^>]*>📌\s*([^<]+)</h3>.*?<p>([^<]+)</p>',
-                    r'- \*\*([^*\n]+)\*\*[^\n]*\n([^_\-\n]*)',
-                    r'▪ ([^\n]+)\n[^\n]*출처[^\n]*\n([^▪\n]+)',
-                ]
+                ideas_section = full_explanation[ideas_start:]
+                print(f"틈새주제 섹션: {ideas_section[:200]}...")
                 
-                for pattern in patterns:
-                    papers = re.findall(pattern, isef_section)
-                    if papers:
-                        processed_papers = []
-                        for title, summary in papers:
-                            clean_title = re.sub(r'<[^>]+>', '', title).strip()
-                            clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
-                            if len(clean_title) > 5 and len(clean_summary) > 10:
-                                processed_papers.append((clean_title, clean_summary))
-                        
-                        result['isef_papers'] = processed_papers[:3]
-                        break
+                # 간단하게 전체를 가져와서 정리
+                lines = ideas_section.split('\n')
+                clean_lines = []
+                
+                for line in lines[1:]:  # 첫 줄(제목) 제외
+                    line = line.strip()
+                    if line and len(line) > 10 and not any(skip in line for skip in ['키워드', 'Scholar', '도메인']):
+                        # • · 패턴을 • 로 시작하는 제목과 설명으로 분리
+                        if '• ·' in line:
+                            parts = line.split('• ·')
+                            if len(parts) >= 2:
+                                title = parts[0].replace('•', '').strip()
+                                desc = parts[1].strip()
+                                clean_lines.append(f"• {title}")
+                                clean_lines.append(f"  {desc}")
+                        elif line.startswith('•'):
+                            clean_lines.append(line)
+                        elif line.startswith('·') and clean_lines:
+                            clean_lines.append(f"  {line[1:].strip()}")
+                        else:
+                            clean_lines.append(line)
+                
+                result['research_ideas'] = '\n'.join(clean_lines)
+                print(f"틈새주제 파싱 완료: {len(clean_lines)}줄")
         
-        # arXiv 파싱
+        # 🔥 ISEF/arXiv 파싱 - 더 관대하게
+        # ISEF 검색
+        isef_papers = []
+        if "ISEF" in content:
+            # 모든 ▪ 또는 - ** 패턴 찾기
+            isef_section = content[content.find("ISEF"):content.find("arXiv") if "arXiv" in content else len(content)]
+            print(f"ISEF 섹션 길이: {len(isef_section)}")
+            
+            # 여러 패턴 시도
+            patterns = [
+                r'▪\s*([^\n]+)\n[^\n]*출처[^\n]*\n\s*([^▪]+?)(?=▪|\n\n|$)',
+                r'-\s*\*\*([^*]+)\*\*[^\n]*\n([^-]+?)(?=-|\n\n|$)',
+                r'([A-Z][^:\n]+):\s*([^▪\n-]+?)(?=▪|-|\n\n|$)'
+            ]
+            
+            for pattern in patterns:
+                matches = re.findall(pattern, isef_section, re.DOTALL)
+                for title, summary in matches:
+                    clean_title = re.sub(r'<[^>]+>', '', title).strip()
+                    clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
+                    if len(clean_title) > 5 and len(clean_summary) > 20:
+                        # 🔥 요약 길이 확장 - 최대한 보존
+                        if len(clean_summary) > 500:
+                            # 문장 단위로 자르되 매우 관대하게
+                            sentences = re.split(r'[.!?]\s+', clean_summary)
+                            kept_sentences = []
+                            total_len = 0
+                            for sent in sentences:
+                                if total_len + len(sent) < 800:  # 800자까지 허용
+                                    kept_sentences.append(sent)
+                                    total_len += len(sent)
+                                else:
+                                    break
+                            clean_summary = '. '.join(kept_sentences)
+                            if not clean_summary.endswith('.'):
+                                clean_summary += '.'
+                        
+                        isef_papers.append((clean_title, clean_summary))
+                        if len(isef_papers) >= 3:
+                            break
+                if isef_papers:
+                    break
+        
+        result['isef_papers'] = isef_papers
+        print(f"ISEF 논문 파싱: {len(isef_papers)}개")
+        
+        # arXiv 검색
+        arxiv_papers = []
         if "arXiv" in content:
-            arxiv_match = re.search(r'## 🌐[^\n]*\n(.*?)(?=## 📄 생성|$)', content, re.DOTALL)
-            if arxiv_match:
-                arxiv_section = arxiv_match.group(1)
-                patterns = [
-                    r'<h3[^>]*>🌐\s*([^<]+)</h3>.*?<p>([^<]+)</p>',
-                    r'- \*\*([^*\n]+)\*\*[^\n]*\n(.*?)(?=\[링크\]|$)',
-                    r'▪ ([^\n]+)\n[^\n]*arXiv[^\n]*\n([^▪\n]+)',
-                ]
-                
-                for pattern in patterns:
-                    papers = re.findall(pattern, arxiv_section, re.DOTALL)
-                    if papers:
-                        processed_papers = []
-                        for title, summary in papers:
-                            clean_title = re.sub(r'<[^>]+>', '', title).strip()
-                            clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
-                            if len(clean_title) > 5 and len(clean_summary) > 10:
-                                processed_papers.append((clean_title, clean_summary))
+            arxiv_section = content[content.find("arXiv"):]
+            print(f"arXiv 섹션 길이: {len(arxiv_section)}")
+            
+            patterns = [
+                r'▪\s*([^\n]+)\n[^\n]*arXiv[^\n]*\n\s*([^▪]+?)(?=▪|\n\n|$)',
+                r'-\s*\*\*([^*]+)\*\*[^\n]*\n([^-]+?)(?=\[링크\]|-|\n\n|$)',
+                r'([A-Z][^:\n]+):\s*([^▪\n-]+?)(?=▪|-|\n\n|영문 원본|$)'
+            ]
+            
+            for pattern in patterns:
+                matches = re.findall(pattern, arxiv_section, re.DOTALL)
+                for title, summary in matches:
+                    clean_title = re.sub(r'<[^>]+>', '', title).strip()
+                    clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
+                    # 한국어 요약 부분만 추출
+                    if '한국어 요약' in clean_summary:
+                        clean_summary = clean_summary.split('한국어 요약')[1].split('영문 원본')[0].strip()
+                    
+                    if len(clean_title) > 5 and len(clean_summary) > 20:
+                        # 🔥 요약 길이 확장
+                        if len(clean_summary) > 500:
+                            sentences = re.split(r'[.!?]\s+', clean_summary)
+                            kept_sentences = []
+                            total_len = 0
+                            for sent in sentences:
+                                if total_len + len(sent) < 800:
+                                    kept_sentences.append(sent)
+                                    total_len += len(sent)
+                                else:
+                                    break
+                            clean_summary = '. '.join(kept_sentences)
+                            if not clean_summary.endswith('.'):
+                                clean_summary += '.'
                         
-                        result['arxiv_papers'] = processed_papers[:3]
-                        break
+                        arxiv_papers.append((clean_title, clean_summary))
+                        if len(arxiv_papers) >= 3:
+                            break
+                if arxiv_papers:
+                    break
         
-        # 생성된 논문 파싱
+        result['arxiv_papers'] = arxiv_papers
+        print(f"arXiv 논문 파싱: {len(arxiv_papers)}개")
+        
+        # 생성된 논문 파싱 (기존 유지)
         if "생성된 연구 논문" in content:
             paper_section = content[content.find("생성된 연구 논문"):]
-            
             sections = ['초록', '서론', '실험 방법', '예상 결과', '결론', '참고문헌']
             for section in sections:
                 pattern = f"### {section}[^\n]*\n(.*?)(?=###|$)"
@@ -534,10 +579,13 @@ def parse_content_enhanced(content):
                     if len(content_text) > 10:
                         result['generated_paper'][section] = content_text
         
+        print(f"🔚 파싱 완료!")
         return result
         
     except Exception as e:
-        print(f"파싱 오류: {e}")
+        print(f"❌ 파싱 오류: {e}")
+        import traceback
+        traceback.print_exc()
         return result
 
 def generate_pdf(content, filename="research_report.pdf"):
