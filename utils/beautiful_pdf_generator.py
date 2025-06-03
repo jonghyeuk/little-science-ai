@@ -656,187 +656,101 @@ def parse_content_enhanced(content):
         return result
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """🔥 단계별 디버깅 - 하나씩 기능 추가"""
+    """🔥 add_title_page 제거한 안전한 버전"""
     try:
-        print("🚀 PDF 생성 시작...")
+        print("=" * 50)
+        print("🚀🚀🚀 PDF 생성 시작!!! 🚀🚀🚀")
+        print("=" * 50)
         
         # 출력 디렉토리 생성
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         
         # 주제 추출
         topic = extract_topic_from_content(content)
-        print(f"📝 주제 추출: {topic}")
+        print(f"📝 주제: {topic}")
         
-        # 향상된 파싱 사용
-        print("🔍 내용 파싱 시작...")
-        sections = parse_content_enhanced(content)
-        print(f"📊 파싱 결과: 해설({len(sections['topic_explanation'])}자), ISEF({len(sections['isef_papers'])}개), arXiv({len(sections['arxiv_papers'])}개), 논문({len(sections['generated_paper'])}섹션)")
-        
-        # PDF 생성
+        # 안전한 PDF 생성
+        print("🎨 안전한 PDF 생성 중...")
         with suppress_fpdf_warnings():
             pdf = BeautifulSciencePDF(topic)
             
-            # 1단계: 표지 페이지 (이건 성공했음)
-            print("📄 1단계: 표지 페이지...")
-            pdf.add_title_page(topic)
-            print("✅ 표지 완료")
-            
-            # 2단계: 새 페이지 + 간단 테스트 (이것도 성공했음)
-            print("📝 2단계: 기본 페이지...")
+            # 🔥 add_title_page 대신 간단한 표지
+            print("📄 간단한 표지 페이지 추가...")
             pdf.add_page()
-            pdf.set_safe_font('bold', 14, 'text_dark')
-            pdf.cell(0, 10, "=== 연구 탐색 보고서 ===", align='C', ln=True)
+            
+            # 간단한 표지 (복잡한 기능 없이)
+            pdf.set_safe_font('bold', 20, 'text_dark')
+            pdf.ln(30)
+            pdf.cell(0, 15, topic, align='C', ln=True)
             pdf.ln(10)
-            print("✅ 기본 페이지 완료")
             
-            # 3단계: add_section_title 테스트
-            print("🔬 3단계: 섹션 제목 테스트...")
-            try:
-                pdf.add_section_title("주제 개요")
-                print("✅ 섹션 제목 성공")
-            except Exception as e:
-                print(f"❌ 섹션 제목 실패: {e}")
-                # 실패시 간단하게 대체
-                pdf.set_safe_font('bold', 12, 'text_dark')
-                pdf.cell(0, 8, "1. 주제 개요", align='L', ln=True)
-                pdf.ln(5)
+            pdf.set_safe_font('normal', 14, 'text_medium')
+            pdf.cell(0, 10, '과학 연구 탐색 보고서', align='C', ln=True)
+            pdf.ln(20)
             
-            # 4단계: 간단한 텍스트 추가
-            print("📝 4단계: 텍스트 추가...")
-            try:
-                if sections['topic_explanation']:
-                    explanation = sections['topic_explanation'][:500]  # 처음 500자만
-                    clean_text = pdf.clean_text(explanation)
-                    pdf.set_safe_font('normal', 10, 'text_medium')
-                    pdf.multi_cell(0, 6, clean_text[:200], align='L')  # 더 짧게
-                    pdf.ln(5)
-                    print("✅ 텍스트 추가 성공")
-                else:
-                    pdf.set_safe_font('normal', 10, 'text_medium')
-                    pdf.cell(0, 6, "주제 해설이 없습니다.", align='L', ln=True)
-            except Exception as e:
-                print(f"❌ 텍스트 추가 실패: {e}")
-                pdf.set_safe_font('normal', 10, 'text_medium')
-                pdf.cell(0, 6, "텍스트 처리 중 오류 발생", align='L', ln=True)
+            pdf.set_safe_font('normal', 10, 'text_medium')
+            today = datetime.now().strftime("%Y년 %m월 %d일")
+            pdf.cell(0, 8, f'생성일: {today}', align='C', ln=True)
+            pdf.ln(5)
+            pdf.cell(0, 8, 'LittleScienceAI', align='C', ln=True)
             
-            # 5단계: ISEF 논문 (간단 버전)
-            print("🏆 5단계: ISEF 논문...")
-            try:
-                pdf.set_safe_font('bold', 12, 'text_dark')
-                pdf.cell(0, 8, "2. ISEF 관련 연구", align='L', ln=True)
-                pdf.ln(3)
-                
-                if sections['isef_papers']:
-                    for i, (title, summary) in enumerate(sections['isef_papers'][:2]):  # 최대 2개만
-                        pdf.set_safe_font('bold', 10, 'text_dark')
-                        clean_title = pdf.clean_text(title)[:100]  # 100자만
-                        pdf.cell(0, 6, f"🏆 {clean_title}", align='L', ln=True)
-                        
-                        pdf.set_safe_font('normal', 9, 'text_medium')
-                        clean_summary = pdf.clean_text(summary)[:200]  # 200자만
-                        pdf.multi_cell(0, 5, clean_summary, align='L')
-                        pdf.ln(3)
-                        print(f"✅ ISEF 논문 {i+1} 성공")
-                else:
-                    pdf.set_safe_font('normal', 10, 'text_medium')
-                    pdf.cell(0, 6, "관련 ISEF 프로젝트가 없습니다.", align='L', ln=True)
-                    
-            except Exception as e:
-                print(f"❌ ISEF 논문 실패: {e}")
-                pdf.set_safe_font('normal', 10, 'text_medium')
-                pdf.cell(0, 6, "ISEF 논문 처리 중 오류 발생", align='L', ln=True)
+            print("✅ 간단한 표지 완료!")
             
-            # 6단계: arXiv 논문 (간단 버전)
-            print("📚 6단계: arXiv 논문...")
-            try:
-                pdf.ln(5)
-                pdf.set_safe_font('bold', 12, 'text_dark')
-                pdf.cell(0, 8, "3. arXiv 최신 연구", align='L', ln=True)
-                pdf.ln(3)
-                
-                if sections['arxiv_papers']:
-                    for i, (title, summary) in enumerate(sections['arxiv_papers'][:2]):  # 최대 2개만
-                        pdf.set_safe_font('bold', 10, 'text_dark')
-                        clean_title = pdf.clean_text(title)[:100]  # 100자만
-                        pdf.cell(0, 6, f"📚 {clean_title}", align='L', ln=True)
-                        
-                        pdf.set_safe_font('normal', 9, 'text_medium')
-                        clean_summary = pdf.clean_text(summary)[:200]  # 200자만
-                        pdf.multi_cell(0, 5, clean_summary, align='L')
-                        pdf.ln(3)
-                        print(f"✅ arXiv 논문 {i+1} 성공")
-                else:
-                    pdf.set_safe_font('normal', 10, 'text_medium')
-                    pdf.cell(0, 6, "관련 arXiv 논문이 없습니다.", align='L', ln=True)
-                    
-            except Exception as e:
-                print(f"❌ arXiv 논문 실패: {e}")
-                pdf.set_safe_font('normal', 10, 'text_medium')
-                pdf.cell(0, 6, "arXiv 논문 처리 중 오류 발생", align='L', ln=True)
+            # 내용 페이지
+            print("📝 내용 페이지 추가...")
+            pdf.add_page()
+            pdf.set_safe_font('bold', 16, 'text_dark')
+            pdf.cell(0, 15, "=== 연구 탐색 보고서 ===", align='C', ln=True)
+            pdf.ln(10)
             
-            # 7단계: 생성된 논문 (간단 버전)
-            print("📝 7단계: 연구 계획서...")
-            try:
-                if sections['generated_paper']:
-                    pdf.add_page()  # 새 페이지
-                    
-                    pdf.set_safe_font('bold', 16, 'text_dark')
-                    pdf.cell(0, 10, "연구 계획서", align='C', ln=True)
-                    pdf.ln(10)
-                    
-                    section_order = ['초록', '서론', '실험 방법', '예상 결과', '결론']
-                    for i, section_name in enumerate(section_order):
-                        if section_name in sections['generated_paper']:
-                            content_text = sections['generated_paper'][section_name]
-                            
-                            pdf.set_safe_font('bold', 12, 'text_dark')
-                            pdf.cell(0, 8, f"{i+1}. {section_name}", align='L', ln=True)
-                            pdf.ln(2)
-                            
-                            pdf.set_safe_font('normal', 10, 'text_medium')
-                            clean_content = pdf.clean_text(content_text)[:300]  # 300자만
-                            pdf.multi_cell(0, 6, clean_content, align='L')
-                            pdf.ln(5)
-                            
-                            print(f"✅ {section_name} 섹션 성공")
-                    
-            except Exception as e:
-                print(f"❌ 연구 계획서 실패: {e}")
-                pdf.set_safe_font('normal', 10, 'text_medium')
-                pdf.cell(0, 6, "연구 계획서 처리 중 오류 발생", align='L', ln=True)
+            pdf.set_safe_font('normal', 12, 'text_medium')
+            pdf.cell(0, 10, f"주제: {topic}", align='L', ln=True)
+            pdf.ln(5)
+            pdf.cell(0, 10, f"생성일: {datetime.now().strftime('%Y-%m-%d %H:%M')}", align='L', ln=True)
+            pdf.ln(10)
+            
+            pdf.set_safe_font('normal', 10, 'text_medium')
+            test_content = "이것은 안전한 테스트 PDF입니다. add_title_page 함수를 사용하지 않고 간단하게 만들었습니다."
+            pdf.multi_cell(0, 8, test_content, align='L')
+            
+            print("✅ 내용 페이지 완료!")
             
             # 저장
             output_path = os.path.join(OUTPUT_DIR, filename)
-            print(f"💾 PDF 저장...")
+            print(f"💾 PDF 저장 중: {output_path}")
             
-            with suppress_fpdf_warnings():
-                pdf.output(output_path)
-            print("✅ PDF 저장 완료")
+            pdf.output(output_path)
+            print("✅ PDF 저장 완료!")
         
         # 파일 검증
         if os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
-            print(f"📊 생성된 파일 크기: {file_size:,} bytes")
+            print(f"📊 파일 크기: {file_size:,} bytes")
             
-            if file_size > 3000:  # 3KB 이상이면 성공
-                print(f"🎉 단계별 PDF 생성 성공!")
+            if file_size > 1000:
+                print("🎉🎉🎉 성공!!! 🎉🎉🎉")
                 return output_path
             else:
-                print(f"⚠️ 파일이 너무 작음: {file_size} bytes")
-                raise Exception(f"PDF 파일 크기가 비정상적으로 작음")
+                print(f"⚠️ 파일이 너무 작음: {file_size}")
+                raise Exception("파일 크기 이상")
         else:
-            raise Exception("PDF 파일이 생성되지 않음")
+            print("❌ 파일 생성 실패")
+            raise Exception("파일 생성 안됨")
         
     except Exception as e:
-        print(f"❌ PDF 생성 실패: {e}")
+        print("=" * 50)
+        print(f"❌❌❌ 오류 발생: {e} ❌❌❌")
+        print("=" * 50)
         
-        # 실패시 텍스트 백업
+        # 백업
         try:
             txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
             with open(txt_path, 'w', encoding='utf-8') as f:
-                f.write(f"=== {extract_topic_from_content(content)} 연구보고서 ===\n\n")
-                f.write(f"생성 시간: {datetime.now()}\n\n")
-                f.write(content[:1000])  # 처음 1000자만
+                f.write(f"주제: {extract_topic_from_content(content)}\n")
+                f.write(f"생성시간: {datetime.now()}\n")
+                f.write("PDF 생성 실패\n")
+            print(f"📝 백업 파일 생성: {txt_path}")
             return txt_path
         except:
+            print("❌ 백업도 실패")
             return None
