@@ -562,6 +562,30 @@ if topic:
             with st.spinner("⚡ AI가 주제 분석 중..."):
                 explanation_lines = explain_topic(topic)
                 explanation_text = "\n\n".join(explanation_lines)
+                # 🔥 소주제 파싱: 개념, 메커니즘, 배경 구분
+                concept_text = ""
+                mechanism_text = ""
+                background_text = ""
+
+                current_section = "concept"
+
+                for line in explanation_lines:
+                    line = line.strip()
+                    if "작동 원리" in line or "메커니즘" in line:
+                       current_section = "mechanism"
+                       continue
+                    elif "과학적" in line or "사회적 배경" in line:
+                        current_section = "background"
+                        continue
+
+                    if current_section == "concept":
+                        concept_text += line + "\n"
+                    elif current_section == "mechanism":
+                        mechanism_text += line + "\n"
+                    elif current_section == "background":
+                        background_text += line + "\n"
+
+
                 
                 # 틈새주제 파싱 및 저장
                 st.session_state.niche_topics = parse_niche_topics(explanation_lines)
@@ -589,8 +613,17 @@ if topic:
                 placeholder.markdown(text, unsafe_allow_html=True)
             
             # 1단계: 확장 가능한 탐구 아이디어까지 애니메이션
-            animation_linked = convert_doi_to_links(animation_part)
-            typewriter_animation(animation_linked)
+            if concept_text:
+                st.markdown("### 🧠 개념 정의")
+                typewriter_animation(convert_doi_to_links(concept_text))
+
+            if mechanism_text:
+                st.markdown("### ⚙️ 작동 원리 / 메커니즘")
+                st.markdown(convert_doi_to_links(mechanism_text), unsafe_allow_html=True)
+
+            if background_text:
+                st.markdown("### 🌍 과학적·사회적 배경")
+                st.markdown(convert_doi_to_links(background_text), unsafe_allow_html=True)
             
             # 2단계: 나머지 즉시 표시
             if remaining_part:
@@ -599,7 +632,14 @@ if topic:
                 st.markdown(remaining_linked, unsafe_allow_html=True)
             
             # PDF용 텍스트 저장 (전체 내용)
-            st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
+            st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n"
+
+            if concept_text:
+                st.session_state.full_text += "### 개념 정의\n" + concept_text.strip() + "\n\n"
+            if mechanism_text:
+                st.session_state.full_text += "### 작동 원리 및 메커니즘\n" + mechanism_text.strip() + "\n\n"
+            if background_text:
+                st.session_state.full_text += "### 과학적 및 사회적 배경\n" + background_text.strip() + "\n\n"
             
         except Exception as e:
             st.error(f"주제 해설 생성 중 오류: {str(e)}")
@@ -658,7 +698,7 @@ if topic:
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        st.session_state.full_text += f"- **{title}**\n{summary}\n_{meta_text}_\n\n"
+                        st.session_state.full_text += f"▪ {title}\n출처: ISEF\n{summary.strip()}\n\n"
             except Exception as e:
                 st.error(f"내부 DB 검색 중 오류: {str(e)}")
                 st.session_state.cached_internal_results = []
