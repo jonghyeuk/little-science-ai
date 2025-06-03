@@ -512,14 +512,15 @@ def parse_content_enhanced(content):
                 result['research_ideas'] = '\n'.join(clean_lines)
                 print(f"틈새주제 파싱 완료: {len(clean_lines)}줄")
         
-        # 🔥 ISEF 파싱 (기존 로직 그대로)
+        # 🔥 ISEF 파싱 (수정된 버전 - HTML 태그 고려)
         isef_papers = []
         if "ISEF" in content:
             isef_section = content[content.find("ISEF"):content.find("arXiv") if "arXiv" in content else len(content)]
             print(f"ISEF 섹션 길이: {len(isef_section)}")
             
-            # 여러 패턴 시도
+            # 🎯 HTML 태그를 고려한 패턴 추가 (동작하는 버전에서 가져옴)
             patterns = [
+                r'<h3[^>]*>📌\s*([^<]+)</h3>.*?<p>([^<]+)</p>',  # HTML 태그 패턴
                 r'▪\s*([^\n]+)\n[^\n]*출처[^\n]*\n\s*([^▪]+?)(?=▪|\n\n|$)',
                 r'-\s*\*\*([^*]+)\*\*[^\n]*\n([^-]+?)(?=-|\n\n|$)',
                 r'([A-Z][^:\n]+):\s*([^▪\n-]+?)(?=▪|-|\n\n|$)'
