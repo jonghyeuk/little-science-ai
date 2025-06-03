@@ -546,9 +546,13 @@ if topic:
     if (st.session_state.last_searched_topic != topic or 
         len(st.session_state.cached_internal_results) == 0 or 
         len(st.session_state.cached_arxiv_results) == 0):
-        # 새 주제 검색
+        # 새 주제 검색 - 모든 상태 완전 초기화
         st.session_state.last_searched_topic = topic
         st.session_state.generated_paper = {}  # 논문 초기화
+        st.session_state.full_text = ""  # PDF 텍스트 초기화 - 중요!
+        st.session_state.niche_topics = []  # 틈새주제 초기화
+        st.session_state.cached_internal_results = []  # 캐시 초기화
+        st.session_state.cached_arxiv_results = []  # 캐시 초기화
         
 # 주제 해설 표시
         st.subheader("📘 주제 해설")
@@ -925,6 +929,11 @@ if topic:
     # PDF 저장 버튼 - 논문 완성 후에만 활성화
     st.markdown("---")
     st.subheader("📄 PDF 저장")
+    
+    # 디버깅용 - 현재 주제 확인
+    if st.session_state.full_text:
+        current_topic_in_pdf = st.session_state.full_text.split('\n')[0] if '\n' in st.session_state.full_text else "확인 불가"
+        st.caption(f"📌 PDF 저장될 주제: {current_topic_in_pdf[:50]}...")
 
     # 논문이 완성되었는지 확인
     paper_completed = bool(st.session_state.generated_paper and 
@@ -934,7 +943,14 @@ if topic:
     if paper_completed:
         if st.button("📥 완성된 연구보고서 PDF로 저장하기", type="primary"):
             if st.session_state.full_text:
-                path = generate_pdf(st.session_state.full_text)
+                # 현재 주제와 PDF 내용이 일치하는지 확인
+                if topic in st.session_state.full_text:
+                    path = generate_pdf(st.session_state.full_text)
+                else:
+                    st.error("⚠️ 현재 검색 주제와 PDF 내용이 일치하지 않습니다. 다시 검색해주세요.")
+                    # 상태 초기화
+                    st.session_state.full_text = ""
+                    st.session_state.generated_paper = {}
                 if path and os.path.exists(path):
                     with open(path, "rb") as f:
                         st.download_button(
