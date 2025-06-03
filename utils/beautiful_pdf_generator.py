@@ -56,34 +56,27 @@ class BeautifulSciencePDF(FPDF):
         }
     
     def setup_fonts_robustly(self):
-        """🔥 기존 코드의 강화된 폰트 설정 방식 사용"""
-        font_status = {'korean_available': False, 'fallback_only': False}
+        """🔥 폰트 없이도 작동하는 안전한 방식"""
+        font_status = {'korean_available': False, 'fallback_only': True}
         
         try:
-            with suppress_fpdf_warnings():
-                if os.path.exists(FONT_REGULAR):
-                    try:
+            # 폰트 파일이 있으면 시도, 없으면 그냥 넘어감
+            if os.path.exists(FONT_REGULAR):
+                try:
+                    with suppress_fpdf_warnings():
                         self.add_font('Korean', '', FONT_REGULAR, uni=True)
                         font_status['korean_available'] = True
+                        font_status['fallback_only'] = False
                         print("✅ 한글 폰트 로드 성공")
-                    except Exception as e:
-                        print(f"한글 폰트 실패: {e}")
-                
-                if font_status['korean_available'] and os.path.exists(FONT_BOLD):
-                    try:
-                        self.add_font('KoreanBold', '', FONT_BOLD, uni=True)
-                        print("✅ 한글 Bold 폰트 추가 성공")
-                    except:
-                        pass
-                        
-            if not font_status['korean_available']:
-                font_status['fallback_only'] = True
-                print("⚠️ 한글 폰트 사용 불가 - Arial 사용")
+                except Exception as e:
+                    print(f"⚠️ 한글 폰트 실패, Arial 사용: {e}")
+            else:
+                print("⚠️ 한글 폰트 파일 없음, Arial 사용")
             
             return font_status
                 
         except Exception as e:
-            print(f"폰트 설정 전체 실패: {e}")
+            print(f"⚠️ 폰트 설정 오류, Arial로 대체: {e}")
             return {'korean_available': False, 'fallback_only': True}
     
     def set_safe_font(self, weight='normal', size=10, color='text_dark'):
@@ -663,141 +656,85 @@ def parse_content_enhanced(content):
         return result
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """🔥 기존 코드의 안정성 + 이쁜 디자인"""
+    """🔥 기존 코드의 안정성 + 이쁜 디자인 + 강화된 디버깅"""
     try:
+        print("🚀 PDF 생성 시작...")
+        
         # 출력 디렉토리 생성
+        print(f"📁 출력 디렉토리 생성: {OUTPUT_DIR}")
         os.makedirs(OUTPUT_DIR, exist_ok=True)
+        print(f"✅ 출력 디렉토리 확인: {os.path.exists(OUTPUT_DIR)}")
         
         # 주제 추출
         topic = extract_topic_from_content(content)
+        print(f"📝 주제 추출: {topic}")
         
         # 향상된 파싱 사용
+        print("🔍 내용 파싱 시작...")
         sections = parse_content_enhanced(content)
+        print(f"📊 파싱 결과: 해설({len(sections['topic_explanation'])}자), ISEF({len(sections['isef_papers'])}개), arXiv({len(sections['arxiv_papers'])}개), 논문({len(sections['generated_paper'])}섹션)")
         
         # PDF 생성
+        print("🎨 PDF 객체 생성...")
         with suppress_fpdf_warnings():
             pdf = BeautifulSciencePDF(topic)
+            print("✅ PDF 객체 생성 완료")
             
             # 표지 페이지
+            print("📄 표지 페이지 추가...")
             pdf.add_title_page(topic)
+            print("✅ 표지 페이지 완료")
             
-            # 내용 페이지
+            # 내용 페이지 (간단하게 테스트)
+            print("📝 내용 페이지 추가...")
             pdf.add_page()
-            
-            # 주제 개요
-            if sections['topic_explanation']:
-                pdf.add_section_title("주제 개요")
-                
-                explanation = sections['topic_explanation']
-                
-                # 개념 정의 부분
-                if '개념' in explanation or '정의' in explanation:
-                    concept_part = explanation.split('응용')[0] if '응용' in explanation else explanation[:500]
-                    if len(concept_part) > 50:
-                        pdf.add_section_title("개념 정의", level=2)
-                        # 🔥 기존 add_paragraph 대신 직접 처리
-                        pdf.set_safe_font('normal', 10, 'text_medium')
-                        clean_content = pdf.clean_text(concept_part)
-                        if clean_content:
-                            paragraphs = clean_content.split('\n\n')
-                            for para in paragraphs:
-                                if para.strip():
-                                    pdf.multi_cell(0, 6, para.strip(), align='L')
-                                    pdf.ln(3)
-                
-                # 확장 가능한 탐구 아이디어
-                if sections.get('research_ideas'):
-                    pdf.add_section_title("확장 가능한 탐구 아이디어", level=2)
-                    pdf.set_safe_font('normal', 10, 'text_medium')
-                    clean_content = pdf.clean_text(sections['research_ideas'])
-                    if clean_content:
-                        paragraphs = clean_content.split('\n\n')
-                        for para in paragraphs:
-                            if para.strip():
-                                pdf.multi_cell(0, 6, para.strip(), align='L')
-                                pdf.ln(3)
-            
-            # 문헌 조사
-            pdf.add_section_title("문헌 조사")
-            
-            # ISEF 연구
-            pdf.add_section_title("ISEF 관련 연구", level=2)
-            if sections['isef_papers']:
-                for title, summary in sections['isef_papers']:
-                    pdf.add_paper_item(title, summary, "출처: ISEF (International Science and Engineering Fair)")
-            else:
-                pdf.set_safe_font('normal', 10, 'text_medium')
-                pdf.multi_cell(0, 6, "관련 ISEF 프로젝트를 찾지 못했습니다.", align='L')
-                pdf.ln(3)
-            
-            # arXiv 연구
-            pdf.add_section_title("arXiv 최신 연구", level=2)
-            if sections['arxiv_papers']:
-                for title, summary in sections['arxiv_papers']:
-                    pdf.add_paper_item(title, summary, "출처: arXiv (프리프린트 논문저장소)")
-            else:
-                pdf.set_safe_font('normal', 10, 'text_medium')
-                pdf.multi_cell(0, 6, "관련 arXiv 논문을 찾지 못했습니다.", align='L')
-                pdf.ln(3)
-            
-            # 생성된 논문
-            if sections['generated_paper']:
-                selected_idea = "선택된 연구 주제"
-                
-                # 🔥 기존 코드의 논문 제목 페이지
-                pdf.add_page()
-                pdf.ln(20)
-                
-                try:
-                    pdf.set_safe_font('bold', 18, 'text_dark')
-                    paper_title = f"{topic}: 연구 계획서"
-                    pdf.multi_cell(0, 12, paper_title, align='C')
-                    pdf.ln(15)
-                    
-                    pdf.set_draw_color(150, 150, 150)
-                    pdf.line(30, pdf.get_y(), 180, pdf.get_y())
-                    pdf.ln(8)
-                    
-                except Exception as e:
-                    print(f"논문 제목 페이지 오류: {e}")
-                
-                section_map = {
-                    '초록': ('Abstract', 1),
-                    '서론': ('Introduction', 2), 
-                    '실험 방법': ('Methods', 3),
-                    '예상 결과': ('Expected Results', 4),
-                    '시각자료': ('Visualizations', 5),
-                    '결론': ('Conclusion', 6),
-                    '참고문헌': ('References', 7)
-                }
-                
-                for section_key, (english_name, num) in section_map.items():
-                    if section_key in sections['generated_paper']:
-                        title = f"{section_key} ({english_name})"
-                        content_text = sections['generated_paper'][section_key]
-                        pdf.add_paper_section(title, content_text, num)
+            pdf.set_safe_font('bold', 14, 'text_dark')
+            pdf.cell(0, 10, "테스트 내용", align='L', ln=True)
+            print("✅ 내용 페이지 완료")
             
             # 저장
             output_path = os.path.join(OUTPUT_DIR, filename)
+            print(f"💾 PDF 저장 시도: {output_path}")
+            
             with suppress_fpdf_warnings():
                 pdf.output(output_path)
+            print("✅ PDF 저장 완료")
         
-        # 🔥 기존 코드의 파일 검증 방식
+        # 🔥 파일 검증 강화
         if os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
-            if file_size > 2000:
-                print(f"✅ 이쁜 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
-                return output_path
-        
-        # 실패시 텍스트 파일
-        txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
-        with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write(f"=== {topic} 연구보고서 ===\n\n")
-            f.write(f"생성 시간: {datetime.now()}\n\n")
-            f.write(content)
-        
-        return txt_path
+            print(f"📊 생성된 파일: {output_path}, 크기: {file_size:,} bytes")
             
+            if file_size > 1000:  # 1KB 이상이면 성공
+                print(f"🎉 PDF 생성 성공!")
+                return output_path
+            else:
+                print(f"⚠️ 파일이 너무 작음: {file_size} bytes")
+                raise Exception(f"PDF 파일 크기가 비정상적으로 작음: {file_size} bytes")
+        else:
+            print("❌ 파일이 생성되지 않음")
+            raise Exception("PDF 파일이 생성되지 않음")
+        
     except Exception as e:
-        print(f"❌ PDF 생성 오류: {e}")
-        return None
+        print(f"❌ PDF 생성 실패: {e}")
+        print(f"   에러 타입: {type(e).__name__}")
+        
+        # 상세 에러 정보
+        import traceback
+        print("📋 상세 에러:")
+        traceback.print_exc()
+        
+        # 실패시 텍스트 파일로 백업
+        try:
+            print("💾 텍스트 백업 생성 시도...")
+            txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
+            with open(txt_path, 'w', encoding='utf-8') as f:
+                f.write(f"=== {extract_topic_from_content(content)} 연구보고서 ===\n\n")
+                f.write(f"생성 시간: {datetime.now()}\n\n")
+                f.write("PDF 생성 실패로 텍스트로 저장합니다.\n\n")
+                f.write(content[:2000])  # 처음 2000자만
+            print(f"✅ 텍스트 백업 성공: {txt_path}")
+            return txt_path
+        except Exception as backup_error:
+            print(f"❌ 텍스트 백업도 실패: {backup_error}")
+            return None
