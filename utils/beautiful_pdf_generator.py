@@ -3,6 +3,7 @@ from fpdf import FPDF
 import os
 import re
 import warnings
+import logging
 from datetime import datetime
 import contextlib
 
