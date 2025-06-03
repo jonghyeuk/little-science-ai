@@ -6,634 +6,797 @@ import warnings
 from datetime import datetime
 import contextlib
 
-# 경고 억제
+# 🔥 기존 코드의 강화된 경고 억제 방식 사용
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("anthropic").setLevel(logging.WARNING)
+
+warnings.filterwarnings("ignore", message="cmap value too big/small")
 warnings.filterwarnings("ignore", category=UserWarning, module="fpdf")
-warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore", category=UserWarning, message=".*fpdf.*")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="fpdf")
+warnings.filterwarnings("ignore", message=".*font.*")
+warnings.filterwarnings("ignore", message=".*PDF.*")
+warnings.filterwarnings("ignore", message=".*unicode.*")
 
 @contextlib.contextmanager
-def suppress_warnings():
+def suppress_fpdf_warnings():
+    """PDF 생성 중 모든 경고 억제 - 기존 방식"""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         yield
 
-# 설정
+# 🔥 기존 코드와 동일한 폰트 경로
 FONT_REGULAR = os.path.join("fonts", "NanumGothic-Regular.ttf")
 FONT_BOLD = os.path.join("fonts", "NanumGothic-Bold.ttf")
+FONT_EXTRABOLD = os.path.join("fonts", "NanumGothic-ExtraBold.ttf")
 OUTPUT_DIR = "outputs"
 
 class BeautifulSciencePDF(FPDF):
-    def __init__(self, topic="과학 연구"):
+    def __init__(self, topic=""):
         super().__init__(format='A4')
         self.set_auto_page_break(auto=True, margin=25)
         self.set_margins(20, 20, 20)
-        self.topic = self.clean_text_minimal(topic)
-        self.setup_fonts()
-        self.current_section = 0
+        self.topic = self.clean_text(topic)  # 🔥 기존 함수명 사용
+        self.font_status = self.setup_fonts_robustly()  # 🔥 기존 방식
+        self.section_number = 0
+        self.subsection_number = 0
         
         # 🎨 색상 팔레트 (현대적)
         self.colors = {
-            'primary': (59, 130, 246),      # 파란색 (블루)
-            'secondary': (16, 185, 129),    # 초록색 (그린)
-            'accent': (139, 92, 246),       # 보라색 (퍼플)
-            'warning': (245, 158, 11),      # 주황색 (오렌지)
+            'primary': (59, 130, 246),      # 파란색
+            'secondary': (16, 185, 129),    # 초록색
+            'accent': (139, 92, 246),       # 보라색
+            'warning': (245, 158, 11),      # 주황색
             'text_dark': (17, 24, 39),      # 진한 텍스트
             'text_medium': (55, 65, 81),    # 중간 텍스트
             'text_light': (107, 114, 128),  # 연한 텍스트
             'bg_light': (249, 250, 251),    # 연한 배경
             'border': (229, 231, 235)       # 테두리
         }
+    
+    def setup_fonts_robustly(self):
+        """🔥 기존 코드의 강화된 폰트 설정 방식 사용"""
+        font_status = {'korean_available': False, 'fallback_only': False}
         
-    def setup_fonts(self):
-        """폰트 설정"""
-        self.korean_available = False
         try:
-            with suppress_warnings():
+            with suppress_fpdf_warnings():
                 if os.path.exists(FONT_REGULAR):
-                    self.add_font('Korean', '', FONT_REGULAR, uni=True)
-                    self.korean_available = True
-                if os.path.exists(FONT_BOLD):
-                    self.add_font('KoreanBold', '', FONT_BOLD, uni=True)
-        except:
-            pass
+                    try:
+                        self.add_font('Korean', '', FONT_REGULAR, uni=True)
+                        font_status['korean_available'] = True
+                        print("✅ 한글 폰트 로드 성공")
+                    except Exception as e:
+                        print(f"한글 폰트 실패: {e}")
+                
+                if font_status['korean_available'] and os.path.exists(FONT_BOLD):
+                    try:
+                        self.add_font('KoreanBold', '', FONT_BOLD, uni=True)
+                        print("✅ 한글 Bold 폰트 추가 성공")
+                    except:
+                        pass
+                        
+            if not font_status['korean_available']:
+                font_status['fallback_only'] = True
+                print("⚠️ 한글 폰트 사용 불가 - Arial 사용")
             
-    def set_font_beautiful(self, weight='normal', size=10, color='text_dark'):
-        """이쁜 폰트 설정"""
+            return font_status
+                
+        except Exception as e:
+            print(f"폰트 설정 전체 실패: {e}")
+            return {'korean_available': False, 'fallback_only': True}
+    
+    def set_safe_font(self, weight='normal', size=10, color='text_dark'):
+        """🔥 기존 코드 + 색상 추가"""
         try:
-            if self.korean_available:
-                font_name = 'KoreanBold' if weight == 'bold' else 'Korean'
-                self.set_font(font_name, size=size)
+            if self.font_status['korean_available']:
+                if weight == 'bold':
+                    try:
+                        self.set_font('KoreanBold', size=size)
+                    except:
+                        self.set_font('Korean', size=size)
+                else:
+                    self.set_font('Korean', size=size)
             else:
                 style = 'B' if weight == 'bold' else ''
                 self.set_font('Arial', style, size)
-            
-            # 색상 설정
+                
+            # 🎨 색상 설정 추가
             if color in self.colors:
                 r, g, b = self.colors[color]
                 self.set_text_color(r, g, b)
             else:
-                self.set_text_color(55, 65, 81)  # 기본색
-        except:
+                self.set_text_color(70, 70, 70)  # 기본색
+                
+        except Exception as e:
+            print(f"폰트 설정 오류, Arial 사용: {e}")
             self.set_font('Arial', '', size)
-            self.set_text_color(55, 65, 81)
+            self.set_text_color(70, 70, 70)
     
     def header(self):
+        """🔥 기존 코드 + 색상 개선"""
         if self.page_no() > 1:
-            self.set_font_beautiful('normal', 8, 'text_light')
-            header_text = f'{self.topic} - 연구탐색보고서'
-            if len(header_text) > 40:
-                header_text = header_text[:37] + "..."
-            
-            # 헤더 라인
-            r, g, b = self.colors['border']
-            self.set_draw_color(r, g, b)
-            self.line(20, 25, 190, 25)
-            
-            self.set_y(15)
-            self.cell(0, 8, header_text, align='R', ln=True)
-            self.ln(5)
+            try:
+                self.set_safe_font('normal', 9, 'text_light')
+                header_text = f'{self.topic[:30]}... - 연구보고서' if len(self.topic) > 30 else f'{self.topic} - 연구보고서'
+                
+                # 🎨 헤더 라인 추가
+                r, g, b = self.colors['border']
+                self.set_draw_color(r, g, b)
+                self.line(20, 25, 190, 25)
+                
+                self.cell(0, 10, header_text, align='R', ln=True)
+                self.ln(3)
+            except:
+                pass
             
     def footer(self):
-        self.set_y(-20)
-        
-        # 푸터 라인
-        r, g, b = self.colors['border']
-        self.set_draw_color(r, g, b)
-        self.line(20, self.get_y(), 190, self.get_y())
-        
-        self.ln(5)
-        self.set_font_beautiful('normal', 8, 'text_light')
-        self.cell(0, 10, f'- {self.page_no()} -', align='C')
+        """🔥 기존 코드 + 색상 개선"""
+        try:
+            self.set_y(-20)
+            
+            # 🎨 푸터 라인 추가
+            r, g, b = self.colors['border']
+            self.set_draw_color(r, g, b)
+            self.line(20, self.get_y(), 190, self.get_y())
+            
+            self.ln(5)
+            self.set_safe_font('normal', 9, 'text_light')
+            self.cell(0, 10, f'- {self.page_no()} -', align='C')
+        except:
+            pass
     
-    def clean_text_minimal(self, text):
-        """최소한의 텍스트 정리"""
-        if not text:
-            return ""
-        
-        text = str(text)
-        
-        # 기본적인 정리만
-        text = re.sub(r'#{1,6}\s*', '', text)  # 마크다운 헤더 제거
-        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **볼드** 제거
-        text = re.sub(r'[`]', '', text)  # 백틱 제거
-        text = re.sub(r'https?://[^\s\)]+', '', text)  # URL 제거
-        
-        # 이모지는 일부만 제거
-        common_emojis = r'[📘📄🌐🔬💡⚙️🌍📊🎯📋📖]'
-        text = re.sub(common_emojis, '', text)
-        
-        # 공백 정리
-        text = re.sub(r'\s+', ' ', text)
-        text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
-        
-        return text.strip()
+    def clean_text(self, text):
+        """🔥 기존 코드의 덜 공격적인 텍스트 정리 방식 사용"""
+        try:
+            if not text:
+                return ""
+            
+            text = str(text)
+            
+            # 기본적인 마크다운 정리
+            text = re.sub(r'^---\s*', '', text, flags=re.MULTILINE)
+            text = re.sub(r'\s*---\s*', ' ', text)
+            
+            # URL 제거를 더 신중하게
+            text = re.sub(r'https?://[^\s\]\)\n]+(?:\s|$)', '', text)
+            
+            # 마크다운 제거를 더 완전하게
+            text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **굵은글씨** → 굵은글씨
+            text = re.sub(r'\*\*\s*$', '', text)  # 텍스트 끝의 ** 제거
+            text = re.sub(r'\*\*', '', text)  # 남은 ** 제거
+            text = re.sub(r'[`#\[\]<>]', '', text)  # 일부 문자만 제거
+            
+            # 이모지 제거를 선택적으로
+            common_emojis = r'[📘📄🌐🔬💡⚙️🌍📊🎯📋📖🔗📚📈🏆📅🔍❗🚀✅📌🎉🔧🛠️🧬]'
+            text = re.sub(common_emojis, '', text)
+            
+            # 빈 괄호 제거
+            text = re.sub(r'\(\s*\)', '', text)
+            
+            # DOI 정리
+            text = re.sub(r'DOI\s*:\s*', '', text)
+            text = re.sub(r'&[a-zA-Z]+;', '', text)
+            
+            # 공백 정리
+            text = re.sub(r'\s+', ' ', text)
+            text = re.sub(r'\n+', '\n', text)
+            
+            return text.strip()
+            
+        except Exception as e:
+            print(f"텍스트 정리 오류: {e}")
+            return str(text)[:200] if text else ""
     
-    def add_beautiful_cover(self):
-        """현대적이고 이쁜 표지"""
+    def safe_text_truncate(self, text, max_length=500):
+        """🔥 기존 코드의 자연스러운 텍스트 자르기 방식"""
+        try:
+            if len(text) <= max_length:
+                return text
+            
+            # 일단 최대한 늘려서 시도
+            extended_length = max_length + 200  # 추가 200자 여유
+            if len(text) <= extended_length:
+                return text
+            
+            # 마지막 완전한 문장 찾기
+            truncated = text[:extended_length]
+            
+            # 마지막 문장 구분자 찾기 (한국어 우선)
+            sentence_endings = ['다.', '요.', '다!', '요!', '다?', '요?', '습니다.', '입니다.', 
+                              '됩니다.', '합니다.', '려고', '하여', '으로', '에서', '.', '!', '?']
+            last_sentence_end = -1
+            
+            for ending in sentence_endings:
+                pos = truncated.rfind(ending)
+                if pos > last_sentence_end:
+                    last_sentence_end = pos
+            
+            # 매우 관대하게: 전체 길이의 20% 이상에서 끝나면 사용
+            if last_sentence_end > max_length * 0.2:
+                # 완전한 문장 구분자의 끝까지 포함
+                for ending in sentence_endings:
+                    if truncated[last_sentence_end:last_sentence_end+len(ending)] == ending:
+                        return text[:last_sentence_end + len(ending)]
+                return text[:last_sentence_end + 1]
+            else:
+                # 그냥 최대한 늘려서 반환 (거의 자르지 않음)
+                return text[:max_length + 300] if len(text) > max_length + 300 else text
+                    
+        except Exception as e:
+            print(f"텍스트 자르기 오류: {e}")
+            # 에러 시에도 최대한 보존
+            return text[:max_length + 100] if text else ""
+    
+    def add_title_page(self, topic):
+        """🔥 기존 코드 + 이쁜 디자인"""
         self.add_page()
-        
-        # 🎨 그라데이션 효과 (박스들로 구현)
-        for i in range(5):
-            alpha = 255 - (i * 30)
-            gray = 240 + (i * 3)
-            self.set_fill_color(gray, gray, gray)
-            self.rect(20 + i, 30 + i, 170 - (i*2), 200 - (i*2), 'F')
-        
-        # 메인 배경
-        r, g, b = self.colors['bg_light']
-        self.set_fill_color(r, g, b)
-        self.rect(25, 35, 160, 190, 'F')
-        
-        # 상단 색상 바
-        r, g, b = self.colors['primary']
-        self.set_fill_color(r, g, b)
-        self.rect(25, 35, 160, 8, 'F')
-        
-        # 내용 시작
-        self.set_y(60)
-        
-        # 메인 제목
-        self.set_font_beautiful('bold', 24, 'text_dark')
-        title_lines = self.split_text_to_lines(self.topic, 35)
-        for line in title_lines:
-            self.cell(0, 15, line, align='C', ln=True)
-        
-        self.ln(10)
-        
-        # 장식 라인
-        r, g, b = self.colors['accent']
-        self.set_draw_color(r, g, b)
-        self.set_line_width(2)
-        center_x = 105
-        self.line(center_x - 30, self.get_y(), center_x + 30, self.get_y())
-        self.set_line_width(0.2)  # 원래대로
-        
-        self.ln(15)
-        
-        # 부제목
-        self.set_font_beautiful('normal', 16, 'text_medium')
-        self.cell(0, 10, '과학 연구 탐색 보고서', align='C', ln=True)
-        
         self.ln(20)
         
-        # 설명 박스
-        r, g, b = self.colors['bg_light']
-        self.set_fill_color(255, 255, 255)  # 흰색 박스
-        self.set_draw_color(*self.colors['border'])
-        self.rect(40, self.get_y(), 130, 40, 'FD')
-        
-        self.ln(5)
-        self.set_font_beautiful('normal', 10, 'text_medium')
-        description = "AI를 활용한 과학 연구 주제 탐색,\n관련 문헌 조사 및 연구 계획 수립"
-        lines = description.split('\n')
-        for line in lines:
-            self.cell(0, 8, line, align='C', ln=True)
-        
-        # 하단 정보
-        self.set_y(200)
-        self.set_font_beautiful('normal', 9, 'text_light')
-        today = datetime.now().strftime("%Y년 %m월 %d일")
-        self.cell(0, 6, f'생성일: {today}', align='C', ln=True)
-        self.ln(2)
-        self.cell(0, 6, 'LittleScienceAI', align='C', ln=True)
-    
-    def split_text_to_lines(self, text, max_chars):
-        """텍스트를 적절한 길이로 분할"""
-        if len(text) <= max_chars:
-            return [text]
-        
-        words = text.split()
-        lines = []
-        current_line = ""
-        
-        for word in words:
-            if len(current_line + " " + word) <= max_chars:
-                current_line += " " + word if current_line else word
-            else:
-                if current_line:
-                    lines.append(current_line)
-                current_line = word
-        
-        if current_line:
-            lines.append(current_line)
-        
-        return lines
-    
-    def add_section_header(self, title, icon="📌", level=1):
-        """이쁜 섹션 헤더"""
-        # 페이지 하단에서 시작하지 않도록
-        if self.get_y() > 240:
-            self.add_page()
-        
-        self.ln(8)
-        
-        if level == 1:
-            self.current_section += 1
-            # 섹션 배경 박스
-            r, g, b = self.colors['bg_light']
+        try:
+            # 🎨 상단 색상 바
+            r, g, b = self.colors['primary']
             self.set_fill_color(r, g, b)
-            self.rect(15, self.get_y()-2, 180, 20, 'F')
+            self.rect(20, self.get_y(), 170, 6, 'F')
+            self.ln(15)
             
-            # 사이드 컬러 바
-            colors = [self.colors['primary'], self.colors['secondary'], 
-                     self.colors['accent'], self.colors['warning']]
-            color_idx = (self.current_section - 1) % len(colors)
-            r, g, b = colors[color_idx]
-            self.set_fill_color(r, g, b)
-            self.rect(15, self.get_y()-2, 4, 20, 'F')
+            # 메인 제목
+            self.set_safe_font('bold', 20, 'text_dark')
+            self.multi_cell(0, 12, topic, align='C')
+            self.ln(8)
             
+            # 🎨 장식선
+            r, g, b = self.colors['accent']
+            self.set_draw_color(r, g, b)
+            self.set_line_width(2)
+            center_x = 105
+            self.line(center_x - 30, self.get_y(), center_x + 30, self.get_y())
+            self.set_line_width(0.2)  # 원래대로
+            
+            # 부제목
+            self.ln(8)
+            self.set_safe_font('normal', 14, 'text_medium')
+            self.multi_cell(0, 10, '과학 연구 탐색 보고서', align='C')
+            self.ln(20)
+            
+            # 🎨 설명 박스
+            self.set_fill_color(255, 255, 255)
+            self.set_draw_color(*self.colors['border'])
+            self.rect(40, self.get_y(), 130, 35, 'FD')
+            
+            self.ln(5)
+            self.set_safe_font('normal', 10, 'text_medium')
+            description = "본 보고서는 AI를 활용하여 과학 연구 주제를 탐색하고,\n관련 문헌을 조사하며, 연구 계획을 수립한 결과입니다."
+            lines = description.split('\n')
+            for line in lines:
+                self.multi_cell(0, 8, line, align='C')
+            
+            # 하단 정보
+            self.ln(20)
+            self.set_safe_font('normal', 10, 'text_light')
+            today = datetime.now().strftime("%Y년 %m월 %d일")
+            self.multi_cell(0, 8, f'생성일: {today}', align='C')
             self.ln(3)
-            self.set_font_beautiful('bold', 16, 'text_dark')
-            self.cell(10, 10, icon, align='C')
-            self.cell(0, 10, title, align='L', ln=True)
-            self.ln(2)
-        else:
-            self.set_font_beautiful('bold', 13, 'text_medium')
-            self.cell(5, 8, icon, align='C')
-            self.cell(0, 8, title, align='L', ln=True)
-            self.ln(2)
+            self.multi_cell(0, 8, 'LittleScienceAI', align='C')
+            
+        except Exception as e:
+            print(f"표지 페이지 오류: {e}")
     
-    def add_content_block(self, content, preserve_length=True):
-        """이쁜 내용 블록"""
-        if not content:
-            return
+    def add_section_title(self, title, level=1):
+        """🔥 기존 코드 + 이쁜 디자인"""
+        try:
+            clean_title = self.clean_text(title)
             
-        self.set_font_beautiful('normal', 10, 'text_medium')
-        
-        cleaned_content = self.clean_text_minimal(content)
-        
-        # 자연스러운 길이 조정
-        if preserve_length and len(cleaned_content) > 1800:
-            paragraphs = cleaned_content.split('\n\n')
-            kept_paragraphs = []
-            total_length = 0
-            
-            for para in paragraphs:
-                if total_length + len(para) < 1600:
-                    kept_paragraphs.append(para)
-                    total_length += len(para)
-                else:
-                    # 마지막 문장까지 완전히 포함
-                    sentences = para.split('. ')
-                    for sent in sentences:
-                        if total_length + len(sent) < 1700:
-                            kept_paragraphs.append(sent + '.')
-                            total_length += len(sent)
-                        else:
-                            break
-                    break
-            
-            cleaned_content = '\n\n'.join(kept_paragraphs)
-        
-        # 배경 박스
-        content_height = len(cleaned_content) // 80 * 6 + 10  # 대략적 높이 계산
-        self.set_fill_color(255, 255, 255)
-        self.set_draw_color(*self.colors['border'])
-        
-        # 문단별로 출력
-        paragraphs = cleaned_content.split('\n\n')
-        for para in paragraphs:
-            if para.strip():
-                self.multi_cell(0, 6, para.strip(), align='L')
+            if level == 1:
+                # 메인 섹션은 페이지 하단에서 시작하지 않도록
+                if self.get_y() > 230:
+                    self.add_page()
+                
+                self.section_number += 1
+                self.subsection_number = 0
+                title_text = f"{self.section_number}. {clean_title}"
+                
+                # 🎨 섹션 배경 박스
+                r, g, b = self.colors['bg_light']
+                self.set_fill_color(r, g, b)
+                self.rect(15, self.get_y()-2, 180, 18, 'F')
+                
+                # 🎨 사이드 컬러 바
+                colors = [self.colors['primary'], self.colors['secondary'], 
+                         self.colors['accent'], self.colors['warning']]
+                color_idx = (self.section_number - 1) % len(colors)
+                r, g, b = colors[color_idx]
+                self.set_fill_color(r, g, b)
+                self.rect(15, self.get_y()-2, 4, 18, 'F')
+                
                 self.ln(3)
+                self.set_safe_font('bold', 14, 'text_dark')
+                
+            elif level == 2:
+                # 서브섹션도 페이지 하단에서 시작하지 않도록
+                if self.get_y() > 240:
+                    self.add_page()
+                
+                self.subsection_number += 1
+                title_text = f"{self.section_number}.{self.subsection_number} {clean_title}"
+                
+                self.ln(6)
+                self.set_safe_font('bold', 12, 'text_medium')
+            
+            self.multi_cell(0, 8, title_text, align='L')
+            self.ln(4)
+            
+        except Exception as e:
+            print(f"섹션 제목 오류: {e}")
     
-    def add_beautiful_paper_card(self, title, summary, source="", card_type="default"):
-        """이쁜 논문 카드"""
-        # 페이지 끝에서 카드가 시작되지 않도록
-        if self.get_y() > 220:
-            self.add_page()
-        
-        card_start_y = self.get_y()
-        
-        # 카드 타입별 색상
-        if card_type == "isef":
-            border_color = self.colors['primary']
-            bg_color = (239, 246, 255)  # 연한 파란색
-            icon = "🏆"
-        elif card_type == "arxiv":
-            border_color = self.colors['secondary']
-            bg_color = (236, 253, 245)  # 연한 초록색
-            icon = "📚"
-        else:
-            border_color = self.colors['text_light']
-            bg_color = self.colors['bg_light']
-            icon = "📄"
-        
-        # 카드 배경
-        self.set_fill_color(*bg_color)
-        self.set_draw_color(*self.colors['border'])
-        card_height = 45  # 기본 높이
-        self.rect(20, card_start_y, 170, card_height, 'FD')
-        
-        # 사이드 컬러 바
-        self.set_fill_color(*border_color)
-        self.rect(20, card_start_y, 3, card_height, 'F')
-        
-        # 내용
-        self.ln(4)
-        self.set_x(28)
-        
-        # 아이콘과 제목
-        self.set_font_beautiful('bold', 11, 'text_dark')
-        clean_title = self.clean_text_minimal(title)
-        if len(clean_title) > 65:
-            clean_title = clean_title[:62] + "..."
-        
-        title_text = f"{icon} {clean_title}"
-        self.multi_cell(165, 6, title_text, align='L')
-        
-        # 출처
-        if source:
+    def add_paper_item(self, title, summary, source=""):
+        """🔥 기존 코드 + 이쁜 카드 디자인"""
+        try:
+            # 페이지 하단에서 논문 항목이 시작되면 새 페이지로
+            if self.get_y() > 220:
+                self.add_page()
+            
+            card_start_y = self.get_y()
+            
+            # 🎨 카드 타입별 색상
+            if "ISEF" in source:
+                border_color = self.colors['primary']
+                bg_color = (239, 246, 255)  # 연한 파란색
+                icon = "🏆"
+            elif "arXiv" in source:
+                border_color = self.colors['secondary']
+                bg_color = (236, 253, 245)  # 연한 초록색
+                icon = "📚"
+            else:
+                border_color = self.colors['text_light']
+                bg_color = self.colors['bg_light']
+                icon = "📄"
+            
+            # 🎨 카드 배경
+            self.set_fill_color(*bg_color)
+            self.set_draw_color(*self.colors['border'])
+            card_height = 40
+            self.rect(20, card_start_y, 170, card_height, 'FD')
+            
+            # 🎨 사이드 컬러 바
+            self.set_fill_color(*border_color)
+            self.rect(20, card_start_y, 3, card_height, 'F')
+            
+            # 내용
+            self.ln(3)
             self.set_x(28)
-            self.set_font_beautiful('normal', 8, 'text_light')
-            self.multi_cell(165, 4, source, align='L')
-        
-        # 요약
-        self.set_x(28)
-        self.set_font_beautiful('normal', 9, 'text_medium')
-        clean_summary = self.clean_text_minimal(summary)
-        
-        # 요약 자연스럽게 줄이기
-        if len(clean_summary) > 250:
-            sentences = clean_summary.split('. ')
-            kept_sentences = []
-            total_len = 0
-            for sent in sentences:
-                if total_len + len(sent) < 230:
-                    kept_sentences.append(sent)
-                    total_len += len(sent)
-                else:
-                    break
-            clean_summary = '. '.join(kept_sentences)
-            if not clean_summary.endswith('.'):
-                clean_summary += '.'
-        
-        self.multi_cell(165, 5, clean_summary, align='L')
-        self.ln(8)
+            
+            # 제목
+            self.set_safe_font('bold', 10, 'text_dark')
+            clean_title = self.clean_text(title)
+            
+            # 🔥 기존 코드의 길이 제한 방식 사용
+            if len(clean_title) > 300:
+                clean_title = self.safe_text_truncate(clean_title, 300) + "..."
+            
+            title_with_icon = f"{icon} {clean_title}"
+            self.multi_cell(165, 7, title_with_icon, align='L')
+            
+            # 출처
+            if source:
+                self.set_x(28)
+                self.set_safe_font('normal', 8, 'text_light')
+                self.multi_cell(165, 5, source, align='L')
+            
+            # 요약
+            self.set_x(28)
+            self.set_safe_font('normal', 9, 'text_medium')
+            clean_summary = self.clean_text(summary)
+            
+            # 🔥 기존 코드의 길이 제한 방식 사용 (확장됨)
+            if len(clean_summary) > 500:
+                clean_summary = self.safe_text_truncate(clean_summary, 500)
+            
+            if clean_summary:
+                self.multi_cell(165, 6, clean_summary, align='L')
+            
+            self.ln(6)
+            
+        except Exception as e:
+            print(f"논문 항목 오류: {e}")
     
-    def add_research_section(self, title, content, section_type="default"):
-        """연구 계획 섹션"""
-        self.ln(5)
-        
-        # 섹션별 아이콘
-        icons = {
-            '초록': '📋', '서론': '📖', '실험 방법': '🔬', 
-            '예상 결과': '📊', '시각자료': '📈', '결론': '🎯', '참고문헌': '📚'
-        }
-        icon = icons.get(title.split(' ')[0], '📌')
-        
-        # 섹션 박스
-        section_start_y = self.get_y()
-        self.set_fill_color(255, 255, 255)
-        self.set_draw_color(*self.colors['border'])
-        
-        # 제목
-        self.set_font_beautiful('bold', 12, 'text_dark')
-        title_with_icon = f"{icon} {title}"
-        self.cell(0, 8, title_with_icon, align='L', ln=True)
-        
-        # 제목 아래 라인
-        r, g, b = self.colors['primary']
-        self.set_draw_color(r, g, b)
-        self.set_line_width(1)
-        self.line(20, self.get_y(), 60, self.get_y())
-        self.set_line_width(0.2)  # 원래대로
-        
-        self.ln(5)
-        
-        # 내용
-        self.set_font_beautiful('normal', 10, 'text_medium')
-        cleaned_content = self.clean_text_minimal(content)
-        
-        # 연구 계획은 더 자세히 보존
-        if len(cleaned_content) > 1200:
-            paragraphs = cleaned_content.split('\n')
-            kept_paragraphs = []
-            total_length = 0
+    def add_paper_section(self, title, content, section_number):
+        """🔥 기존 코드 + 이쁜 디자인"""
+        try:
+            self.ln(8)
             
-            for para in paragraphs:
-                if total_length + len(para) < 1100:
-                    kept_paragraphs.append(para)
-                    total_length += len(para)
-                else:
+            # 🎨 섹션별 아이콘
+            icons = {
+                '초록': '📋', '서론': '📖', '실험': '🔬', 
+                '예상': '📊', '시각': '📈', '결론': '🎯', '참고': '📚'
+            }
+            icon = "📌"
+            for key, ico in icons.items():
+                if key in title:
+                    icon = ico
                     break
             
-            cleaned_content = '\n'.join(kept_paragraphs)
-        
-        self.multi_cell(0, 6, cleaned_content, align='L')
-        self.ln(6)
+            self.set_safe_font('bold', 12, 'text_dark')
+            section_title = f"{icon} {section_number}. {title}"
+            self.multi_cell(0, 8, section_title, align='L')
+            
+            # 🎨 제목 아래 라인
+            r, g, b = self.colors['primary']
+            self.set_draw_color(r, g, b)
+            self.set_line_width(1)
+            self.line(20, self.get_y(), 80, self.get_y())
+            self.set_line_width(0.2)  # 원래대로
+            
+            self.ln(4)
+            
+            if "참고문헌" in title or "References" in title:
+                self.add_professional_references()
+            else:
+                self.set_safe_font('normal', 10, 'text_medium')
+                clean_content = self.clean_text(content)
+                
+                if clean_content:
+                    paragraphs = clean_content.split('\n\n')
+                    for para in paragraphs:
+                        if para.strip():
+                            self.multi_cell(0, 6, para.strip(), align='L')
+                            self.ln(3)
+            
+        except Exception as e:
+            print(f"논문 섹션 오류: {e}")
+    
+    def add_professional_references(self):
+        """🔥 기존 코드 그대로 유지"""
+        try:
+            self.set_safe_font('normal', 10, 'text_medium')
+            guide_text = "실제 연구 수행 시, 주요 학술검색 사이트를 활용하여 관련 논문들을 찾아 참고문헌에 추가하시기 바랍니다."
+            self.multi_cell(0, 6, guide_text, align='L')
+            self.ln(6)
+            
+            self.set_safe_font('bold', 10, 'text_dark')
+            self.multi_cell(0, 7, "참고문헌 작성 양식 (APA Style):", align='L')
+            self.ln(3)
+            
+            self.set_safe_font('normal', 9, 'text_medium')
+            
+            examples = [
+                "【학술지 논문】",
+                "김철수, 이영희. (2024). 플라즈마 기술을 이용한 공기정화 시스템 개발. 한국과학기술학회지, 45(3), 123-135.",
+                "",
+                "【온라인 자료】",
+                "국가과학기술정보센터. (2024). 플라즈마 기술 동향 보고서.",
+                "",
+                "【서적】",
+                "홍길동. (2023). 현대 플라즈마 물리학. 서울: 과학기술출판사."
+            ]
+            
+            for example in examples:
+                if example.startswith('【') and example.endswith('】'):
+                    self.set_safe_font('bold', 9, 'text_dark')
+                    self.multi_cell(0, 6, example, align='L')
+                    self.ln(2)
+                elif example == "":
+                    self.ln(2)
+                else:
+                    self.set_safe_font('normal', 9, 'text_medium')
+                    self.multi_cell(0, 5, example, align='L')
+                    self.ln(1)
+            
+        except Exception as e:
+            print(f"참고문헌 가이드 오류: {e}")
 
 def extract_topic_from_content(content):
-    """내용에서 주제 추출"""
+    """🔥 기존 코드 그대로"""
     try:
-        patterns = [
-            r'# 📘\s*([^\n-]+?)(?:\s*-|$)',
-            r'주제[:\s]*([^\n]+)',
-        ]
-        
-        for pattern in patterns:
-            match = re.search(pattern, content, re.IGNORECASE)
-            if match:
-                topic = match.group(1).strip()
-                topic = re.sub(r'주제\s*해설', '', topic).strip()
-                if len(topic) > 3:
-                    return topic[:50] if len(topic) > 50 else topic
-        
+        title_match = re.search(r'# 📘\s*([^\n-]+)', content)
+        if title_match:
+            topic = title_match.group(1).strip()
+            return topic[:50] if len(topic) > 50 else topic
         return "과학 연구 탐색"
     except:
         return "과학 연구 탐색"
 
-def parse_content_smart(content):
-    """스마트한 내용 파싱"""
+def parse_content_enhanced(content):
+    """🔥 기존 코드의 파싱 로직 사용 (완전히 새로운 파싱)"""
     result = {
         'topic_explanation': '',
+        'applications': '',
+        'research_ideas': '',
         'isef_papers': [],
         'arxiv_papers': [],
         'generated_paper': {}
     }
     
     try:
-        # 주제 해설 추출
+        print("🔍 파싱 로직 시작...")
+        print(f"전체 콘텐츠 길이: {len(content)}")
+        
+        # 전체 주제 해설 추출
         explanation_match = re.search(r'# 📘[^\n]*\n(.*?)(?=## 📄|## 🌐|$)', content, re.DOTALL)
         if explanation_match:
-            result['topic_explanation'] = explanation_match.group(1).strip()
+            full_explanation = explanation_match.group(1).strip()
+            result['topic_explanation'] = full_explanation
+            print(f"주제 해설 추출 성공: {len(full_explanation)}자")
+            
+            # 🔥 틈새주제 파싱
+            if '확장 가능한 탐구' in full_explanation:
+                ideas_start = full_explanation.find('확장 가능한 탐구')
+                ideas_section = full_explanation[ideas_start:]
+                print(f"틈새주제 섹션: {ideas_section[:200]}...")
+                
+                # 간단하게 전체를 가져와서 정리
+                lines = ideas_section.split('\n')
+                clean_lines = []
+                
+                for line in lines[1:]:  # 첫 줄(제목) 제외
+                    line = line.strip()
+                    if line and len(line) > 10 and not any(skip in line for skip in ['키워드', 'Scholar', '도메인']):
+                        # • · 패턴을 • 로 시작하는 제목과 설명으로 분리
+                        if '• ·' in line:
+                            parts = line.split('• ·')
+                            if len(parts) >= 2:
+                                title = parts[0].replace('•', '').strip()
+                                desc = parts[1].strip()
+                                clean_lines.append(f"• {title}")
+                                clean_lines.append(f"  {desc}")
+                        elif line.startswith('•'):
+                            clean_lines.append(line)
+                        elif line.startswith('·') and clean_lines:
+                            clean_lines.append(f"  {line[1:].strip()}")
+                        else:
+                            clean_lines.append(line)
+                
+                result['research_ideas'] = '\n'.join(clean_lines)
+                print(f"틈새주제 파싱 완료: {len(clean_lines)}줄")
         
-        # ISEF 논문 추출
+        # 🔥 ISEF/arXiv 파싱 - 더 관대하게
+        # ISEF 검색
+        isef_papers = []
         if "ISEF" in content:
+            # 모든 ▪ 또는 - ** 패턴 찾기
             isef_section = content[content.find("ISEF"):content.find("arXiv") if "arXiv" in content else len(content)]
+            print(f"ISEF 섹션 길이: {len(isef_section)}")
             
-            # 제목 패턴 찾기
-            title_pattern = r'📌\s*([^\n]+)'
-            titles = re.findall(title_pattern, isef_section)
+            # 여러 패턴 시도
+            patterns = [
+                r'▪\s*([^\n]+)\n[^\n]*출처[^\n]*\n\s*([^▪]+?)(?=▪|\n\n|$)',
+                r'-\s*\*\*([^*]+)\*\*[^\n]*\n([^-]+?)(?=-|\n\n|$)',
+                r'📌\s*([^\n]+).*?\n.*?\n([^📌]+?)(?=📌|\n\n|$)'  # 새 패턴 추가
+            ]
             
-            for title in titles[:3]:
-                # 각 제목 다음의 내용 찾기
-                title_pos = isef_section.find(title)
-                next_title_pos = isef_section.find('📌', title_pos + 1)
-                if next_title_pos == -1:
-                    next_title_pos = len(isef_section)
-                
-                section_content = isef_section[title_pos:next_title_pos]
-                lines = section_content.split('\n')[1:4]  # 제목 다음 3줄
-                summary = ' '.join([line.strip() for line in lines if line.strip() and not line.strip().startswith('📅')])
-                
-                if len(summary) > 20:
-                    result['isef_papers'].append((title.strip(), summary))
+            for pattern in patterns:
+                matches = re.findall(pattern, isef_section, re.DOTALL)
+                for title, summary in matches:
+                    clean_title = re.sub(r'<[^>]+>', '', title).strip()
+                    clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
+                    if len(clean_title) > 5 and len(clean_summary) > 20:
+                        # 요약 길이 확장
+                        if len(clean_summary) > 500:
+                            sentences = re.split(r'[.!?]\s+', clean_summary)
+                            kept_sentences = []
+                            total_len = 0
+                            for sent in sentences:
+                                if total_len + len(sent) < 800:
+                                    kept_sentences.append(sent)
+                                    total_len += len(sent)
+                                else:
+                                    break
+                            clean_summary = '. '.join(kept_sentences)
+                            if not clean_summary.endswith('.'):
+                                clean_summary += '.'
+                        
+                        isef_papers.append((clean_title, clean_summary))
+                        if len(isef_papers) >= 3:
+                            break
+                if isef_papers:
+                    break
         
-        # arXiv 논문 추출
+        result['isef_papers'] = isef_papers
+        print(f"ISEF 논문 파싱: {len(isef_papers)}개")
+        
+        # arXiv 검색
+        arxiv_papers = []
         if "arXiv" in content:
             arxiv_section = content[content.find("arXiv"):]
+            print(f"arXiv 섹션 길이: {len(arxiv_section)}")
             
-            title_pattern = r'🌐\s*([^\n]+)'
-            titles = re.findall(title_pattern, arxiv_section)
+            patterns = [
+                r'▪\s*([^\n]+)\n[^\n]*arXiv[^\n]*\n\s*([^▪]+?)(?=▪|\n\n|$)',
+                r'-\s*\*\*([^*]+)\*\*[^\n]*\n([^-]+?)(?=\[링크\]|-|\n\n|$)',
+                r'🌐\s*([^\n]+).*?\n.*?\n([^🌐]+?)(?=🌐|\n\n|$)'  # 새 패턴 추가
+            ]
             
-            for title in titles[:3]:
-                title_pos = arxiv_section.find(title)
-                next_title_pos = arxiv_section.find('🌐', title_pos + 1)
-                if next_title_pos == -1:
-                    next_title_pos = len(arxiv_section)
-                
-                section_content = arxiv_section[title_pos:next_title_pos]
-                lines = section_content.split('\n')[1:4]
-                summary = ' '.join([line.strip() for line in lines if line.strip() and '출처:' not in line])
-                
-                if len(summary) > 20:
-                    result['arxiv_papers'].append((title.strip(), summary))
+            for pattern in patterns:
+                matches = re.findall(pattern, arxiv_section, re.DOTALL)
+                for title, summary in matches:
+                    clean_title = re.sub(r'<[^>]+>', '', title).strip()
+                    clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
+                    
+                    # 한국어 요약 부분만 추출
+                    if '한국어 요약' in clean_summary:
+                        clean_summary = clean_summary.split('한국어 요약')[1].split('영문 원본')[0].strip()
+                    
+                    if len(clean_title) > 5 and len(clean_summary) > 20:
+                        # 요약 길이 확장
+                        if len(clean_summary) > 500:
+                            sentences = re.split(r'[.!?]\s+', clean_summary)
+                            kept_sentences = []
+                            total_len = 0
+                            for sent in sentences:
+                                if total_len + len(sent) < 800:
+                                    kept_sentences.append(sent)
+                                    total_len += len(sent)
+                                else:
+                                    break
+                            clean_summary = '. '.join(kept_sentences)
+                            if not clean_summary.endswith('.'):
+                                clean_summary += '.'
+                        
+                        arxiv_papers.append((clean_title, clean_summary))
+                        if len(arxiv_papers) >= 3:
+                            break
+                if arxiv_papers:
+                    break
         
-        # 생성된 논문 추출
+        result['arxiv_papers'] = arxiv_papers
+        print(f"arXiv 논문 파싱: {len(arxiv_papers)}개")
+        
+        # 생성된 논문 파싱 (기존 유지)
         if "생성된 연구 논문" in content:
             paper_section = content[content.find("생성된 연구 논문"):]
-            
-            sections = {
-                '초록': r'초록[^\n]*(?:\([^)]*\))?[^\n]*\n([^#]+?)(?=###|$)',
-                '서론': r'서론[^\n]*(?:\([^)]*\))?[^\n]*\n([^#]+?)(?=###|$)',
-                '실험 방법': r'실험\s*방법[^\n]*(?:\([^)]*\))?[^\n]*\n([^#]+?)(?=###|$)',
-                '예상 결과': r'예상\s*결과[^\n]*(?:\([^)]*\))?[^\n]*\n([^#]+?)(?=###|$)',
-                '시각자료': r'시각자료[^\n]*(?:\([^)]*\))?[^\n]*\n([^#]+?)(?=###|$)',
-                '결론': r'결론[^\n]*(?:\([^)]*\))?[^\n]*\n([^#]+?)(?=###|$)',
-                '참고문헌': r'참고문헌[^\n]*(?:\([^)]*\))?[^\n]*\n([^#]+?)(?=###|$)'
-            }
-            
-            for section_name, pattern in sections.items():
-                match = re.search(pattern, paper_section, re.DOTALL | re.IGNORECASE)
+            sections = ['초록', '서론', '실험 방법', '예상 결과', '시각자료', '결론', '참고문헌']
+            for section in sections:
+                pattern = f"### {section}[^\n]*\n(.*?)(?=###|$)"
+                match = re.search(pattern, paper_section, re.DOTALL)
                 if match:
                     content_text = match.group(1).strip()
-                    if len(content_text) > 20:
-                        result['generated_paper'][section_name] = content_text
+                    if len(content_text) > 10:
+                        result['generated_paper'][section] = content_text
         
+        print(f"🔚 파싱 완료!")
         return result
         
     except Exception as e:
-        print(f"파싱 오류: {e}")
+        print(f"❌ 파싱 오류: {e}")
+        import traceback
+        traceback.print_exc()
         return result
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """이쁜 PDF 생성 (Streamlit Cloud 안정성 보장)"""
+    """🔥 기존 코드의 안정성 + 이쁜 디자인"""
     try:
         # 출력 디렉토리 생성
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         
-        # 데이터 추출
+        # 주제 추출
         topic = extract_topic_from_content(content)
-        data = parse_content_smart(content)
         
-        print(f"🎨 이쁜 PDF 생성 시작: {topic}")
-        print(f"   - 주제해설: {len(data['topic_explanation'])}자")
-        print(f"   - ISEF 논문: {len(data['isef_papers'])}개")
-        print(f"   - arXiv 논문: {len(data['arxiv_papers'])}개") 
-        print(f"   - 생성된 논문: {len(data['generated_paper'])}개 섹션")
+        # 향상된 파싱 사용
+        sections = parse_content_enhanced(content)
         
         # PDF 생성
-        with suppress_warnings():
+        with suppress_fpdf_warnings():
             pdf = BeautifulSciencePDF(topic)
             
-            # 1. 이쁜 표지
-            pdf.add_beautiful_cover()
+            # 표지 페이지
+            pdf.add_title_page(topic)
             
-            # 2. 주제 탐색
+            # 내용 페이지
             pdf.add_page()
-            pdf.add_section_header("주제 탐색 및 분석", "🔬")
             
-            if data['topic_explanation']:
-                explanation = data['topic_explanation']
+            # 주제 개요
+            if sections['topic_explanation']:
+                pdf.add_section_title("주제 개요")
                 
-                # 개념 정의
+                explanation = sections['topic_explanation']
+                
+                # 개념 정의 부분
                 if '개념' in explanation or '정의' in explanation:
-                    concept_section = explanation.split('응용')[0] if '응용' in explanation else explanation[:900]
-                    if len(concept_section) > 100:
-                        pdf.add_section_header("개념 정의 및 원리", "💡", level=2)
-                        pdf.add_content_block(concept_section)
+                    concept_part = explanation.split('응용')[0] if '응용' in explanation else explanation[:500]
+                    if len(concept_part) > 50:
+                        pdf.add_section_title("개념 정의", level=2)
+                        # 🔥 기존 add_paragraph 대신 직접 처리
+                        pdf.set_safe_font('normal', 10, 'text_medium')
+                        clean_content = pdf.clean_text(concept_part)
+                        if clean_content:
+                            paragraphs = clean_content.split('\n\n')
+                            for para in paragraphs:
+                                if para.strip():
+                                    pdf.multi_cell(0, 6, para.strip(), align='L')
+                                    pdf.ln(3)
                 
-                # 연구 아이디어
-                if '확장 가능한 탐구' in explanation:
-                    ideas_start = explanation.find('확장 가능한 탐구')
-                    ideas_section = explanation[ideas_start:]
-                    if len(ideas_section) > 100:
-                        pdf.add_section_header("연구 아이디어", "🎯", level=2)
-                        pdf.add_content_block(ideas_section)
+                # 확장 가능한 탐구 아이디어
+                if sections.get('research_ideas'):
+                    pdf.add_section_title("확장 가능한 탐구 아이디어", level=2)
+                    pdf.set_safe_font('normal', 10, 'text_medium')
+                    clean_content = pdf.clean_text(sections['research_ideas'])
+                    if clean_content:
+                        paragraphs = clean_content.split('\n\n')
+                        for para in paragraphs:
+                            if para.strip():
+                                pdf.multi_cell(0, 6, para.strip(), align='L')
+                                pdf.ln(3)
             
-            # 3. 관련 연구 조사
-            pdf.add_section_header("관련 연구 문헌 조사", "📚")
+            # 문헌 조사
+            pdf.add_section_title("문헌 조사")
             
             # ISEF 연구
-            if data['isef_papers']:
-                pdf.add_section_header("ISEF 프로젝트 분석", "🏆", level=2)
-                for title, summary in data['isef_papers']:
-                    pdf.add_beautiful_paper_card(title, summary, "출처: ISEF (International Science and Engineering Fair)", "isef")
+            pdf.add_section_title("ISEF 관련 연구", level=2)
+            if sections['isef_papers']:
+                for title, summary in sections['isef_papers']:
+                    pdf.add_paper_item(title, summary, "출처: ISEF (International Science and Engineering Fair)")
+            else:
+                pdf.set_safe_font('normal', 10, 'text_medium')
+                pdf.multi_cell(0, 6, "관련 ISEF 프로젝트를 찾지 못했습니다.", align='L')
+                pdf.ln(3)
             
             # arXiv 연구
-            if data['arxiv_papers']:
-                pdf.add_section_header("최신 연구논문 분석", "📚", level=2)
-                for title, summary in data['arxiv_papers']:
-                    pdf.add_beautiful_paper_card(title, summary, "출처: arXiv (프리프린트 논문저장소)", "arxiv")
+            pdf.add_section_title("arXiv 최신 연구", level=2)
+            if sections['arxiv_papers']:
+                for title, summary in sections['arxiv_papers']:
+                    pdf.add_paper_item(title, summary, "출처: arXiv (프리프린트 논문저장소)")
+            else:
+                pdf.set_safe_font('normal', 10, 'text_medium')
+                pdf.multi_cell(0, 6, "관련 arXiv 논문을 찾지 못했습니다.", align='L')
+                pdf.ln(3)
             
-            # 4. 연구 계획서
-            if data['generated_paper']:
-                pdf.add_section_header("연구 계획서", "📝")
+            # 생성된 논문
+            if sections['generated_paper']:
+                selected_idea = "선택된 연구 주제"
                 
-                section_order = ['초록', '서론', '실험 방법', '예상 결과', '시각자료', '결론', '참고문헌']
-                section_english = {
-                    '초록': 'Abstract',
-                    '서론': 'Introduction',
-                    '실험 방법': 'Methods',
-                    '예상 결과': 'Expected Results',
-                    '시각자료': 'Visualizations',
-                    '결론': 'Conclusion',
-                    '참고문헌': 'References'
+                # 🔥 기존 코드의 논문 제목 페이지
+                pdf.add_page()
+                pdf.ln(20)
+                
+                try:
+                    pdf.set_safe_font('bold', 18, 'text_dark')
+                    paper_title = f"{topic}: 연구 계획서"
+                    pdf.multi_cell(0, 12, paper_title, align='C')
+                    pdf.ln(15)
+                    
+                    pdf.set_draw_color(150, 150, 150)
+                    pdf.line(30, pdf.get_y(), 180, pdf.get_y())
+                    pdf.ln(8)
+                    
+                except Exception as e:
+                    print(f"논문 제목 페이지 오류: {e}")
+                
+                section_map = {
+                    '초록': ('Abstract', 1),
+                    '서론': ('Introduction', 2), 
+                    '실험 방법': ('Methods', 3),
+                    '예상 결과': ('Expected Results', 4),
+                    '시각자료': ('Visualizations', 5),
+                    '결론': ('Conclusion', 6),
+                    '참고문헌': ('References', 7)
                 }
                 
-                for section_name in section_order:
-                    if section_name in data['generated_paper']:
-                        english_name = section_english.get(section_name, section_name)
-                        title = f"{section_name} ({english_name})"
-                        content_text = data['generated_paper'][section_name]
-                        
-                        if section_name == '참고문헌':
-                            pdf.add_research_section(title, "실제 연구 수행 시 관련 논문들을 찾아 APA 스타일로 작성하시기 바랍니다.")
-                        else:
-                            pdf.add_research_section(title, content_text)
+                for section_key, (english_name, num) in section_map.items():
+                    if section_key in sections['generated_paper']:
+                        title = f"{section_key} ({english_name})"
+                        content_text = sections['generated_paper'][section_key]
+                        pdf.add_paper_section(title, content_text, num)
             
             # 저장
             output_path = os.path.join(OUTPUT_DIR, filename)
-            pdf.output(output_path)
+            with suppress_fpdf_warnings():
+                pdf.output(output_path)
         
-        # 검증
-        if os.path.exists(output_path) and os.path.getsize(output_path) > 5000:
-            print(f"✅ 이쁜 PDF 생성 완료: {output_path}")
-            return output_path
-        else:
-            raise Exception("PDF 생성 실패")
+        # 🔥 기존 코드의 파일 검증 방식
+        if os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            if file_size > 2000:
+                print(f"✅ 이쁜 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
+                return output_path
+        
+        # 실패시 텍스트 파일
+        txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
+        with open(txt_path, 'w', encoding='utf-8') as f:
+            f.write(f"=== {topic} 연구보고서 ===\n\n")
+            f.write(f"생성 시간: {datetime.now()}\n\n")
+            f.write(content)
+        
+        return txt_path
             
     except Exception as e:
-        print(f"❌ PDF 생성 실패: {e}")
-        
-        # 실패시 텍스트 파일로 백업
-        try:
-            txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
-            with open(txt_path, 'w', encoding='utf-8') as f:
-                f.write(f"=== {topic} 연구탐색보고서 ===\n")
-                f.write(f"생성일: {datetime.now()}\n\n")
-                f.write("PDF 생성 실패로 텍스트로 저장합니다.\n\n")
-                f.write(content)
-            return txt_path
-        except:
-            return None
+        print(f"❌ PDF 생성 오류: {e}")
+        return None
