@@ -546,13 +546,9 @@ if topic:
     if (st.session_state.last_searched_topic != topic or 
         len(st.session_state.cached_internal_results) == 0 or 
         len(st.session_state.cached_arxiv_results) == 0):
-        # 새 주제 검색 - 모든 상태 완전 초기화
+        # 새 주제 검색
         st.session_state.last_searched_topic = topic
         st.session_state.generated_paper = {}  # 논문 초기화
-        st.session_state.full_text = ""  # PDF 텍스트 초기화 - 중요!
-        st.session_state.niche_topics = []  # 틈새주제 초기화
-        st.session_state.cached_internal_results = []  # 캐시 초기화
-        st.session_state.cached_arxiv_results = []  # 캐시 초기화
         
 # 주제 해설 표시
         st.subheader("📘 주제 해설")
@@ -562,30 +558,6 @@ if topic:
             with st.spinner("⚡ AI가 주제 분석 중..."):
                 explanation_lines = explain_topic(topic)
                 explanation_text = "\n\n".join(explanation_lines)
-                # 🔥 소주제 파싱: 개념, 메커니즘, 배경 구분
-                concept_text = ""
-                mechanism_text = ""
-                background_text = ""
-
-                current_section = "concept"
-
-                for line in explanation_lines:
-                    line = line.strip()
-                    if "작동 원리" in line or "메커니즘" in line:
-                       current_section = "mechanism"
-                       continue
-                    elif "과학적" in line or "사회적 배경" in line:
-                        current_section = "background"
-                        continue
-
-                    if current_section == "concept":
-                        concept_text += line + "\n"
-                    elif current_section == "mechanism":
-                        mechanism_text += line + "\n"
-                    elif current_section == "background":
-                        background_text += line + "\n"
-
-
                 
                 # 틈새주제 파싱 및 저장
                 st.session_state.niche_topics = parse_niche_topics(explanation_lines)
@@ -613,17 +585,8 @@ if topic:
                 placeholder.markdown(text, unsafe_allow_html=True)
             
             # 1단계: 확장 가능한 탐구 아이디어까지 애니메이션
-            if concept_text:
-                st.markdown("### 🧠 개념 정의")
-                typewriter_animation(convert_doi_to_links(concept_text))
-
-            if mechanism_text:
-                st.markdown("### ⚙️ 작동 원리 / 메커니즘")
-                st.markdown(convert_doi_to_links(mechanism_text), unsafe_allow_html=True)
-
-            if background_text:
-                st.markdown("### 🌍 과학적·사회적 배경")
-                st.markdown(convert_doi_to_links(background_text), unsafe_allow_html=True)
+            animation_linked = convert_doi_to_links(animation_part)
+            typewriter_animation(animation_linked)
             
             # 2단계: 나머지 즉시 표시
             if remaining_part:
@@ -632,14 +595,7 @@ if topic:
                 st.markdown(remaining_linked, unsafe_allow_html=True)
             
             # PDF용 텍스트 저장 (전체 내용)
-            st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n"
-
-            if concept_text:
-                st.session_state.full_text += "### 개념 정의\n" + concept_text.strip() + "\n\n"
-            if mechanism_text:
-                st.session_state.full_text += "### 작동 원리 및 메커니즘\n" + mechanism_text.strip() + "\n\n"
-            if background_text:
-                st.session_state.full_text += "### 과학적 및 사회적 배경\n" + background_text.strip() + "\n\n"
+            st.session_state.full_text = f"# 📘 {topic} - 주제 해설\n\n{explanation_text}\n\n"
             
         except Exception as e:
             st.error(f"주제 해설 생성 중 오류: {str(e)}")
@@ -698,7 +654,7 @@ if topic:
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        st.session_state.full_text += f"▪ {title}\n출처: ISEF\n{summary.strip()}\n\n"
+                        st.session_state.full_text += f"- **{title}**\n{summary}\n_{meta_text}_\n\n"
             except Exception as e:
                 st.error(f"내부 DB 검색 중 오류: {str(e)}")
                 st.session_state.cached_internal_results = []
@@ -969,11 +925,6 @@ if topic:
     # PDF 저장 버튼 - 논문 완성 후에만 활성화
     st.markdown("---")
     st.subheader("📄 PDF 저장")
-    
-    # 디버깅용 - 현재 주제 확인
-    if st.session_state.full_text:
-        current_topic_in_pdf = st.session_state.full_text.split('\n')[0] if '\n' in st.session_state.full_text else "확인 불가"
-        st.caption(f"📌 PDF 저장될 주제: {current_topic_in_pdf[:50]}...")
 
     # 논문이 완성되었는지 확인
     paper_completed = bool(st.session_state.generated_paper and 
@@ -983,14 +934,7 @@ if topic:
     if paper_completed:
         if st.button("📥 완성된 연구보고서 PDF로 저장하기", type="primary"):
             if st.session_state.full_text:
-                # 현재 주제와 PDF 내용이 일치하는지 확인
-                if topic in st.session_state.full_text:
-                    path = generate_pdf(st.session_state.full_text)
-                else:
-                    st.error("⚠️ 현재 검색 주제와 PDF 내용이 일치하지 않습니다. 다시 검색해주세요.")
-                    # 상태 초기화
-                    st.session_state.full_text = ""
-                    st.session_state.generated_paper = {}
+                path = generate_pdf(st.session_state.full_text)
                 if path and os.path.exists(path):
                     with open(path, "rb") as f:
                         st.download_button(
