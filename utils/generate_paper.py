@@ -66,8 +66,8 @@ def generate_research_paper(topic, research_idea, references=""):
         # Claude 호출
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=3500,  # 참고문헌 고정으로 토큰 절약
-            temperature=0.3,
+            max_tokens=4000,  # 참고문헌 고정으로 토큰 절약
+            temperature=0.5,
             system=system_prompt,
             messages=[
                 {"role": "user", "content": user_prompt}
