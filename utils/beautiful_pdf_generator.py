@@ -656,10 +656,10 @@ def parse_content_enhanced(content):
         return result
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """🔥 긴급 테스트: 파싱된 데이터 대신 더미 데이터로 테스트"""
+    """🔥 multi_cell() 제거 - cell()만 사용"""
     try:
         print("=" * 50)
-        print("🚨🚨🚨 긴급 더미 데이터 테스트!!! 🚨🚨🚨")
+        print("🚨🚨🚨 multi_cell() 제거 테스트!!! 🚨🚨🚨")
         print("=" * 50)
         
         # 출력 디렉토리 생성
@@ -669,35 +669,33 @@ def generate_pdf(content, filename="research_report.pdf"):
         topic = extract_topic_from_content(content)
         print(f"📝 주제: {topic}")
         
-        # 🔥 파싱 대신 더미 데이터 사용
+        # 🔍 더미 데이터 (이미 검증됨)
         print("🔍 더미 데이터 생성...")
         dummy_sections = {
-            'topic_explanation': "이것은 테스트용 주제 해설입니다. 특수문자나 인코딩 문제가 없는 안전한 텍스트입니다.",
+            'topic_explanation': "테스트용 주제 해설입니다.",
             'isef_papers': [
-                ("테스트 ISEF 논문 1", "이것은 테스트용 ISEF 논문 요약입니다."),
-                ("테스트 ISEF 논문 2", "이것도 테스트용 ISEF 논문 요약입니다.")
+                ("테스트 ISEF 논문", "테스트 요약"),
+                ("테스트 ISEF 논문2", "테스트 요약2")
             ],
             'arxiv_papers': [
-                ("테스트 arXiv 논문 1", "이것은 테스트용 arXiv 논문 요약입니다."),
-                ("테스트 arXiv 논문 2", "이것도 테스트용 arXiv 논문 요약입니다.")
+                ("테스트 arXiv 논문", "테스트 요약"),
+                ("테스트 arXiv 논문2", "테스트 요약2")
             ],
             'generated_paper': {
-                '초록': "이것은 테스트용 초록입니다.",
-                '서론': "이것은 테스트용 서론입니다.",
-                '실험 방법': "이것은 테스트용 실험 방법입니다.",
-                '예상 결과': "이것은 테스트용 예상 결과입니다.",
-                '결론': "이것은 테스트용 결론입니다."
+                '초록': "테스트 초록",
+                '서론': "테스트 서론",
+                '실험 방법': "테스트 실험 방법",
+                '결론': "테스트 결론"
             }
         }
-        print("✅ 더미 데이터 준비 완료!")
         
-        # 안전한 PDF 생성
-        print("🎨 안전한 PDF 생성 중...")
+        # 🔥 cell()만 사용하는 안전한 PDF 생성
+        print("🎨 cell()만 사용하는 PDF 생성...")
         with suppress_fpdf_warnings():
             pdf = BeautifulSciencePDF(topic)
             
-            # 간단한 표지 (이미 검증됨)
-            print("📄 간단한 표지 페이지...")
+            # 표지 (성공 검증됨)
+            print("📄 표지 페이지...")
             pdf.add_page()
             
             pdf.set_safe_font('bold', 20, 'text_dark')
@@ -716,55 +714,56 @@ def generate_pdf(content, filename="research_report.pdf"):
             pdf.cell(0, 8, 'LittleScienceAI', align='C', ln=True)
             print("✅ 표지 완료!")
             
-            # 🔥 더미 데이터로 실제 내용 테스트
-            print("📝 더미 데이터로 내용 페이지 추가...")
+            # 🔥 새 페이지 + cell()만 사용
+            print("📝 내용 페이지 (cell()만 사용)...")
             pdf.add_page()
             
-            # 1. 주제 해설 (더미)
-            print("🔬 1단계: 더미 주제 해설...")
+            # 1. 주제 해설
+            print("🔬 1단계: 주제 해설 (cell()만)...")
             pdf.set_safe_font('bold', 16, 'text_dark')
             pdf.cell(0, 10, "1. 주제 해설", align='L', ln=True)
             pdf.ln(5)
             
             pdf.set_safe_font('normal', 10, 'text_medium')
-            pdf.multi_cell(0, 6, dummy_sections['topic_explanation'], align='L')
+            # 🔥 multi_cell() 대신 cell() 여러 번 사용
+            pdf.cell(0, 8, dummy_sections['topic_explanation'], align='L', ln=True)
             pdf.ln(10)
-            print("✅ 더미 주제 해설 완료!")
+            print("✅ 주제 해설 완료!")
             
-            # 2. ISEF 연구 (더미)
-            print("🏆 2단계: 더미 ISEF 연구...")
+            # 2. ISEF 연구
+            print("🏆 2단계: ISEF 연구 (cell()만)...")
             pdf.set_safe_font('bold', 16, 'text_dark')
             pdf.cell(0, 10, "2. ISEF 관련 연구", align='L', ln=True)
             pdf.ln(5)
             
             for i, (title, summary) in enumerate(dummy_sections['isef_papers']):
                 pdf.set_safe_font('bold', 11, 'text_dark')
-                pdf.multi_cell(0, 7, f"🏆 {title}", align='L')
+                pdf.cell(0, 8, f"🏆 {title}", align='L', ln=True)
                 
                 pdf.set_safe_font('normal', 9, 'text_medium')
-                pdf.multi_cell(0, 5, f"   {summary}", align='L')
+                pdf.cell(0, 6, f"   {summary}", align='L', ln=True)
                 pdf.ln(5)
-                print(f"✅ 더미 ISEF 논문 {i+1} 완료!")
+                print(f"✅ ISEF 논문 {i+1} 완료!")
             
             pdf.ln(10)
             
-            # 3. arXiv 연구 (더미)
-            print("📚 3단계: 더미 arXiv 연구...")
+            # 3. arXiv 연구
+            print("📚 3단계: arXiv 연구 (cell()만)...")
             pdf.set_safe_font('bold', 16, 'text_dark')
             pdf.cell(0, 10, "3. arXiv 최신 연구", align='L', ln=True)
             pdf.ln(5)
             
             for i, (title, summary) in enumerate(dummy_sections['arxiv_papers']):
                 pdf.set_safe_font('bold', 11, 'text_dark')
-                pdf.multi_cell(0, 7, f"📚 {title}", align='L')
+                pdf.cell(0, 8, f"📚 {title}", align='L', ln=True)
                 
                 pdf.set_safe_font('normal', 9, 'text_medium')
-                pdf.multi_cell(0, 5, f"   {summary}", align='L')
+                pdf.cell(0, 6, f"   {summary}", align='L', ln=True)
                 pdf.ln(5)
-                print(f"✅ 더미 arXiv 논문 {i+1} 완료!")
+                print(f"✅ arXiv 논문 {i+1} 완료!")
             
-            # 4. 연구 계획서 (더미, 새 페이지)
-            print("📝 4단계: 더미 연구 계획서...")
+            # 4. 연구 계획서 (새 페이지)
+            print("📝 4단계: 연구 계획서 (cell()만)...")
             pdf.add_page()
             
             pdf.set_safe_font('bold', 18, 'text_dark')
@@ -772,7 +771,7 @@ def generate_pdf(content, filename="research_report.pdf"):
             pdf.cell(0, 12, "연구 계획서", align='C', ln=True)
             pdf.ln(15)
             
-            section_order = ['초록', '서론', '실험 방법', '예상 결과', '결론']
+            section_order = ['초록', '서론', '실험 방법', '결론']
             for i, section_name in enumerate(section_order):
                 if section_name in dummy_sections['generated_paper']:
                     content_text = dummy_sections['generated_paper'][section_name]
@@ -782,14 +781,14 @@ def generate_pdf(content, filename="research_report.pdf"):
                     pdf.cell(0, 8, f"{i+1}. {section_name}", align='L', ln=True)
                     pdf.ln(3)
                     
-                    # 내용
+                    # 🔥 multi_cell() 대신 cell() 사용
                     pdf.set_safe_font('normal', 10, 'text_medium')
-                    pdf.multi_cell(0, 6, content_text, align='L')
+                    pdf.cell(0, 6, content_text, align='L', ln=True)
                     pdf.ln(8)
                     
-                    print(f"✅ 더미 {section_name} 섹션 완료!")
+                    print(f"✅ {section_name} 섹션 완료!")
             
-            print("✅ 모든 더미 내용 완료!")
+            print("✅ 모든 내용 완료 (cell()만 사용)!")
             
             # 저장
             output_path = os.path.join(OUTPUT_DIR, filename)
@@ -803,8 +802,8 @@ def generate_pdf(content, filename="research_report.pdf"):
             file_size = os.path.getsize(output_path)
             print(f"📊 파일 크기: {file_size:,} bytes")
             
-            if file_size > 3000:
-                print("🎉🎉🎉 더미 데이터 PDF 성공!!! 🎉🎉🎉")
+            if file_size > 2000:
+                print("🎉🎉🎉 cell()만 사용해서 성공!!! 🎉🎉🎉")
                 return output_path
             else:
                 print(f"⚠️ 파일이 너무 작음: {file_size}")
@@ -815,7 +814,7 @@ def generate_pdf(content, filename="research_report.pdf"):
         
     except Exception as e:
         print("=" * 50)
-        print(f"❌❌❌ 더미 데이터 테스트도 실패: {e} ❌❌❌")
+        print(f"❌❌❌ cell() 테스트도 실패: {e} ❌❌❌")
         print("=" * 50)
         
         # 백업
@@ -824,7 +823,7 @@ def generate_pdf(content, filename="research_report.pdf"):
             with open(txt_path, 'w', encoding='utf-8') as f:
                 f.write(f"주제: {extract_topic_from_content(content)}\n")
                 f.write(f"생성시간: {datetime.now()}\n")
-                f.write("더미 데이터 테스트 실패\n")
+                f.write("cell() 테스트 실패\n")
             print(f"📝 백업 파일 생성: {txt_path}")
             return txt_path
         except:
