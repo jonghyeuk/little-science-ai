@@ -421,58 +421,6 @@ class ImprovedKoreanPDF(FPDF):
         except Exception as e:
             print(f"참고문헌 가이드 오류: {e}")
     
-    def add_simple_usage_guide(self, topic):
-        """🔧 상세한 활용가이드 추가 - 문법 오류 수정"""
-        try:
-            # 새 페이지 시작
-            self.add_page()
-            
-            # 🎨 섹션 제목
-            self.ln(8)
-            self.set_safe_font('bold', 18)
-            self.set_text_color(25, 118, 210)  # 파란색
-            self.multi_cell(0, 10, "이렇게 활용하세요", align='C')
-            self.ln(8)
-            
-            # 🎨 부제목
-            self.set_safe_font('normal', 12)
-            self.set_text_color(96, 125, 139)
-            self.multi_cell(0, 8, "학술대회 및 연구 발표를 위한 상세 가이드", align='C')
-            self.ln(12)
-            
-            # 🔧 상세한 초록 가이드
-            self.add_elegant_subsection("📋 초록 (Abstract) 작성법")
-            abstract_guide = "학술대회에서 초록은 연구의 핵심을 200-250단어로 간단명료하게 전달하는 중요한 역할을 합니다.\n\n구성 요소:\n• 연구 목적: 왜 이 연구를 했는지 한 문장으로 설명\n• 연구 방법: 사용한 실험 방법이나 분석 기법을 한 문장으로 요약\n• 주요 결과: 가장 중요한 발견사항 1-2가지를 구체적 수치와 함께 제시\n• 결론 및 의의: 연구가 갖는 학술적, 실용적 의미를 명시\n\n작성 예시: 본 연구는 효율성 향상을 목적으로 수행되었다. 실험 방법을 사용하여 측정한 결과, 기존 대비 15% 향상된 성능을 확인하였다. 이는 관련 분야 발전에 기여할 것으로 사료된다.\n\n주의사항: 약어는 첫 사용 시 풀어서 쓰고, 미래형보다는 과거형을 사용하세요."
-            self.add_paragraph(abstract_guide)
-            
-            # 🔧 상세한 서론 가이드
-            self.add_elegant_subsection("📖 서론 (Introduction) 작성법")
-            intro_guide = "서론은 연구의 배경과 필요성을 논리적으로 설득하는 핵심 섹션입니다.\n\n작성 순서:\n1. 연구 분야의 일반적 현황 소개 (2-3문장)\n2. 기존 연구들의 성과와 한계점 (참고문헌 활용)\n3. 연구 문제 제기 및 가설 설정\n4. 연구 목적과 기대효과 명시\n\n참고문헌 활용 예시:\n김○○ 등(2023)의 연구에 따르면, 관련 분야에서 특정 성과를 달성했다고 보고하였다.\n최근 연구들에서는 개선을 위한 다양한 시도가 이루어졌으나 한계가 있었다.\n그러나 기존 연구들은 특정 한계가 있어 추가 연구가 필요한 실정이다.\n\n핵심 원칙: 타인의 연구 결과를 정확히 인용하여 연구의 당위성을 객관적으로 뒷받침하는 것이 가장 중요합니다."
-            self.add_paragraph(intro_guide)
-            
-            # 🔧 상세한 방법론 가이드
-            self.add_elegant_subsection("🔬 연구방법 (Methods) 작성법")
-            methods_guide = "연구방법 섹션은 다른 연구자가 실험을 재현할 수 있도록 정확하고 상세하게 기술해야 합니다.\n\n필수 포함 요소:\n• 실험 재료 및 장비: 제조사, 모델명까지 구체적으로 명시\n• 실험 절차: 단계별로 시간, 온도, 농도 등 정량적 정보 포함\n• 측정 방법: 사용한 분석 기기와 측정 조건\n• 통계 분석: 사용한 통계 프로그램과 유의수준\n\n실제 작성 예시:\n실험에는 특정 다이오드(제조사, 모델명)와 디지털 멀티미터를 사용하였다. 각도를 15도 간격으로 조절하며 전압과 전류를 측정하였고, 각 조건에서 3회씩 반복 측정하여 평균값을 산출하였다.\n\n주의사항: 실제 논문에서는 간결하면서도 정확하게 작성해야 합니다."
-            self.add_paragraph(methods_guide)
-            
-            # 🔧 상세한 결과 해석 가이드
-            self.add_elegant_subsection("📊 결과 (Results) 작성법")
-            results_guide = "결과 섹션에서는 객관적 사실을 바탕으로 의미를 논리적으로 해석해야 합니다.\n\n작성 원칙:\n• 측정 결과의 객관적 기술이 우선\n• 그림과 표를 활용한 시각적 설명 필수\n• 참고문헌을 활용한 결과 해석으로 신뢰성 확보\n• 통계적 유의성 검증 결과 포함\n\n올바른 표현 방식:\n잘못된 예: 우리의 실험이 가장 우수하다 (주관적 판단)\n올바른 예: 기존 연구 결과와 비교했을 때, 본 실험에서는 15% 향상된 성능을 보였으며, 이는 관련 이론을 뒷받침하는 것으로 사료된다 (객관적 비교)\n\n핵심: 자신의 주관적 의견보다는 기존 연구나 이론적 배경을 근거로 해석하는 것이 학술적으로 올바른 접근입니다."
-            self.add_paragraph(results_guide)
-            
-            # 🔧 상세한 결론 가이드
-            self.add_elegant_subsection("🎯 결론 (Conclusion) 작성법")
-            conclusion_guide = "결론에서는 연구의 종합적 의미와 학술적 기여도를 균형있게 제시해야 합니다.\n\n구성 요소:\n1. 연구 목적 달성 여부 확인\n2. 주요 발견사항의 학술적 의의\n3. 기존 연구와의 차별점\n4. 연구의 한계점 솔직한 인정\n5. 향후 연구 방향 제시\n\n적절한 표현 예시:\n본 연구 결과는 관련 분야의 이론을 실험적으로 검증함으로써 학술적 이해를 높이는 데 기여한 것으로 사료된다.\n향후 추가 연구가 필요할 것으로 판단되며, 특히 특정 조건에서의 장기 안정성 평가가 요구된다.\n\n주의사항: 겸손한 표현을 사용하되 연구의 가치는 명확히 전달해야 합니다."
-            self.add_paragraph(conclusion_guide)
-            
-            # 🔧 실전 팁
-            self.add_elegant_subsection("💡 학술대회 발표 실전 팁")
-            practical_tips = "포스터 발표 시:\n• 그림과 표의 폰트 크기는 최소 24pt 이상 사용\n• 핵심 결과는 3초 안에 파악 가능하도록 시각화\n• QR코드를 활용해 추가 자료 제공\n\n구두 발표 시:\n• 발표 시간의 70%는 결과와 해석에 할애\n• 질의응답에서 모르겠다보다는 흥미로운 지적으로, 향후 연구에서 검토하겠다 활용\n• 참고문헌을 활용한 답변으로 전문성 어필\n\n논문 투고 준비:\n• 국내 학회지 투고 전 영문 초록 검토 필수\n• 그림의 해상도는 최소 300dpi 이상\n• 참고문헌 스타일 가이드 철저히 준수\n\n네트워킹 전략:\n• 연구 관련 키워드를 명함에 포함\n• 타 연구자의 발표에 적극적으로 질문하여 관계 형성\n• SNS를 활용한 사후 연결 유지\n\n이러한 세부 전략들을 활용하면 학술대회에서 더욱 효과적으로 연구를 어필할 수 있습니다."
-            self.add_paragraph(practical_tips)
-            
-        except Exception as e:
-            print(f"활용가이드 섹션 오류: {e}")
-    
     def clean_text(self, text):
         """개선된 텍스트 정리 - 기존 로직 유지"""
         try:
@@ -526,7 +474,7 @@ def extract_topic_from_content(content):
         return "과학 연구 탐색"
 
 def parse_content_enhanced(content):
-    """🔥 원본 파싱 로직 그대로 유지 - 안전함"""
+    """🔥 기존 파싱 로직 그대로 유지 - 안전함"""
     result = {
         'topic_explanation': '',
         'applications': '',
@@ -537,7 +485,7 @@ def parse_content_enhanced(content):
     }
     
     try:
-        print("🔍 원본 파싱 로직 사용...")
+        print("🔍 기존 파싱 로직 사용...")
         print(f"전체 콘텐츠 길이: {len(content)}")
         
         # 전체 주제 해설 추출
@@ -564,7 +512,7 @@ def parse_content_enhanced(content):
                 result['research_ideas'] = '\n'.join(clean_lines)
                 print(f"틈새주제 파싱 완료: {len(clean_lines)}줄")
         
-        # 🔥 ISEF 파싱 (원본 그대로)
+        # 🔥 ISEF 파싱 (기존 로직 그대로)
         isef_papers = []
         if "ISEF" in content:
             isef_section = content[content.find("ISEF"):content.find("arXiv") if "arXiv" in content else len(content)]
@@ -607,7 +555,7 @@ def parse_content_enhanced(content):
         result['isef_papers'] = isef_papers
         print(f"ISEF 논문 파싱: {len(isef_papers)}개")
         
-        # arXiv 검색 (원본 로직)
+        # arXiv 검색 (기존 로직)
         arxiv_papers = []
         if "arXiv" in content:
             arxiv_section = content[content.find("arXiv"):]
@@ -661,7 +609,7 @@ def parse_content_enhanced(content):
                     if len(content_text) > 10:
                         result['generated_paper'][section] = content_text
         
-        print(f"🎉 원본 파싱 완료!")
+        print(f"🎉 기존 파싱 완료!")
         return result
         
     except Exception as e:
@@ -690,7 +638,7 @@ def get_highschool_default_content(section, topic):
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """🎨 원본 기반 최소 수정 PDF 생성"""
+    """🎨 안전하게 개선된 PDF 생성 - 기존 파싱 로직 사용"""
     try:
         # 출력 디렉토리 생성
         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -698,387 +646,63 @@ def generate_pdf(content, filename="research_report.pdf"):
         # 주제 추출
         topic = extract_topic_from_content(content)
         
-        # 🔥 원본 파싱 로직 사용 (안전함)
+        # 🔥 기존 파싱 로직 사용 (안전함)
         sections = parse_content_enhanced(content)
         
-        # 🎨 PDF 생성 (원본 구조 유지)
+        # 🎨 PDF 생성 (컬러풀하게 개선)
         with suppress_fpdf_warnings():
             pdf = ImprovedKoreanPDF(topic)
             
-            # 🎨 표지 페이지
+            # 🎨 표지 페이지 (컬러풀하게)
             pdf.add_title_page(topic)
             
             # 내용 페이지
             pdf.add_page()
             
-            # 🔧 수정1: 주제 개요 (정확한 섹션 분리)
+            # 🎨 주제 개요 - 원본 방식 그대로
             if sections['topic_explanation']:
                 pdf.add_section_title("주제 개요")
                 
                 explanation = sections['topic_explanation']
                 
-                # 🔧 개념 정의 - 순수 개념만 추출
+                # 개념 정의 부분
                 if '개념' in explanation or '정의' in explanation:
-                    try:
-                        # 개념 정의 시작점 찾기
-                        concept_start = 0
-                        if '개념 정의' in explanation:
-                            concept_start = explanation.find('개념 정의')
-                        elif '정의' in explanation:
-                            concept_start = explanation.find('정의')
-                        
-                        # 개념 정의 끝점 찾기 (작동 원리 시작 전까지)
-                        concept_end = len(explanation)
-                        for keyword in ['작동 원리', '작동', '메커니즘', '현재', '응용']:
-                            pos = explanation.find(keyword, concept_start)
-                            if pos != -1 and pos < concept_end:
-                                concept_end = pos
-                        
-                        concept_part = explanation[concept_start:concept_end].strip()
-                        
-                        # 불필요한 제목 제거
-                        concept_part = re.sub(r'^개념\s*정의\s*', '', concept_part)
-                        concept_part = re.sub(r'^정의\s*', '', concept_part)
-                        
-                        if len(concept_part) > 50:
-                            pdf.add_elegant_subsection("📌 개념 정의")
-                            pdf.add_paragraph(concept_part)
-                    except:
-                        # 실패 시 기본 방식
-                        concept_part = explanation.split('작동')[0] if '작동' in explanation else explanation[:300]
-                        if len(concept_part) > 50:
-                            pdf.add_elegant_subsection("📌 개념 정의")
-                            pdf.add_paragraph(concept_part)
+                    concept_part = explanation.split('응용')[0] if '응용' in explanation else explanation[:500]
+                    if len(concept_part) > 50:
+                        pdf.add_elegant_subsection("개념 정의")
+                        pdf.add_paragraph(concept_part)
                 
-                # 🔧 작동 원리 - 정확한 추출
-                if '작동' in explanation and ('원리' in explanation or '메커니즘' in explanation):
-                    try:
-                        # 작동 원리 시작점
-                        mechanism_start = explanation.find('작동')
-                        if mechanism_start == -1:
-                            mechanism_start = explanation.find('메커니즘')
-                        
-                        # 작동 원리 끝점
-                        mechanism_end = len(explanation)
-                        for keyword in ['현재', '과학적', '사회적', '배경', '응용', '확장']:
-                            pos = explanation.find(keyword, mechanism_start + 10)
-                            if pos != -1 and pos < mechanism_end:
-                                mechanism_end = pos
-                        
-                        mechanism_part = explanation[mechanism_start:mechanism_end].strip()
-                        
-                        # 불필요한 제목 제거 및 정리
-                        mechanism_part = re.sub(r'^작동\s*원리\s*[&＆]\s*메커니즘\s*', '', mechanism_part)
-                        mechanism_part = re.sub(r'^작동\s*원리\s*', '', mechanism_part)
-                        mechanism_part = re.sub(r'^메커니즘\s*', '', mechanism_part)
-                        
-                        if len(mechanism_part) > 50 and '키워드' not in mechanism_part:
-                            pdf.add_elegant_subsection("🔧 작동 원리 및 메커니즘")
-                            pdf.add_paragraph(mechanism_part)
-                    except:
-                        pass
-                
-                # 🔧 현재 배경 - 검색 키워드 제거
-                if '현재' in explanation and ('과학' in explanation or '사회' in explanation or '배경' in explanation):
-                    try:
-                        # 현재 배경 시작점
-                        background_start = explanation.find('현재')
-                        
-                        # 현재 배경 끝점 (검색 키워드 전까지)
-                        background_end = len(explanation)
-                        for keyword in ['키워드', '검색', '응용', '확장', 'Scholar', 'Google']:
-                            pos = explanation.find(keyword, background_start)
-                            if pos != -1 and pos < background_end:
-                                background_end = pos
-                        
-                        background_part = explanation[background_start:background_end].strip()
-                        
-                        # 불필요한 제목 및 검색 관련 내용 제거
-                        background_part = re.sub(r'^현재\s*과학적[·\s]*사회적\s*배경\s*', '', background_part)
-                        background_part = re.sub(r'최신논문검색.*
-            
-            # 🔧 수정2: 문헌조사 제거 (원본에서 해당 부분만 주석 처리)
-            # 원본 문헌조사 코드는 생략
-            
-            # 🎨 생성된 논문 (원본 구조 유지)
-            if sections['generated_paper']:
-                selected_idea = "선택된 연구 주제"
-                pdf.add_paper_title_page(topic, selected_idea)
-                
-                section_map = {
-                    '초록': ('Abstract', 1),
-                    '서론': ('Introduction', 2), 
-                    '실험 방법': ('Methods', 3),
-                    '예상 결과': ('Expected Results', 4),
-                    '결론': ('Conclusion', 5),
-                    '참고문헌': ('References', 6)
-                }
-                
-                for section_key, (english_name, num) in section_map.items():
-                    if section_key in sections['generated_paper']:
-                        title = f"{section_key} ({english_name})"
-                        content_text = sections['generated_paper'][section_key]
-                        pdf.add_paper_section(title, content_text, num)
-                    else:
-                        # 🎓 고등학교 수준 기본 내용 사용
-                        title = f"{section_key} ({english_name})"
-                        section_lower = section_key.lower().replace(' ', '_')
-                        if section_lower == '실험_방법':
-                            section_lower = 'methods'
-                        elif section_lower == '예상_결과':
-                            section_lower = 'results'
-                        
-                        default_content = get_highschool_default_content(section_lower, topic)
-                        pdf.add_paper_section(title, default_content, num)
-            
-            # 🔧 수정3: 간단한 활용가이드 추가 (안전하게)
-            try:
-                pdf.add_simple_usage_guide(topic)
-            except Exception as e:
-                print(f"활용가이드 추가 실패 (무시): {e}")
-                # 실패해도 PDF 생성은 계속 진행
-            
-            # 저장
-            output_path = os.path.join(OUTPUT_DIR, filename)
-            with suppress_fpdf_warnings():
-                pdf.output(output_path)
-        
-        # 파일 검증
-        if os.path.exists(output_path):
-            file_size = os.path.getsize(output_path)
-            if file_size > 2000:
-                print(f"✅ 원본 기반 안전 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
-                return output_path
-        
-        # 실패시 텍스트 파일
-        txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
-        with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write(f"=== {topic} 연구보고서 ===\n\n")
-            f.write(f"생성 시간: {datetime.now()}\n\n")
-            f.write(content)
-        
-        return txt_path
-            
-    except Exception as e:
-        print(f"❌ PDF 생성 오류: {e}")
-        return None, '', background_part, flags=re.DOTALL)
-                        background_part = re.sub(r'키워드.*
-            
-            # 🔧 수정2: 문헌조사 제거 (원본에서 해당 부분만 주석 처리)
-            # 원본 문헌조사 코드는 생략
-            
-            # 🎨 생성된 논문 (원본 구조 유지)
-            if sections['generated_paper']:
-                selected_idea = "선택된 연구 주제"
-                pdf.add_paper_title_page(topic, selected_idea)
-                
-                section_map = {
-                    '초록': ('Abstract', 1),
-                    '서론': ('Introduction', 2), 
-                    '실험 방법': ('Methods', 3),
-                    '예상 결과': ('Expected Results', 4),
-                    '결론': ('Conclusion', 5),
-                    '참고문헌': ('References', 6)
-                }
-                
-                for section_key, (english_name, num) in section_map.items():
-                    if section_key in sections['generated_paper']:
-                        title = f"{section_key} ({english_name})"
-                        content_text = sections['generated_paper'][section_key]
-                        pdf.add_paper_section(title, content_text, num)
-                    else:
-                        # 🎓 고등학교 수준 기본 내용 사용
-                        title = f"{section_key} ({english_name})"
-                        section_lower = section_key.lower().replace(' ', '_')
-                        if section_lower == '실험_방법':
-                            section_lower = 'methods'
-                        elif section_lower == '예상_결과':
-                            section_lower = 'results'
-                        
-                        default_content = get_highschool_default_content(section_lower, topic)
-                        pdf.add_paper_section(title, default_content, num)
-            
-            # 🔧 수정3: 간단한 활용가이드 추가 (안전하게)
-            try:
-                pdf.add_simple_usage_guide(topic)
-            except Exception as e:
-                print(f"활용가이드 추가 실패 (무시): {e}")
-                # 실패해도 PDF 생성은 계속 진행
-            
-            # 저장
-            output_path = os.path.join(OUTPUT_DIR, filename)
-            with suppress_fpdf_warnings():
-                pdf.output(output_path)
-        
-        # 파일 검증
-        if os.path.exists(output_path):
-            file_size = os.path.getsize(output_path)
-            if file_size > 2000:
-                print(f"✅ 원본 기반 안전 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
-                return output_path
-        
-        # 실패시 텍스트 파일
-        txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
-        with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write(f"=== {topic} 연구보고서 ===\n\n")
-            f.write(f"생성 시간: {datetime.now()}\n\n")
-            f.write(content)
-        
-        return txt_path
-            
-    except Exception as e:
-        print(f"❌ PDF 생성 오류: {e}")
-        return None, '', background_part, flags=re.DOTALL)
-                        background_part = re.sub(r'Google.*
-            
-            # 🔧 수정2: 문헌조사 제거 (원본에서 해당 부분만 주석 처리)
-            # 원본 문헌조사 코드는 생략
-            
-            # 🎨 생성된 논문 (원본 구조 유지)
-            if sections['generated_paper']:
-                selected_idea = "선택된 연구 주제"
-                pdf.add_paper_title_page(topic, selected_idea)
-                
-                section_map = {
-                    '초록': ('Abstract', 1),
-                    '서론': ('Introduction', 2), 
-                    '실험 방법': ('Methods', 3),
-                    '예상 결과': ('Expected Results', 4),
-                    '결론': ('Conclusion', 5),
-                    '참고문헌': ('References', 6)
-                }
-                
-                for section_key, (english_name, num) in section_map.items():
-                    if section_key in sections['generated_paper']:
-                        title = f"{section_key} ({english_name})"
-                        content_text = sections['generated_paper'][section_key]
-                        pdf.add_paper_section(title, content_text, num)
-                    else:
-                        # 🎓 고등학교 수준 기본 내용 사용
-                        title = f"{section_key} ({english_name})"
-                        section_lower = section_key.lower().replace(' ', '_')
-                        if section_lower == '실험_방법':
-                            section_lower = 'methods'
-                        elif section_lower == '예상_결과':
-                            section_lower = 'results'
-                        
-                        default_content = get_highschool_default_content(section_lower, topic)
-                        pdf.add_paper_section(title, default_content, num)
-            
-            # 🔧 수정3: 간단한 활용가이드 추가 (안전하게)
-            try:
-                pdf.add_simple_usage_guide(topic)
-            except Exception as e:
-                print(f"활용가이드 추가 실패 (무시): {e}")
-                # 실패해도 PDF 생성은 계속 진행
-            
-            # 저장
-            output_path = os.path.join(OUTPUT_DIR, filename)
-            with suppress_fpdf_warnings():
-                pdf.output(output_path)
-        
-        # 파일 검증
-        if os.path.exists(output_path):
-            file_size = os.path.getsize(output_path)
-            if file_size > 2000:
-                print(f"✅ 원본 기반 안전 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
-                return output_path
-        
-        # 실패시 텍스트 파일
-        txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
-        with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write(f"=== {topic} 연구보고서 ===\n\n")
-            f.write(f"생성 시간: {datetime.now()}\n\n")
-            f.write(content)
-        
-        return txt_path
-            
-    except Exception as e:
-        print(f"❌ PDF 생성 오류: {e}")
-        return None, '', background_part, flags=re.DOTALL)
-                        background_part = re.sub(r'Scholar.*
-            
-            # 🔧 수정2: 문헌조사 제거 (원본에서 해당 부분만 주석 처리)
-            # 원본 문헌조사 코드는 생략
-            
-            # 🎨 생성된 논문 (원본 구조 유지)
-            if sections['generated_paper']:
-                selected_idea = "선택된 연구 주제"
-                pdf.add_paper_title_page(topic, selected_idea)
-                
-                section_map = {
-                    '초록': ('Abstract', 1),
-                    '서론': ('Introduction', 2), 
-                    '실험 방법': ('Methods', 3),
-                    '예상 결과': ('Expected Results', 4),
-                    '결론': ('Conclusion', 5),
-                    '참고문헌': ('References', 6)
-                }
-                
-                for section_key, (english_name, num) in section_map.items():
-                    if section_key in sections['generated_paper']:
-                        title = f"{section_key} ({english_name})"
-                        content_text = sections['generated_paper'][section_key]
-                        pdf.add_paper_section(title, content_text, num)
-                    else:
-                        # 🎓 고등학교 수준 기본 내용 사용
-                        title = f"{section_key} ({english_name})"
-                        section_lower = section_key.lower().replace(' ', '_')
-                        if section_lower == '실험_방법':
-                            section_lower = 'methods'
-                        elif section_lower == '예상_결과':
-                            section_lower = 'results'
-                        
-                        default_content = get_highschool_default_content(section_lower, topic)
-                        pdf.add_paper_section(title, default_content, num)
-            
-            # 🔧 수정3: 간단한 활용가이드 추가 (안전하게)
-            try:
-                pdf.add_simple_usage_guide(topic)
-            except Exception as e:
-                print(f"활용가이드 추가 실패 (무시): {e}")
-                # 실패해도 PDF 생성은 계속 진행
-            
-            # 저장
-            output_path = os.path.join(OUTPUT_DIR, filename)
-            with suppress_fpdf_warnings():
-                pdf.output(output_path)
-        
-        # 파일 검증
-        if os.path.exists(output_path):
-            file_size = os.path.getsize(output_path)
-            if file_size > 2000:
-                print(f"✅ 원본 기반 안전 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
-                return output_path
-        
-        # 실패시 텍스트 파일
-        txt_path = os.path.join(OUTPUT_DIR, filename.replace('.pdf', '_backup.txt'))
-        with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write(f"=== {topic} 연구보고서 ===\n\n")
-            f.write(f"생성 시간: {datetime.now()}\n\n")
-            f.write(content)
-        
-        return txt_path
-            
-    except Exception as e:
-        print(f"❌ PDF 생성 오류: {e}")
-        return None, '', background_part, flags=re.DOTALL)
-                        
-                        if len(background_part) > 50:
-                            pdf.add_elegant_subsection("🌍 현재 과학적·사회적 배경")
-                            pdf.add_paragraph(background_part)
-                    except:
-                        pass
-                
-                # 확장 가능한 탐구 아이디어 (원본 유지)
+                # 🎨 확장 가능한 탐구 아이디어 (예쁘게 포맷팅)
                 if sections.get('research_ideas'):
-                    pdf.add_elegant_subsection("🎯 확장 가능한 탐구 아이디어")
+                    pdf.add_elegant_subsection("확장 가능한 탐구 아이디어")
                     pdf.add_beautiful_research_ideas(sections['research_ideas'])
             
-            # 🔧 수정2: 문헌조사 제거 (원본에서 해당 부분만 주석 처리)
-            # 원본 문헌조사 코드는 생략
+            # 🎨 문헌 조사 - 원본 그대로
+            pdf.add_section_title("문헌 조사")
             
-            # 🎨 생성된 논문 (원본 구조 유지)
+            # 🎨 ISEF 연구
+            pdf.add_section_title("ISEF 관련 연구", level=2)
+            if sections['isef_papers']:
+                for title, summary in sections['isef_papers']:
+                    pdf.add_paper_item(title, summary, "출처: ISEF 프로젝트")
+            else:
+                pdf.set_safe_font('normal', 10)
+                pdf.set_text_color(158, 158, 158)
+                pdf.multi_cell(0, 6, "관련 ISEF 프로젝트를 찾지 못했습니다.", align='L')
+                pdf.ln(4)
+            
+            # 🎨 arXiv 연구
+            pdf.add_section_title("arXiv 최신 연구", level=2)
+            if sections['arxiv_papers']:
+                for title, summary in sections['arxiv_papers']:
+                    pdf.add_paper_item(title, summary, "출처: arXiv (프리프린트)")
+            else:
+                pdf.set_safe_font('normal', 10)
+                pdf.set_text_color(158, 158, 158)
+                pdf.multi_cell(0, 6, "관련 arXiv 논문을 찾지 못했습니다.", align='L')
+                pdf.ln(4)
+            
+            # 🎨 생성된 논문 (고등학교 수준으로)
             if sections['generated_paper']:
                 selected_idea = "선택된 연구 주제"
                 pdf.add_paper_title_page(topic, selected_idea)
@@ -1109,13 +733,6 @@ def generate_pdf(content, filename="research_report.pdf"):
                         default_content = get_highschool_default_content(section_lower, topic)
                         pdf.add_paper_section(title, default_content, num)
             
-            # 🔧 수정3: 간단한 활용가이드 추가 (안전하게)
-            try:
-                pdf.add_simple_usage_guide(topic)
-            except Exception as e:
-                print(f"활용가이드 추가 실패 (무시): {e}")
-                # 실패해도 PDF 생성은 계속 진행
-            
             # 저장
             output_path = os.path.join(OUTPUT_DIR, filename)
             with suppress_fpdf_warnings():
@@ -1125,7 +742,7 @@ def generate_pdf(content, filename="research_report.pdf"):
         if os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
             if file_size > 2000:
-                print(f"✅ 원본 기반 안전 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
+                print(f"✅ 안전한 개선 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
                 return output_path
         
         # 실패시 텍스트 파일
