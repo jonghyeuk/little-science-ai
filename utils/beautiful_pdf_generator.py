@@ -421,42 +421,138 @@ class ImprovedKoreanPDF(FPDF):
         except Exception as e:
             print(f"참고문헌 가이드 오류: {e}")
     
-    def add_simple_usage_guide(self, topic):
-        """🔧 간단한 활용가이드 추가 - 안전함"""
+    def add_comprehensive_usage_guide(self, topic):
+        """🎓 구체적이고 친절한 활용가이드 - 대폭 개선"""
         try:
             # 새 페이지 시작
             self.add_page()
             
-            # 🎨 섹션 제목
+            # 🎨 메인 제목
             self.ln(8)
             self.set_safe_font('bold', 18)
             self.set_text_color(25, 118, 210)  # 파란색
-            self.multi_cell(0, 10, "이렇게 활용하세요", align='C')
+            self.multi_cell(0, 10, "📚 연구보고서 완벽 활용 가이드", align='C')
             self.ln(8)
             
             # 🎨 부제목
             self.set_safe_font('normal', 12)
             self.set_text_color(96, 125, 139)
-            self.multi_cell(0, 8, "학술대회 및 연구 발표를 위한 가이드", align='C')
+            self.multi_cell(0, 8, "과학 탐구 대회부터 학교 발표까지 - 단계별 완전정복", align='C')
             self.ln(12)
             
-            # 간단한 가이드 추가
-            self.add_elegant_subsection("📋 초록 작성 요령")
-            guide_text = "초록은 연구의 목적, 방법, 결과, 결론을 간단명료하게 작성합니다. 모든 주장은 참고문헌으로 뒷받침하고, '사료된다', '판단된다' 등의 겸손한 표현을 사용하세요."
-            self.add_paragraph(guide_text)
+            # === 1단계: 연구 주제 다듬기 ===
+            self.add_elegant_subsection("🎯 1단계: 연구 주제를 더 구체적으로 다듬어보세요")
             
-            self.add_elegant_subsection("📖 서론 작성 요령")
-            guide_text2 = "서론에서는 기존 연구들의 성과와 한계점을 참고문헌을 활용하여 설명하고, 연구의 필요성과 목적을 명시합니다. 타인의 연구 결과를 인용하여 연구의 당위성을 뒷받침하는 것이 중요합니다."
-            self.add_paragraph(guide_text2)
+            step1_text = f"""지금 생성된 '{topic}' 연구를 바탕으로, 여러분만의 독창적인 관점을 추가해보세요. 예를 들어 "단순히 LED 신호등을 만드는 것"에서 벗어나 "우리 학교 주변 교통 상황을 실제로 조사해서, 그 데이터를 반영한 맞춤형 신호등 시스템 개발"로 확장할 수 있어요.
+
+구체적인 방법:
+• 우리 동네나 학교 주변의 실제 문제점 찾기 (예: 횡단보도 대기시간이 너무 길어서 학생들이 무단횡단을 한다든지)
+• 설문조사나 관찰일기를 통해 데이터 수집하기
+• "만약 내가 교통 엔지니어라면?" 하는 관점으로 접근하기
+
+이렇게 하면 단순한 실험이 아니라 "사회 문제 해결형 연구"가 되어서 훨씬 임팩트가 커집니다."""
             
-            self.add_elegant_subsection("💡 핵심 포인트")
-            final_advice = "• 모든 주장은 참고문헌으로 뒷받침하기\n• '사료된다', '판단된다' 등의 겸손한 표현 사용\n• 객관적 사실과 주관적 해석을 구분하기\n• 그림과 표를 효과적으로 활용하기\n• 연구의 한계점을 솔직하게 인정하기"
-            self.set_safe_font('normal', 10)
-            self.set_text_color(55, 55, 55)
-            self.add_paragraph(final_advice)
+            self.add_paragraph(step1_text)
+            
+            # === 2단계: 실험 설계 업그레이드 ===
+            self.add_elegant_subsection("🔬 2단계: 실험을 더 과학적으로 설계하기")
+            
+            step2_text = """이 보고서에 나온 기본 실험에서 한 단계 더 나아가려면 "비교 실험"을 설계해보세요. 
+
+실제 사례로 설명하면:
+• 대조군 설정: 기존 고정시간 신호등 vs 우리가 만든 적응형 신호등
+• 변수 통제: 같은 시간대, 같은 장소에서 테스트
+• 정량적 측정: "그냥 좋아졌다"가 아니라 "대기시간이 평균 23% 단축되었다"처럼 숫자로 표현
+
+과학 탐구 대회에서 높은 점수를 받는 팀들의 공통점이 바로 이런 "정량적 비교 분석"이에요. 심사위원들은 "얼마나 과학적으로 접근했는가"를 가장 중요하게 봅니다."""
+            
+            self.add_paragraph(step2_text)
+            
+            # === 3단계: 발표 준비 전략 ===
+            self.add_elegant_subsection("🎤 3단계: 발표에서 압도적인 임팩트 만들기")
+            
+            step3_text = """발표할 때는 "스토리텔링"이 핵심입니다. 기술적인 내용을 나열하는 것보다 청중이 공감할 수 있는 이야기로 포장하세요.
+
+효과적인 발표 구성:
+1. 문제 제기 (30초): "여러분도 학교 앞 횡단보도에서 이런 경험 있으시죠?"
+2. 해결책 제시 (1분): "그래서 우리가 만든 게 바로 이겁니다!" (실제 작동하는 모델 시연)
+3. 실험 결과 (2분): 그래프와 숫자로 효과 입증
+4. 의미와 확장성 (30초): "이 기술이 실제로 적용되면 우리 도시가 이렇게 달라집니다"
+
+꿀팁: 발표 중간중간 질문을 던져서 청중의 참여를 유도하세요. "혹시 여러분 중에 신호등 때문에 지각해본 경험 있는 분?" 이런 식으로요."""
+            
+            self.add_paragraph(step3_text)
+            
+            # === 4단계: 포트폴리오 작성법 ===
+            self.add_elegant_subsection("📝 4단계: 입시에서도 빛나는 포트폴리오 만들기")
+            
+            step4_text = """이 연구를 대학 입시 포트폴리오에 활용할 때는 "성장 과정"을 강조하세요.
+
+포트폴리오 작성 팁:
+• 실패담도 솔직하게: "처음에는 LED가 제대로 안 켜져서 3일 밤을 새웠지만, 그 과정에서 회로 설계의 중요성을 깨달았다"
+• 협업 경험 부각: "팀원과 의견이 달라 갈등이 있었지만, 토론을 통해 더 나은 해결책을 찾아냈다"
+• 사회적 가치 연결: "단순한 기술 구현을 넘어 교통 약자를 배려하는 마음을 기술로 실현했다"
+
+대학에서는 "완벽한 결과"보다 "과정에서의 학습과 성장"을 더 높이 평가합니다."""
+            
+            self.add_paragraph(step4_text)
+            
+            # === 5단계: 심화 연구 방향 ===
+            self.add_elegant_subsection("🚀 5단계: 더 깊이 있는 연구로 발전시키기")
+            
+            step5_text = """이 연구를 기반으로 더 고도화된 프로젝트로 발전시킬 수 있는 방향들:
+
+단기 발전 방향 (1-2개월):
+• IoT 센서 추가: 실제 차량 대수를 감지하는 센서 연동
+• 데이터 시각화: 웹 대시보드로 실시간 교통 상황 모니터링
+• 머신러닝 적용: 과거 데이터를 학습해서 최적의 신호 타이밍 예측
+
+장기 발전 방향 (6개월 이상):
+• 스마트시티 연계: 여러 교차로를 네트워크로 연결한 광역 신호 제어
+• 환경 요소 고려: 공해 저감을 위한 친환경 신호 알고리즘
+• 사회적 약자 배려: 시각장애인을 위한 음성 안내 시스템 추가
+
+이런 식으로 단계적으로 발전시키면, 3년 동안 지속할 수 있는 장기 프로젝트가 됩니다."""
+            
+            self.add_paragraph(step5_text)
+            
+            # === 6단계: 실전 경험담 ===
+            self.add_elegant_subsection("💡 6단계: 실제 대회 참가 후기와 노하우")
+            
+            step6_text = """실제로 과학 탐구 대회에서 입상한 선배들의 노하우를 정리해드릴게요:
+
+대회 준비 체크리스트:
+✓ 2주 전: 발표 연습 시작 (최소 20번은 반복)
+✓ 1주 전: 예상 질문 100개 만들어서 답변 준비
+✓ 3일 전: 장비 고장에 대비한 백업 계획 수립
+✓ 하루 전: 발표 영상 녹화해서 최종 점검
+
+심사위원들이 자주 하는 질문들:
+"이 연구의 사회적 가치는 무엇인가요?"
+"실패했을 때는 어떻게 해결했나요?"
+"다른 기존 연구와의 차별점은 무엇인가요?"
+"실제로 상용화한다면 어떤 문제가 있을까요?"
+
+이런 질문들에 대한 답변을 미리 준비하면 당황하지 않고 자신감 있게 대답할 수 있어요."""
+            
+            self.add_paragraph(step6_text)
+            
+            # === 마무리 격려 메시지 ===
+            self.add_elegant_subsection("🎉 마지막으로 - 여러분을 응원합니다!")
+            
+            final_text = """과학 연구는 정답이 정해져 있는 문제 풀이가 아니라 "나만의 해답"을 찾아가는 여행입니다. 이 보고서는 시작점일 뿐이에요. 여러분의 창의적인 아이디어와 끈기 있는 실험 정신이 더해지면 정말 놀라운 결과물이 나올 거라고 확신합니다.
+
+기억하세요:
+• 실패는 성공의 어머니 - 실험이 안 되면 "왜 안 될까?"를 고민하는 게 진짜 과학
+• 혼자보다는 함께 - 친구들과 토론하고 선생님께 조언을 구하세요
+• 완벽보다는 완성 - 100% 완벽한 연구보다 80%라도 끝까지 해내는 게 중요
+
+여러분의 연구가 세상을 조금 더 나은 곳으로 만드는 데 기여하기를 바랍니다. 화이팅! 🚀"""
+            
+            self.add_paragraph(final_text)
             
         except Exception as e:
-            print(f"활용가이드 섹션 오류: {e}")
+            print(f"종합 활용가이드 섹션 오류: {e}")
     
     def clean_text(self, text):
         """개선된 텍스트 정리 - 기존 로직 유지"""
@@ -739,9 +835,6 @@ def generate_pdf(content, filename="research_report.pdf"):
                     pdf.add_elegant_subsection("🎯 확장 가능한 탐구 아이디어")
                     pdf.add_beautiful_research_ideas(sections['research_ideas'])
             
-            # 🔧 수정2: 문헌조사 제거 (원본에서 해당 부분만 주석 처리)
-            # 원본 문헌조사 코드는 생략
-            
             # 🎨 생성된 논문 (원본 구조 유지)
             if sections['generated_paper']:
                 selected_idea = "선택된 연구 주제"
@@ -773,9 +866,9 @@ def generate_pdf(content, filename="research_report.pdf"):
                         default_content = get_highschool_default_content(section_lower, topic)
                         pdf.add_paper_section(title, default_content, num)
             
-            # 🔧 수정3: 간단한 활용가이드 추가 (안전하게)
+            # 🔧 수정3: 종합 활용가이드 추가 (기존 add_simple_usage_guide 대신)
             try:
-                pdf.add_simple_usage_guide(topic)
+                pdf.add_comprehensive_usage_guide(topic)
             except Exception as e:
                 print(f"활용가이드 추가 실패 (무시): {e}")
                 # 실패해도 PDF 생성은 계속 진행
