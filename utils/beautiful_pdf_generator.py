@@ -277,57 +277,6 @@ class ImprovedKoreanPDF(FPDF):
         except Exception as e:
             print(f"탐구아이디어 포맷팅 오류: {e}")
     
-    def add_paper_item(self, title, summary, source=""):
-        """🎨 논문 항목 예쁘게 포맷팅 - 기존 로직 유지"""
-        try:
-            # 페이지 하단에서 논문 항목이 시작되면 새 페이지로
-            if self.get_y() > 240:
-                self.add_page()
-            
-            # 🎨 논문 제목 - 진한 남색 볼드
-            self.set_safe_font('bold', 11)
-            self.set_text_color(26, 35, 126)  # Indigo
-            clean_title = self.clean_text(title)
-            
-            # 제목 길이 제한 완화
-            if len(clean_title) > 300:
-                clean_title = clean_title[:297] + "..."
-            
-            self.multi_cell(0, 7, f"▪ {clean_title}", align='L')
-            
-            if source:
-                # 🎨 출처 - 중간 회색 
-                self.set_safe_font('normal', 9)
-                self.set_text_color(117, 117, 117)
-                self.multi_cell(0, 5, f"   {source}", align='L')
-            
-            # 🎨 요약 - 진한 회색
-            self.set_safe_font('normal', 10)
-            self.set_text_color(65, 65, 65)
-            clean_summary = self.clean_text(summary)
-            
-            # 요약 길이 제한 완화
-            if len(clean_summary) > 2000:
-                # 자연스러운 문장 끝에서 자르기
-                sentences = re.split(r'[.!?]\s+', clean_summary)
-                kept_text = ""
-                for sent in sentences:
-                    if len(kept_text + sent) < 1500:
-                        kept_text += sent + ". "
-                    else:
-                        break
-                clean_summary = kept_text.rstrip(". ") + "."
-            
-            if clean_summary:
-                # 들여쓰기로 예쁘게
-                self.cell(10, 6, '', ln=0)  # 들여쓰기
-                self.multi_cell(0, 6, clean_summary, align='L')
-            
-            self.ln(6)
-            
-        except Exception as e:
-            print(f"논문 항목 오류: {e}")
-    
     def add_paper_title_page(self, topic, selected_idea):
         self.add_page()
         self.ln(20)
@@ -421,6 +370,128 @@ class ImprovedKoreanPDF(FPDF):
         except Exception as e:
             print(f"참고문헌 가이드 오류: {e}")
     
+    def add_usage_guide_section(self, topic):
+        """🔧 수정3: 새로운 섹션 - 이렇게 활용하세요"""
+        try:
+            # 새 페이지 시작
+            self.add_page()
+            
+            # 🎨 섹션 제목
+            self.ln(8)
+            self.set_safe_font('bold', 18)
+            self.set_text_color(25, 118, 210)  # 파란색
+            self.multi_cell(0, 10, "이렇게 활용하세요", align='C')
+            self.ln(8)
+            
+            # 🎨 부제목
+            self.set_safe_font('normal', 12)
+            self.set_text_color(96, 125, 139)
+            self.multi_cell(0, 8, "학술대회 및 연구 발표를 위한 가이드", align='C')
+            self.ln(12)
+            
+            # 1. 초록 작성법
+            self.add_elegant_subsection("📋 초록 (Abstract) 작성법")
+            abstract_guide = f"""학술대회에서 초록은 연구의 핵심을 간단명료하게 전달하는 역할을 합니다. 
+            
+• 연구 목적: 왜 이 연구를 했는지 한 문장으로 설명
+• 연구 방법: 어떤 실험이나 조사를 했는지 간략히 기술
+• 주요 결과: 가장 중요한 발견이나 결과 1-2가지 제시
+• 결론 및 의의: 이 연구가 갖는 학술적, 실용적 의미
+
+예시: "본 연구는 {topic}의 효율성 향상을 목적으로 수행되었다. ○○ 방법을 사용하여 △△를 측정한 결과, 기존 대비 15% 향상된 성능을 확인하였다. 이는 관련 분야 발전에 기여할 것으로 사료된다."""
+            
+            self.add_paragraph(abstract_guide)
+            
+            # 2. 서론 작성법
+            self.add_elegant_subsection("📖 서론 (Introduction) 작성법")
+            intro_guide = """서론에서는 연구의 배경과 필요성을 설득력 있게 제시해야 합니다.
+
+• 연구 분야의 현황 소개
+• 기존 연구들의 성과와 한계점 (참고문헌 활용)
+• 연구 목적과 가설 명시
+
+**참고문헌 활용 예시:**
+"김○○ 등(2023)의 연구에 따르면..." 
+"최근 연구들(Lee et al., 2024; 박○○, 2023)에서는..."
+"그러나 기존 연구들은 ○○○의 한계가 있어 추가 연구가 필요한 실정이다."
+
+이처럼 타인의 연구 결과를 인용하여 연구의 당위성을 뒷받침하는 것이 중요합니다."""
+            
+            self.add_paragraph(intro_guide)
+            
+            # 3. 방법 작성법
+            self.add_elegant_subsection("🔬 방법 (Methods) 작성법")
+            methods_guide = """방법 섹션은 실험의 재현성을 위해 정확하고 간결하게 기술합니다.
+
+• 실험 재료 및 장비: 사용한 주요 기기와 재료 나열
+• 실험 절차: 단계별로 간단명료하게 기술
+• 측정 방법: 어떤 변수를 어떻게 측정했는지 명시
+
+**실제 작성 예시:**
+"실험에는 ○○ 다이오드(△△사, 모델명)와 ××계를 사용하였다. 각도를 15° 간격으로 조절하며 전압과 전류를 측정하였고, 모든 실험은 3회 반복 수행하였다."
+
+위에서 생성된 상세한 설명은 여러분의 이해를 위한 것이며, 실제 논문에서는 이처럼 간결하게 작성합니다."""
+            
+            self.add_paragraph(methods_guide)
+            
+            # 4. 결과 작성법
+            self.add_elegant_subsection("📊 결과 (Results) 작성법")
+            results_guide = """결과 섹션에서는 객관적 사실을 바탕으로 의미를 해석합니다.
+
+• 측정 결과의 객관적 기술
+• 그림과 표를 활용한 시각적 설명
+• 참고문헌을 활용한 결과 해석
+
+**올바른 표현 방식:**
+❌ "우리의 실험이 최고다" (주관적)
+✅ "○○의 연구 결과와 일치하는 경향을 보였으며, 이는 △△ 이론을 뒷받침하는 것으로 사료된다" (객관적)
+
+**결과 해석 예시:**
+"그림 1에서 보듯이 30° 각도에서 최대 효율을 보였다. 이는 Smith et al.(2023)의 이론적 예측과 일치하는 결과로 사료된다."
+
+자신의 의견보다는 기존 연구나 이론을 근거로 해석하는 것이 학술적으로 바람직합니다."""
+            
+            self.add_paragraph(results_guide)
+            
+            # 5. 결론 작성법
+            self.add_elegant_subsection("🎯 결론 (Conclusion) 작성법")
+            conclusion_guide = """결론에서는 연구의 종합적 의미와 기여도를 제시합니다.
+
+• 연구 목적 달성 여부 확인
+• 주요 발견사항의 학술적 의의
+• 연구의 한계점 및 향후 연구 방향
+
+**적절한 표현:**
+"본 연구 결과는 ○○ 분야의 이해를 높이는 데 기여할 것으로 사료된다"
+"향후 △△에 대한 추가 연구가 필요할 것으로 판단된다"
+"○○의 연구와 종합하면, ××한 결론을 도출할 수 있다"
+
+겸손하면서도 연구의 가치를 명확히 전달하는 것이 중요합니다."""
+            
+            self.add_paragraph(conclusion_guide)
+            
+            # 6. 마무리 조언
+            self.ln(8)
+            self.set_safe_font('bold', 12)
+            self.set_text_color(76, 175, 80)  # 초록색
+            self.multi_cell(0, 8, "💡 핵심 포인트", align='L')
+            self.ln(3)
+            
+            final_advice = """• 모든 주장은 참고문헌으로 뒷받침하기
+• "사료된다", "판단된다" 등의 겸손한 표현 사용
+• 객관적 사실과 주관적 해석을 구분하기
+• 그림과 표를 효과적으로 활용하기
+• 연구의 한계점을 솔직하게 인정하기
+
+이러한 원칙을 지키면 학술대회에서 인정받는 우수한 논문을 작성할 수 있습니다."""
+            
+            self.set_safe_font('normal', 10)
+            self.set_text_color(55, 55, 55)
+            self.add_paragraph(final_advice)
+            
+        except Exception as e:
+            print(f"활용가이드 섹션 오류: {e}")
+    
     def clean_text(self, text):
         """개선된 텍스트 정리 - 기존 로직 유지"""
         try:
@@ -479,8 +550,6 @@ def parse_content_enhanced(content):
         'topic_explanation': '',
         'applications': '',
         'research_ideas': '',
-        'isef_papers': [],
-        'arxiv_papers': [],
         'generated_paper': {}
     }
     
@@ -511,92 +580,6 @@ def parse_content_enhanced(content):
                 
                 result['research_ideas'] = '\n'.join(clean_lines)
                 print(f"틈새주제 파싱 완료: {len(clean_lines)}줄")
-        
-        # 🔥 ISEF 파싱 (수정된 버전 - HTML 태그 고려)
-        isef_papers = []
-        if "ISEF" in content:
-            isef_section = content[content.find("ISEF"):content.find("arXiv") if "arXiv" in content else len(content)]
-            print(f"ISEF 섹션 길이: {len(isef_section)}")
-            
-            # 🎯 HTML 태그를 고려한 패턴 추가 (동작하는 버전에서 가져옴)
-            patterns = [
-                r'<h3[^>]*>📌\s*([^<]+)</h3>.*?<p>([^<]+)</p>',  # HTML 태그 패턴
-                r'▪\s*([^\n]+)\n[^\n]*출처[^\n]*\n\s*([^▪]+?)(?=▪|\n\n|$)',
-                r'-\s*\*\*([^*]+)\*\*[^\n]*\n([^-]+?)(?=-|\n\n|$)',
-                r'([A-Z][^:\n]+):\s*([^▪\n-]+?)(?=▪|-|\n\n|$)'
-            ]
-            
-            for pattern in patterns:
-                matches = re.findall(pattern, isef_section, re.DOTALL)
-                for title, summary in matches:
-                    clean_title = re.sub(r'<[^>]+>', '', title).strip()
-                    clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
-                    if len(clean_title) > 5 and len(clean_summary) > 20:
-                        # 요약 길이 관대하게
-                        if len(clean_summary) > 500:
-                            sentences = re.split(r'[.!?]\s+', clean_summary)
-                            kept_sentences = []
-                            total_len = 0
-                            for sent in sentences:
-                                if total_len + len(sent) < 800:
-                                    kept_sentences.append(sent)
-                                    total_len += len(sent)
-                                else:
-                                    break
-                            clean_summary = '. '.join(kept_sentences)
-                            if not clean_summary.endswith('.'):
-                                clean_summary += '.'
-                        
-                        isef_papers.append((clean_title, clean_summary))
-                        if len(isef_papers) >= 3:
-                            break
-                if isef_papers:
-                    break
-        
-        result['isef_papers'] = isef_papers
-        print(f"ISEF 논문 파싱: {len(isef_papers)}개")
-        
-        # arXiv 검색 (기존 로직)
-        arxiv_papers = []
-        if "arXiv" in content:
-            arxiv_section = content[content.find("arXiv"):]
-            print(f"arXiv 섹션 길이: {len(arxiv_section)}")
-            
-            patterns = [
-                r'▪\s*([^\n]+)\n[^\n]*arXiv[^\n]*\n\s*([^▪]+?)(?=▪|\n\n|$)',
-                r'-\s*\*\*([^*]+)\*\*[^\n]*\n([^-]+?)(?=\[링크\]|-|\n\n|$)',
-                r'([A-Z][^:\n]+):\s*([^▪\n-]+?)(?=▪|-|\n\n|영문 원본|$)'
-            ]
-            
-            for pattern in patterns:
-                matches = re.findall(pattern, arxiv_section, re.DOTALL)
-                for title, summary in matches:
-                    clean_title = re.sub(r'<[^>]+>', '', title).strip()
-                    clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
-                    
-                    if len(clean_title) > 5 and len(clean_summary) > 20:
-                        if len(clean_summary) > 500:
-                            sentences = re.split(r'[.!?]\s+', clean_summary)
-                            kept_sentences = []
-                            total_len = 0
-                            for sent in sentences:
-                                if total_len + len(sent) < 800:
-                                    kept_sentences.append(sent)
-                                    total_len += len(sent)
-                                else:
-                                    break
-                            clean_summary = '. '.join(kept_sentences)
-                            if not clean_summary.endswith('.'):
-                                clean_summary += '.'
-                        
-                        arxiv_papers.append((clean_title, clean_summary))
-                        if len(arxiv_papers) >= 3:
-                            break
-                if arxiv_papers:
-                    break
-        
-        result['arxiv_papers'] = arxiv_papers
-        print(f"arXiv 논문 파싱: {len(arxiv_papers)}개")
         
         # 생성된 논문 파싱 (기존 유지)
         if "생성된 연구 논문" in content:
@@ -639,7 +622,7 @@ def get_highschool_default_content(section, topic):
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """🎨 안전하게 개선된 PDF 생성 - 기존 파싱 로직 사용"""
+    """🎨 수정된 PDF 생성 - 모든 문제점 개선"""
     try:
         # 출력 디렉토리 생성
         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -660,48 +643,45 @@ def generate_pdf(content, filename="research_report.pdf"):
             # 내용 페이지
             pdf.add_page()
             
-            # 🎨 주제 개요
+            # 🔧 수정1: 주제 개요 (소제목 구분 개선)
             if sections['topic_explanation']:
                 pdf.add_section_title("주제 개요")
                 
                 explanation = sections['topic_explanation']
                 
+                # 🔧 소제목들을 명확하게 구분
                 # 개념 정의 부분
                 if '개념' in explanation or '정의' in explanation:
-                    concept_part = explanation.split('응용')[0] if '응용' in explanation else explanation[:500]
+                    concept_part = explanation.split('작동')[0] if '작동' in explanation else explanation.split('현재')[0] if '현재' in explanation else explanation[:500]
                     if len(concept_part) > 50:
-                        pdf.add_elegant_subsection("개념 정의")
+                        pdf.add_elegant_subsection("📌 개념 정의")
                         pdf.add_paragraph(concept_part)
+                
+                # 작동 원리 부분 추가
+                if '작동' in explanation and '원리' in explanation:
+                    mechanism_start = explanation.find('작동')
+                    mechanism_end = explanation.find('현재') if '현재' in explanation else explanation.find('확장') if '확장' in explanation else len(explanation)
+                    mechanism_part = explanation[mechanism_start:mechanism_end]
+                    if len(mechanism_part) > 50:
+                        pdf.add_elegant_subsection("🔧 작동 원리 및 메커니즘")
+                        pdf.add_paragraph(mechanism_part)
+                
+                # 현재 과학적·사회적 배경 부분 추가
+                if '현재' in explanation and ('과학' in explanation or '사회' in explanation or '배경' in explanation):
+                    background_start = explanation.find('현재')
+                    background_end = explanation.find('확장') if '확장' in explanation else len(explanation)
+                    background_part = explanation[background_start:background_end]
+                    if len(background_part) > 50:
+                        pdf.add_elegant_subsection("🌍 현재 과학적·사회적 배경")
+                        pdf.add_paragraph(background_part)
                 
                 # 🎨 확장 가능한 탐구 아이디어 (예쁘게 포맷팅)
                 if sections.get('research_ideas'):
-                    pdf.add_elegant_subsection("확장 가능한 탐구 아이디어")
+                    pdf.add_elegant_subsection("🎯 확장 가능한 탐구 아이디어")
                     pdf.add_beautiful_research_ideas(sections['research_ideas'])
             
-            # 🎨 문헌 조사
-            pdf.add_section_title("문헌 조사")
-            
-            # 🎨 ISEF 연구
-            pdf.add_section_title("ISEF 관련 연구", level=2)
-            if sections['isef_papers']:
-                for title, summary in sections['isef_papers']:
-                    pdf.add_paper_item(title, summary, "출처: ISEF 프로젝트")
-            else:
-                pdf.set_safe_font('normal', 10)
-                pdf.set_text_color(158, 158, 158)
-                pdf.multi_cell(0, 6, "관련 ISEF 프로젝트를 찾지 못했습니다.", align='L')
-                pdf.ln(4)
-            
-            # 🎨 arXiv 연구
-            pdf.add_section_title("arXiv 최신 연구", level=2)
-            if sections['arxiv_papers']:
-                for title, summary in sections['arxiv_papers']:
-                    pdf.add_paper_item(title, summary, "출처: arXiv (프리프린트)")
-            else:
-                pdf.set_safe_font('normal', 10)
-                pdf.set_text_color(158, 158, 158)
-                pdf.multi_cell(0, 6, "관련 arXiv 논문을 찾지 못했습니다.", align='L')
-                pdf.ln(4)
+            # 🔧 수정2: 문헌조사 부분 완전 삭제
+            # (기존 ISEF, arXiv 관련 코드 모두 제거됨)
             
             # 🎨 생성된 논문 (고등학교 수준으로)
             if sections['generated_paper']:
@@ -734,6 +714,9 @@ def generate_pdf(content, filename="research_report.pdf"):
                         default_content = get_highschool_default_content(section_lower, topic)
                         pdf.add_paper_section(title, default_content, num)
             
+            # 🔧 수정3: 새로운 섹션 "이렇게 활용하세요" 추가
+            pdf.add_usage_guide_section(topic)
+            
             # 저장
             output_path = os.path.join(OUTPUT_DIR, filename)
             with suppress_fpdf_warnings():
@@ -743,7 +726,7 @@ def generate_pdf(content, filename="research_report.pdf"):
         if os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
             if file_size > 2000:
-                print(f"✅ 안전한 개선 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
+                print(f"✅ 개선된 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
                 return output_path
         
         # 실패시 텍스트 파일
