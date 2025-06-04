@@ -11,7 +11,7 @@ from utils.layout import load_css
 from utils.search_db import search_similar_titles, initialize_db
 from utils.search_arxiv import search_arxiv
 from utils.explain_topic import explain_topic
-from utils.beautiful_pdf_generator import generate_pdf
+from utils.pdf_generator import generate_pdf
 from utils.generate_paper import generate_research_paper
 
 # 3. 추가: streamlit 콘솔 로그 확인을 위한 코드 (맨 위에 추가)
