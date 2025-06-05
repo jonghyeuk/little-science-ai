@@ -535,6 +535,11 @@ st.title("🧪 과학논문 주제 탐색 도우미")
 if 'full_text' not in st.session_state:
     st.session_state.full_text = ""
 
+# 검색창
+topic = st.text_input("🔬 연구하고 싶은 과학 주제를 입력하세요:", 
+                     placeholder="예: 다이오드 트렌지스터, 미세먼지 필터, 미생물 연료전지...")
+
+# 🔥 깔끔한 가이드
 if not topic:
     st.markdown("""
     <div style="background-color: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #007bff;">
@@ -549,7 +554,7 @@ if not topic:
     <p><strong>⚠️ 주의:</strong> 연관성 있는 과학 개념을 조합해주세요.</p>
     </div>
     """, unsafe_allow_html=True)
-
+    
 # 🔥 주제가 입력된 경우 (캐싱 로직 적용)
 if topic:
    
