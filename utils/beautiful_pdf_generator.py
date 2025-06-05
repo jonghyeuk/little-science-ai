@@ -523,23 +523,21 @@ def generate_pdf(content, filename="research_report.pdf"):
             # 내용 페이지
             pdf.add_page()
             
-            # 🎨 주제 개요
+            # 🎨 개념 정의 (독립 섹션)
             if sections['topic_explanation']:
-                pdf.add_section_title("주제 개요")
-                
                 explanation = sections['topic_explanation']
                 
-                # 개념 정의 부분
+                # 개념 정의 부분 추출
                 if '개념' in explanation or '정의' in explanation:
                     concept_part = explanation.split('응용')[0] if '응용' in explanation else explanation[:500]
                     if len(concept_part) > 50:
-                        pdf.add_elegant_subsection("개념 정의")
+                        pdf.add_section_title("개념 정의")
                         pdf.add_paragraph(concept_part)
-                
-                # 🎨 확장 가능한 탐구 아이디어 (예쁘게 포맷팅)
-                if sections.get('research_ideas'):
-                    pdf.add_elegant_subsection("확장 가능한 탐구 아이디어")
-                    pdf.add_beautiful_research_ideas(sections['research_ideas'])
+            
+            # 🎨 확장 가능한 탐구 아이디어 (독립 섹션)
+            if sections.get('research_ideas'):
+                pdf.add_section_title("확장 가능한 탐구 아이디어")
+                pdf.add_beautiful_research_ideas(sections['research_ideas'])
             
             # =============== 문헌조사 섹션 완전 제거 ===============
             # 기존에 있던 다음 코드들을 모두 제거:
