@@ -541,7 +541,7 @@ topic = st.text_input("🔬 연구하고 싶은 과학 주제를 입력하세요
 
 # 🔥 작은 예쁜 가이드 버튼
 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-with col1:
+with col2:
     with st.expander("💡 입력 가이드"):
         st.markdown("""
         **입력 방식:**
