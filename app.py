@@ -539,8 +539,17 @@ if 'full_text' not in st.session_state:
 topic = st.text_input("🔬 연구하고 싶은 과학 주제를 입력하세요:", 
                      placeholder="예: 다이오드 트렌지스터, 미세먼지 필터, 미생물 연료전지...")
 
-# 🔥 간단한 도움말
-st.caption("💡 단어나 문장 모두 입력 가능해요. 연관성 있는 과학 개념 조합을 추천합니다.")
+# 🔥 작은 예쁜 가이드 버튼
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    with st.expander("💡 입력 가이드"):
+        st.markdown("""
+        **입력 방식:**
+        - 단어형: `미세플라스틱`, `태양전지`
+        - 주제형: `빛을 활용한 프랑크상수 구하기`
+        
+        **주의:** 연관성 있는 과학 개념 조합 추천
+        """)
 
 # 🔥 주제가 입력된 경우 (캐싱 로직 적용)
 if topic:
