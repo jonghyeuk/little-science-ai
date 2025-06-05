@@ -423,8 +423,9 @@ def extract_topic_from_content(content):
         return "과학 연구 탐색"
 
 def parse_content_enhanced(content):
-    """🔥 기존 파싱 로직 그대로 유지 - 안전함"""
+    """🔥 개념 정의와 탐구 아이디어 분리 파싱"""
     result = {
+        'concept_definition': '',  # 🔥 새로 추가
         'topic_explanation': '',
         'applications': '',
         'research_ideas': '',
@@ -434,22 +435,26 @@ def parse_content_enhanced(content):
     }
     
     try:
-        print("🔍 기존 파싱 로직 사용...")
+        print("🔍 개선된 파싱 로직 사용...")
         print(f"전체 콘텐츠 길이: {len(content)}")
         
         # 전체 주제 해설 추출
         explanation_match = re.search(r'# 📘[^\n]*\n(.*?)(?=## 📄|## 🌐|$)', content, re.DOTALL)
         if explanation_match:
             full_explanation = explanation_match.group(1).strip()
-            result['topic_explanation'] = full_explanation
             print(f"주제 해설 추출 성공: {len(full_explanation)}자")
             
-            # 🔥 틈새주제 파싱 (기존 로직)
+            # 🔥 개념 정의와 탐구 아이디어 분리
             if '확장 가능한 탐구' in full_explanation:
                 ideas_start = full_explanation.find('확장 가능한 탐구')
-                ideas_section = full_explanation[ideas_start:]
                 
-                # 간단하게 전체를 가져와서 정리
+                # 개념 정의 부분 (확장 가능한 탐구 이전까지)
+                concept_part = full_explanation[:ideas_start].strip()
+                result['concept_definition'] = concept_part
+                print(f"개념 정의 추출: {len(concept_part)}자")
+                
+                # 탐구 아이디어 부분
+                ideas_section = full_explanation[ideas_start:]
                 lines = ideas_section.split('\n')
                 clean_lines = []
                 
@@ -460,6 +465,31 @@ def parse_content_enhanced(content):
                 
                 result['research_ideas'] = '\n'.join(clean_lines)
                 print(f"틈새주제 파싱 완료: {len(clean_lines)}줄")
+            else:
+                # 탐구 아이디어가 없으면 전체를 개념 정의로
+                result['concept_definition'] = full_explanation
+                print("탐구 아이디어 없음 - 전체를 개념 정의로 처리")
+        
+        # 생성된 논문 파싱 (기존 유지)
+        if "생성된 연구 논문" in content:
+            paper_section = content[content.find("생성된 연구 논문"):]
+            paper_sections = ['초록', '서론', '실험 방법', '예상 결과', '결론', '참고문헌']
+            for section in paper_sections:
+                pattern = f"### {section}[^\n]*\n(.*?)(?=###|$)"
+                match = re.search(pattern, paper_section, re.DOTALL)
+                if match:
+                    content_text = match.group(1).strip()
+                    if len(content_text) > 10:
+                        result['generated_paper'][section] = content_text
+        
+        print(f"🎉 개선된 파싱 완료!")
+        return result
+        
+    except Exception as e:
+        print(f"❌ 파싱 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return result
         
         # 생성된 논문 파싱 (기존 유지)
         if "생성된 연구 논문" in content:
@@ -524,15 +554,9 @@ def generate_pdf(content, filename="research_report.pdf"):
             pdf.add_page()
             
             # 🎨 개념 정의 (독립 섹션)
-            if sections['topic_explanation']:
-                explanation = sections['topic_explanation']
-                
-                # 개념 정의 부분 추출
-                if '개념' in explanation or '정의' in explanation:
-                    concept_part = explanation.split('응용')[0] if '응용' in explanation else explanation[:500]
-                    if len(concept_part) > 50:
-                        pdf.add_section_title("개념 정의")
-                        pdf.add_paragraph(concept_part)
+            if sections.get('concept_definition'):
+                pdf.add_section_title("개념 정의")
+                pdf.add_paragraph(sections['concept_definition'])
             
             # 🎨 확장 가능한 탐구 아이디어 (독립 섹션)
             if sections.get('research_ideas'):
