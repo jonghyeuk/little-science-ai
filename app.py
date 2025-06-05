@@ -551,7 +551,7 @@ if not topic:
     <li><strong>주제형:</strong> <code>광학을 활용한 실험 설계</code></li>
     </ul>
     
-    <p><strong>⚠️ 주의:</strong> 연관성 있는 과학 개념을 조합해주세요.</p>
+    <p><strong>⚠️ 주의:</strong> 연관성 있는 과학 개념을 조합해주세요. 동떨어진 주제를 검색시 엉뚱한 결과가 나올 수 있습니다.</p>
     </div>
     """, unsafe_allow_html=True)
     
