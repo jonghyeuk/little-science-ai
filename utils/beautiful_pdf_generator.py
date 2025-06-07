@@ -237,6 +237,111 @@ class ImprovedKoreanPDF(FPDF):
         except Exception as e:
             print(f"문단 추가 오류: {e}")
     
+    def add_formatted_content(self, text):
+        """🎨 웹 내용을 구조화해서 PDF에 추가 - 소제목과 문단 구분 개선"""
+        try:
+            if not text:
+                return
+                
+            # 문단별로 분리
+            paragraphs = text.split('\n\n')
+            
+            for paragraph in paragraphs:
+                paragraph = paragraph.strip()
+                if not paragraph:
+                    continue
+                
+                # 🔥 소제목 감지 (이모지로 시작하는 경우)
+                if any(emoji in paragraph[:10] for emoji in ['🧪', '🔧', '🌍', '🌎', '💡', '📊', '⚙️', '🔬', '🎯']):
+                    lines = paragraph.split('\n')
+                    if lines:
+                        # 첫 줄을 소제목으로
+                        subtitle = lines[0].strip()
+                        self.add_elegant_subsection(subtitle)
+                        
+                        # 나머지 내용이 있으면 문단으로
+                        if len(lines) > 1:
+                            remaining_content = '\n'.join(lines[1:]).strip()
+                            if remaining_content:
+                                self.add_formatted_paragraph(remaining_content)
+                
+                # 🔥 일반 문단 처리
+                else:
+                    self.add_formatted_paragraph(paragraph)
+                    
+        except Exception as e:
+            print(f"포맷된 내용 추가 오류: {e}")
+            # 오류 시 기본 문단으로 처리
+            self.add_paragraph(text)
+    
+    def add_formatted_paragraph(self, text):
+        """🎨 문단을 보기 좋게 포맷팅해서 추가"""
+        try:
+            # 🎨 일반 텍스트 - 진한 회색
+            self.set_safe_font('normal', 10)
+            self.set_text_color(55, 55, 55)
+            
+            clean_text = self.clean_text(text)
+            if not clean_text or len(clean_text.strip()) <= 5:
+                return
+            
+            # 🔥 줄 단위로 처리 (들여쓰기 고려)
+            lines = clean_text.split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    self.ln(3)  # 빈 줄 간격
+                    continue
+                
+                # 🔥 리스트 항목 감지 (-, •, 1., 2. 등)
+                if re.match(r'^[-•·]\s+', line) or re.match(r'^\d+\.\s+', line):
+                    # 리스트 항목은 들여쓰기 적용
+                    self.cell(8, 6, '', ln=0)  # 들여쓰기
+                    list_content = re.sub(r'^[-•·]\s+|^\d+\.\s+', '', line)
+                    self.multi_cell(0, 6, list_content, align='L')
+                    self.ln(2)
+                
+                # 🔥 일반 텍스트
+                else:
+                    # 긴 문장은 자연스럽게 분할
+                    if len(line) > 600:
+                        sentences = re.split(r'([.!?]\s+)', line)
+                        current_chunk = ""
+                        
+                        for i in range(0, len(sentences), 2):
+                            if i+1 < len(sentences):
+                                sentence = sentences[i] + sentences[i+1]
+                            else:
+                                sentence = sentences[i]
+                            
+                            if len(current_chunk + sentence) <= 600:
+                                current_chunk += sentence
+                            else:
+                                if current_chunk:
+                                    self.multi_cell(0, 6, current_chunk.strip(), align='L')
+                                    self.ln(3)
+                                    current_chunk = sentence
+                                else:
+                                    self.multi_cell(0, 6, sentence, align='L')
+                                    self.ln(3)
+                        
+                        if current_chunk.strip():
+                            self.multi_cell(0, 6, current_chunk.strip(), align='L')
+                            self.ln(3)
+                    else:
+                        self.multi_cell(0, 6, line, align='L')
+                        self.ln(3)
+            
+            # 문단 끝에 추가 간격
+            self.ln(2)
+                
+        except Exception as e:
+            print(f"포맷된 문단 추가 오류: {e}")
+            # 오류 시 기본 처리
+            self.multi_cell(0, 6, self.clean_text(text), align='L')
+            self.ln(3)
+    
     def add_beautiful_research_ideas(self, text):
         """🎨 탐구아이디어 예쁘게 포맷팅 - 기존 파싱 결과 사용"""
         try:
@@ -423,11 +528,9 @@ def extract_topic_from_content(content):
         return "과학 연구 탐색"
 
 def parse_content_enhanced(content):
-    """🔥 개념 정의와 탐구 아이디어 분리 파싱"""
+    """🔥 단순화된 파싱 - 웹 내용을 그대로 PDF로"""
     result = {
-        'concept_definition': '',  # 🔥 새로 추가
-        'topic_explanation': '',
-        'applications': '',
+        'full_topic_explanation': '',  # 🔥 전체 주제 해설 (웹 내용 그대로)
         'research_ideas': '',
         'isef_papers': [],
         'arxiv_papers': [],
@@ -435,56 +538,23 @@ def parse_content_enhanced(content):
     }
     
     try:
-        print("🔍 개선된 파싱 로직 사용...")
+        print("🔍 단순화된 파싱 로직 사용...")
         print(f"전체 콘텐츠 길이: {len(content)}")
         
-        # 전체 주제 해설 추출
+        # 🔥 전체 주제 해설 추출 (## 📄 또는 ## 🌐 전까지)
         explanation_match = re.search(r'# 📘[^\n]*\n(.*?)(?=## 📄|## 🌐|$)', content, re.DOTALL)
         if explanation_match:
             full_explanation = explanation_match.group(1).strip()
             print(f"주제 해설 추출 성공: {len(full_explanation)}자")
             
-            # 🔥 개념 정의와 탐구 아이디어 분리
+            # 🔥 확장 가능한 탐구 아이디어와 분리
             if '확장 가능한 탐구' in full_explanation:
                 ideas_start = full_explanation.find('확장 가능한 탐구')
                 
-                # 개념 정의 부분 더 정교하게 추출
-                concept_part = full_explanation[:ideas_start].strip()
-                
-                # 🔥 검색 가이드나 기타 내용 제거
-                concept_lines = concept_part.split('\n')
-                clean_concept_lines = []
-                
-                for line in concept_lines:
-                    line = line.strip()
-                    # 검색 관련, URL, 키워드 관련 라인 제외
-                    if (line and 
-                        not any(skip in line.lower() for skip in ['google', 'scholar', 'https', 'www', 'dbpia', 'riss', 'naver', 'academic', '검색', '키워드', 'microplastics']) and
-                        not line.startswith('검색 사이트') and
-                        not '(' in line and ')' in line and 'https' in line):
-                        clean_concept_lines.append(line)
-                
-                # 개념 정의 관련 문단만 추출 (처음 몇 문단)
-                concept_text = '\n'.join(clean_concept_lines)
-                
-                # 🔥 개념 정의는 보통 처음 1-2개 문단이므로 길이 제한
-                if len(concept_text) > 1000:
-                    # 문단 단위로 자르기
-                    paragraphs = concept_text.split('\n\n')
-                    concept_paragraphs = []
-                    char_count = 0
-                    
-                    for para in paragraphs:
-                        if char_count + len(para) < 800 and ('개념' in para or '정의' in para or len(concept_paragraphs) < 2):
-                            concept_paragraphs.append(para)
-                            char_count += len(para)
-                        else:
-                            break
-                    
-                    concept_text = '\n\n'.join(concept_paragraphs)
-                
-                result['concept_definition'] = concept_text
-                print(f"정제된 개념 정의 추출: {len(concept_text)}자")
+                # 탐구 아이디어 전까지의 모든 내용
+                topic_content = full_explanation[:ideas_start].strip()
+                result['full_topic_explanation'] = topic_content
+                print(f"✅ 전체 주제 내용 저장: {len(topic_content)}자")
                 
                 # 탐구 아이디어 부분
                 ideas_section = full_explanation[ideas_start:]
@@ -493,20 +563,20 @@ def parse_content_enhanced(content):
                 
                 for line in lines[1:]:  # 첫 줄(제목) 제외
                     line = line.strip()
-                    if line and len(line) > 10 and not any(skip in line for skip in ['키워드', 'Scholar', '도메인']):
+                    if line and len(line) > 10:
                         clean_lines.append(line)
                 
                 result['research_ideas'] = '\n'.join(clean_lines)
-                print(f"틈새주제 파싱 완료: {len(clean_lines)}줄")
+                print(f"✅ 탐구아이디어 저장: {len(clean_lines)}줄")
             else:
-                # 탐구 아이디어가 없으면 전체를 개념 정의로
-                result['concept_definition'] = full_explanation
-                print("탐구 아이디어 없음 - 전체를 개념 정의로 처리")
+                # 탐구 아이디어가 없으면 전체를 주제 해설로
+                result['full_topic_explanation'] = full_explanation
+                print("✅ 탐구 아이디어 없음 - 전체를 주제 해설로 처리")
         
         # 생성된 논문 파싱 (기존 유지)
         if "생성된 연구 논문" in content:
             paper_section = content[content.find("생성된 연구 논문"):]
-            paper_sections = ['초록', '서론', '실험 방법', '예상 결과', '결론', '참고문헌']
+            paper_sections = ['초록', '서론', '실험 방법', '예상 결과', '시각자료 제안', '결론', '참고문헌']
             for section in paper_sections:
                 pattern = f"### {section}[^\n]*\n(.*?)(?=###|$)"
                 match = re.search(pattern, paper_section, re.DOTALL)
@@ -515,28 +585,7 @@ def parse_content_enhanced(content):
                     if len(content_text) > 10:
                         result['generated_paper'][section] = content_text
         
-        print(f"🎉 개선된 파싱 완료!")
-        return result
-        
-    except Exception as e:
-        print(f"❌ 파싱 오류: {e}")
-        import traceback
-        traceback.print_exc()
-        return result
-        
-        # 생성된 논문 파싱 (기존 유지)
-        if "생성된 연구 논문" in content:
-            paper_section = content[content.find("생성된 연구 논문"):]
-            sections = ['초록', '서론', '실험 방법', '예상 결과', '결론', '참고문헌']
-            for section in sections:
-                pattern = f"### {section}[^\n]*\n(.*?)(?=###|$)"
-                match = re.search(pattern, paper_section, re.DOTALL)
-                if match:
-                    content_text = match.group(1).strip()
-                    if len(content_text) > 10:
-                        result['generated_paper'][section] = content_text
-        
-        print(f"🎉 기존 파싱 완료!")
+        print(f"🎉 단순화된 파싱 완료!")
         return result
         
     except Exception as e:
@@ -565,7 +614,7 @@ def get_highschool_default_content(section, topic):
     return defaults.get(section, f"{section} 섹션 내용이 생성되지 않았습니다.")
 
 def generate_pdf(content, filename="research_report.pdf"):
-    """🎨 문헌조사 섹션 제거된 PDF 생성"""
+    """🎨 웹 내용을 구조화해서 PDF 생성"""
     try:
         # 출력 디렉토리 생성
         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -573,10 +622,10 @@ def generate_pdf(content, filename="research_report.pdf"):
         # 주제 추출
         topic = extract_topic_from_content(content)
         
-        # 🔥 기존 파싱 로직 사용 (안전함)
+        # 🔥 단순화된 파싱 로직 사용
         sections = parse_content_enhanced(content)
         
-        # 🎨 PDF 생성 (문헌조사 섹션 제거)
+        # 🎨 PDF 생성
         with suppress_fpdf_warnings():
             pdf = ImprovedKoreanPDF(topic)
             
@@ -586,43 +635,27 @@ def generate_pdf(content, filename="research_report.pdf"):
             # 내용 페이지
             pdf.add_page()
             
-            # 🔥 강제 테스트: 무조건 개념 정의 섹션 추가
-            pdf.add_section_title("개념 정의")
-            pdf.add_paragraph("이것은 테스트 개념 정의입니다. 만약 이 텍스트가 PDF에 나타난다면 코드가 제대로 작동하고 있는 것입니다.")
-            
-            # 🎨 개념 정의 (독립 섹션) - 안전한 방법
-            concept_content = ""
-            if sections.get('concept_definition'):
-                concept_content = sections['concept_definition']
-                print(f"✅ concept_definition 발견: {len(concept_content)}자")
-                pdf.add_paragraph(f"실제 개념 정의: {concept_content}")
-            elif sections.get('topic_explanation'):
-                # fallback: topic_explanation의 처음 부분 사용
-                explanation = sections['topic_explanation']
-                print(f"✅ topic_explanation 사용: {len(explanation)}자")
-                if '확장 가능한 탐구' in explanation:
-                    concept_content = explanation.split('확장 가능한 탐구')[0].strip()
-                    pdf.add_paragraph(f"분리된 개념: {concept_content[:500]}...")
-                else:
-                    concept_content = explanation[:800].strip()  
-                    pdf.add_paragraph(f"전체에서 추출: {concept_content[:500]}...")
+            # 🔥 전체 주제 해설 섹션 (웹 내용을 구조화해서 표시)
+            if sections.get('full_topic_explanation'):
+                pdf.add_section_title("주제 탐색 결과")
+                
+                topic_content = sections['full_topic_explanation']
+                print(f"✅ 전체 주제 내용 PDF 추가: {len(topic_content)}자")
+                
+                # 🔥 새로운 포맷팅 메서드 사용
+                pdf.add_formatted_content(topic_content)
+                
             else:
-                print("❌ 아무 데이터도 없음")
-                pdf.add_paragraph("데이터를 찾을 수 없습니다.")
+                pdf.add_section_title("주제 탐색 결과")
+                pdf.add_paragraph("주제 해설 내용을 찾을 수 없습니다.")
+                print("❌ full_topic_explanation이 없음")
             
-            # 🎨 확장 가능한 탐구 아이디어 (독립 섹션)
+            # 🔥 확장 가능한 탐구 아이디어
             if sections.get('research_ideas'):
                 pdf.add_section_title("확장 가능한 탐구 아이디어")
                 pdf.add_beautiful_research_ideas(sections['research_ideas'])
             
-            # =============== 문헌조사 섹션 완전 제거 ===============
-            # 기존에 있던 다음 코드들을 모두 제거:
-            # - pdf.add_section_title("문헌 조사")
-            # - ISEF 관련 연구 섹션
-            # - arXiv 최신 연구 섹션
-            # =============== 문헌조사 섹션 완전 제거 ===============
-            
-            # 🎨 생성된 논문 (고등학교 수준으로)
+            # 🔥 생성된 논문 (새 페이지에서 시작)
             if sections['generated_paper']:
                 selected_idea = "선택된 연구 주제"
                 pdf.add_paper_title_page(topic, selected_idea)
@@ -632,8 +665,9 @@ def generate_pdf(content, filename="research_report.pdf"):
                     '서론': ('Introduction', 2), 
                     '실험 방법': ('Methods', 3),
                     '예상 결과': ('Expected Results', 4),
-                    '결론': ('Conclusion', 5),
-                    '참고문헌': ('References', 6)
+                    '시각자료 제안': ('Suggested Visualizations', 5),
+                    '결론': ('Conclusion', 6),
+                    '참고문헌': ('References', 7)
                 }
                 
                 for section_key, (english_name, num) in section_map.items():
@@ -644,7 +678,7 @@ def generate_pdf(content, filename="research_report.pdf"):
                     else:
                         # 🎓 고등학교 수준 기본 내용 사용
                         title = f"{section_key} ({english_name})"
-                        section_lower = section_key.lower().replace(' ', '_')
+                        section_lower = section_key.lower().replace(' ', '_').replace('시각자료_제안', 'visuals')
                         if section_lower == '실험_방법':
                             section_lower = 'methods'
                         elif section_lower == '예상_결과':
@@ -662,7 +696,7 @@ def generate_pdf(content, filename="research_report.pdf"):
         if os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
             if file_size > 2000:
-                print(f"✅ 문헌조사 섹션 제거된 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
+                print(f"✅ 웹 내용 구조화된 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
                 return output_path
         
         # 실패시 텍스트 파일
