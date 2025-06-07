@@ -238,7 +238,7 @@ class ImprovedKoreanPDF(FPDF):
             print(f"문단 추가 오류: {e}")
     
     def add_formatted_content(self, text):
-        """🎨 웹 내용을 구조화해서 PDF에 추가 - 소제목과 문단 구분 개선"""
+        """🎨 웹 내용을 구조화해서 PDF에 추가 - 검색 관련 내용 제거"""
         try:
             if not text:
                 return
@@ -249,6 +249,25 @@ class ImprovedKoreanPDF(FPDF):
             for paragraph in paragraphs:
                 paragraph = paragraph.strip()
                 if not paragraph:
+                    continue
+                
+                # 🔥 검색 관련 문단 완전 제거
+                paragraph_lower = paragraph.lower()
+                skip_paragraph = any([
+                    '키워드 조합' in paragraph,
+                    'google scholar' in paragraph_lower,
+                    '검색 사이트' in paragraph,
+                    'scholar.google.com' in paragraph_lower,
+                    'academic.naver.com' in paragraph_lower,
+                    'riss.kr' in paragraph_lower,
+                    'dbpia.co.kr' in paragraph_lower,
+                    '이 키워드로 검색하면' in paragraph,
+                    '연구들을 찾을 수 있' in paragraph,
+                    '최신논문검색' in paragraph
+                ])
+                
+                if skip_paragraph:
+                    print(f"🚫 검색 관련 문단 제거: {paragraph[:50]}...")
                     continue
                 
                 # 🔥 소제목 감지 (이모지로 시작하는 경우)
@@ -475,13 +494,40 @@ class ImprovedKoreanPDF(FPDF):
         except Exception as e:
             print(f"참고문헌 가이드 오류: {e}")
     
-    def clean_text(self, text):
-        """개선된 텍스트 정리 - 기존 로직 유지"""
+def clean_text(self, text):
+        """개선된 텍스트 정리 - 검색 관련 내용 제거"""
         try:
             if not text:
                 return ""
             
             text = str(text)
+            
+            # 🔥 검색 관련 내용 제거 (라인 단위)
+            lines = text.split('\n')
+            clean_lines = []
+            
+            for line in lines:
+                line_lower = line.lower().strip()
+                
+                # 검색 관련 키워드가 포함된 라인 제거
+                skip_line = any([
+                    '키워드 조합' in line,
+                    'google scholar' in line_lower,
+                    'scholar.google.com' in line_lower,
+                    'academic.naver.com' in line_lower,
+                    'riss.kr' in line_lower,
+                    'dbpia.co.kr' in line_lower,
+                    '검색 사이트' in line,
+                    'https://' in line_lower and ('scholar' in line_lower or 'academic' in line_lower or 'riss' in line_lower or 'dbpia' in line_lower),
+                    line.strip().startswith('키워드 조합'),
+                    '이 키워드로 검색하면' in line,
+                    '연구들을 찾을 수 있' in line
+                ])
+                
+                if not skip_line and line.strip():
+                    clean_lines.append(line)
+            
+            text = '\n'.join(clean_lines)
             
             # 기본적인 마크다운 정리
             text = re.sub(r'^---\s*', '', text, flags=re.MULTILINE)
