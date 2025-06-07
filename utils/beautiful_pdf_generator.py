@@ -586,10 +586,36 @@ def generate_pdf(content, filename="research_report.pdf"):
             # 내용 페이지
             pdf.add_page()
             
-            # 🎨 개념 정의 (독립 섹션)
+            # 🎨 개념 정의 (독립 섹션) - 안전한 방법
+            concept_content = ""
             if sections.get('concept_definition'):
+                concept_content = sections['concept_definition']
+                print(f"개념 정의 사용: {len(concept_content)}자")
+            elif sections.get('topic_explanation'):
+                # fallback: topic_explanation의 처음 부분 사용
+                explanation = sections['topic_explanation']
+                if '확장 가능한 탐구' in explanation:
+                    concept_content = explanation.split('확장 가능한 탐구')[0].strip()
+                else:
+                    concept_content = explanation[:800].strip()  # 처음 800자만
+                print(f"fallback 개념 정의 사용: {len(concept_content)}자")
+            
+            # 개념 정의가 있으면 섹션 추가
+            if concept_content and len(concept_content) > 50:
                 pdf.add_section_title("개념 정의")
-                pdf.add_paragraph(sections['concept_definition'])
+                # 🔥 검색 관련 내용만 간단히 제거
+                clean_lines = []
+                for line in concept_content.split('\n'):
+                    if not any(skip in line for skip in ['https://', '검색 사이트:', 'DBpia', 'RISS', 'Scholar']):
+                        clean_lines.append(line)
+                clean_content = '\n'.join(clean_lines).strip()
+                
+                if clean_content:
+                    pdf.add_paragraph(clean_content)
+                else:
+                    pdf.add_paragraph("개념 정의를 생성하는 중 오류가 발생했습니다.")
+            else:
+                print("⚠️ 개념 정의를 찾을 수 없음")
             
             # 🎨 확장 가능한 탐구 아이디어 (독립 섹션)
             if sections.get('research_ideas'):
