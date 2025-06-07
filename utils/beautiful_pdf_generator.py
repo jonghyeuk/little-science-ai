@@ -581,9 +581,9 @@ def extract_topic_from_content(content):
         return "과학 연구 탐색"
 
 def parse_content_enhanced(content):
-    """🔥 단순화된 파싱 - 검색 내용 제거 후 웹 내용을 PDF로"""
+    """🔥 정교한 파싱 - 검색 부분만 선별 제거"""
     result = {
-        'full_topic_explanation': '',  # 🔥 전체 주제 해설 (검색 내용 제외)
+        'full_topic_explanation': '',  # 🔥 전체 주제 해설 (검색 부분만 제거)
         'research_ideas': '',
         'isef_papers': [],
         'arxiv_papers': [],
@@ -591,7 +591,7 @@ def parse_content_enhanced(content):
     }
     
     try:
-        print("🔍 검색 내용 제거 파싱 로직 사용...")
+        print("🔍 정교한 검색 제거 파싱 로직 사용...")
         print(f"전체 콘텐츠 길이: {len(content)}")
         
         # 🔥 전체 주제 해설 추출 (## 📄 또는 ## 🌐 전까지)
@@ -604,59 +604,54 @@ def parse_content_enhanced(content):
             if '확장 가능한 탐구' in full_explanation:
                 ideas_start = full_explanation.find('확장 가능한 탐구')
                 
-                # 탐구 아이디어 전까지의 내용 (검색 부분 포함)
+                # 탐구 아이디어 전까지의 내용
                 raw_topic_content = full_explanation[:ideas_start].strip()
                 
-                # 🔥 검색 관련 내용 제거
+                # 🔥 정교한 검색 내용만 제거 (라인 단위)
                 topic_lines = raw_topic_content.split('\n')
                 clean_topic_lines = []
                 
                 for line in topic_lines:
-                    line_lower = line.lower().strip()
+                    # 🔥 매우 구체적인 검색 관련 라인만 제거
+                    skip_line = (
+                        line.strip().startswith('키워드 조합') or
+                        'scholar.google.com' in line.lower() or
+                        'academic.naver.com' in line.lower() or
+                        'riss.kr' in line.lower() or
+                        'dbpia.co.kr' in line.lower() or
+                        (line.strip().startswith('검색 사이트') and ':' in line) or
+                        ('이 키워드로 검색하면' in line and '연구' in line)
+                    )
                     
-                    # 검색 관련 라인 제거
-                    skip_line = any([
-                        '키워드 조합' in line,
-                        'google scholar' in line_lower,
-                        'scholar.google.com' in line_lower,
-                        'academic.naver.com' in line_lower,
-                        'riss.kr' in line_lower,
-                        'dbpia.co.kr' in line_lower,
-                        '검색 사이트' in line,
-                        '이 키워드로 검색하면' in line,
-                        '연구들을 찾을 수 있' in line,
-                        '네이버 학술정보' in line,
-                        'RISS' in line and '(' in line,
-                        'DBpia' in line and '(' in line,
-                        line.strip().startswith('키워드 조합'),
-                        'https://' in line_lower and ('scholar' in line_lower or 'academic' in line_lower)
-                    ])
-                    
-                    if not skip_line and line.strip():
+                    if not skip_line:
                         clean_topic_lines.append(line)
-                        
-                # 🔥 검색 관련 문단도 제거
+                
+                # 🔥 문단 단위에서 검색 전용 문단만 제거
                 clean_content = '\n'.join(clean_topic_lines)
                 paragraphs = clean_content.split('\n\n')
                 final_paragraphs = []
                 
                 for paragraph in paragraphs:
-                    paragraph_lower = paragraph.lower()
-                    skip_paragraph = any([
-                        '키워드 조합' in paragraph,
-                        'google scholar' in paragraph_lower,
-                        '검색 사이트' in paragraph,
-                        'scholar.google.com' in paragraph_lower,
-                        'academic.naver.com' in paragraph_lower,
-                        'riss.kr' in paragraph_lower,
-                        'dbpia.co.kr' in paragraph_lower
-                    ])
+                    paragraph = paragraph.strip()
+                    if not paragraph:
+                        continue
                     
-                    if not skip_paragraph and paragraph.strip():
+                    # 검색 전용 문단만 제거 (더 구체적으로)
+                    is_search_paragraph = (
+                        ('키워드 조합' in paragraph and 'Google Scholar' in paragraph) or
+                        ('scholar.google.com' in paragraph.lower() and 'academic.naver' in paragraph.lower()) or
+                        (paragraph.count('https://') >= 3 and 'scholar' in paragraph.lower())
+                    )
+                    
+                    if not is_search_paragraph:
                         final_paragraphs.append(paragraph)
                 
                 result['full_topic_explanation'] = '\n\n'.join(final_paragraphs)
-                print(f"✅ 검색 내용 제거 후 주제 내용 저장: {len(result['full_topic_explanation'])}자")
+                print(f"✅ 정교한 검색 제거 후 주제 내용 저장: {len(result['full_topic_explanation'])}자")
+                
+                # 디버깅: 저장된 내용 미리보기
+                preview = result['full_topic_explanation'][:200] + "..." if len(result['full_topic_explanation']) > 200 else result['full_topic_explanation']
+                print(f"📝 저장된 내용 미리보기: {preview}")
                 
                 # 탐구 아이디어 부분
                 ideas_section = full_explanation[ideas_start:]
@@ -671,28 +666,11 @@ def parse_content_enhanced(content):
                 result['research_ideas'] = '\n'.join(clean_lines)
                 print(f"✅ 탐구아이디어 저장: {len(clean_lines)}줄")
             else:
-                # 탐구 아이디어가 없으면 전체에서 검색 내용 제거
-                print("✅ 탐구 아이디어 없음 - 전체에서 검색 내용 제거")
-                # 검색 내용 제거 로직 적용
-                lines = full_explanation.split('\n')
-                clean_lines = []
-                
-                for line in lines:
-                    line_lower = line.lower().strip()
-                    skip_line = any([
-                        '키워드 조합' in line,
-                        'google scholar' in line_lower,
-                        'scholar.google.com' in line_lower,
-                        'academic.naver.com' in line_lower,
-                        'riss.kr' in line_lower,
-                        'dbpia.co.kr' in line_lower,
-                        '검색 사이트' in line
-                    ])
-                    
-                    if not skip_line and line.strip():
-                        clean_lines.append(line)
-                
-                result['full_topic_explanation'] = '\n'.join(clean_lines)
+                # 탐구 아이디어가 없으면 전체를 주제 해설로 (최소한의 검색 제거)
+                result['full_topic_explanation'] = full_explanation
+                print("✅ 탐구 아이디어 없음 - 전체를 주제 해설로 처리")
+        else:
+            print("❌ 주제 해설을 찾을 수 없음")
         
         # 생성된 논문 파싱 (기존 유지)
         if "생성된 연구 논문" in content:
@@ -706,7 +684,7 @@ def parse_content_enhanced(content):
                     if len(content_text) > 10:
                         result['generated_paper'][section] = content_text
         
-        print(f"🎉 검색 내용 제거 파싱 완료!")
+        print(f"🎉 정교한 파싱 완료!")
         return result
         
     except Exception as e:
