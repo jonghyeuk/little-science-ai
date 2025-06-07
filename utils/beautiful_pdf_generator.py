@@ -448,10 +448,43 @@ def parse_content_enhanced(content):
             if '확장 가능한 탐구' in full_explanation:
                 ideas_start = full_explanation.find('확장 가능한 탐구')
                 
-                # 개념 정의 부분 (확장 가능한 탐구 이전까지)
+                # 개념 정의 부분 더 정교하게 추출
                 concept_part = full_explanation[:ideas_start].strip()
-                result['concept_definition'] = concept_part
-                print(f"개념 정의 추출: {len(concept_part)}자")
+                
+                # 🔥 검색 가이드나 기타 내용 제거
+                concept_lines = concept_part.split('\n')
+                clean_concept_lines = []
+                
+                for line in concept_lines:
+                    line = line.strip()
+                    # 검색 관련, URL, 키워드 관련 라인 제외
+                    if (line and 
+                        not any(skip in line.lower() for skip in ['google', 'scholar', 'https', 'www', 'dbpia', 'riss', 'naver', 'academic', '검색', '키워드', 'microplastics']) and
+                        not line.startswith('검색 사이트') and
+                        not '(' in line and ')' in line and 'https' in line):
+                        clean_concept_lines.append(line)
+                
+                # 개념 정의 관련 문단만 추출 (처음 몇 문단)
+                concept_text = '\n'.join(clean_concept_lines)
+                
+                # 🔥 개념 정의는 보통 처음 1-2개 문단이므로 길이 제한
+                if len(concept_text) > 1000:
+                    # 문단 단위로 자르기
+                    paragraphs = concept_text.split('\n\n')
+                    concept_paragraphs = []
+                    char_count = 0
+                    
+                    for para in paragraphs:
+                        if char_count + len(para) < 800 and ('개념' in para or '정의' in para or len(concept_paragraphs) < 2):
+                            concept_paragraphs.append(para)
+                            char_count += len(para)
+                        else:
+                            break
+                    
+                    concept_text = '\n\n'.join(concept_paragraphs)
+                
+                result['concept_definition'] = concept_text
+                print(f"정제된 개념 정의 추출: {len(concept_text)}자")
                 
                 # 탐구 아이디어 부분
                 ideas_section = full_explanation[ideas_start:]
