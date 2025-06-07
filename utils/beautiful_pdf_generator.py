@@ -586,36 +586,29 @@ def generate_pdf(content, filename="research_report.pdf"):
             # 내용 페이지
             pdf.add_page()
             
+            # 🔥 강제 테스트: 무조건 개념 정의 섹션 추가
+            pdf.add_section_title("개념 정의")
+            pdf.add_paragraph("이것은 테스트 개념 정의입니다. 만약 이 텍스트가 PDF에 나타난다면 코드가 제대로 작동하고 있는 것입니다.")
+            
             # 🎨 개념 정의 (독립 섹션) - 안전한 방법
             concept_content = ""
             if sections.get('concept_definition'):
                 concept_content = sections['concept_definition']
-                print(f"개념 정의 사용: {len(concept_content)}자")
+                print(f"✅ concept_definition 발견: {len(concept_content)}자")
+                pdf.add_paragraph(f"실제 개념 정의: {concept_content}")
             elif sections.get('topic_explanation'):
                 # fallback: topic_explanation의 처음 부분 사용
                 explanation = sections['topic_explanation']
+                print(f"✅ topic_explanation 사용: {len(explanation)}자")
                 if '확장 가능한 탐구' in explanation:
                     concept_content = explanation.split('확장 가능한 탐구')[0].strip()
+                    pdf.add_paragraph(f"분리된 개념: {concept_content[:500]}...")
                 else:
-                    concept_content = explanation[:800].strip()  # 처음 800자만
-                print(f"fallback 개념 정의 사용: {len(concept_content)}자")
-            
-            # 개념 정의가 있으면 섹션 추가
-            if concept_content and len(concept_content) > 50:
-                pdf.add_section_title("개념 정의")
-                # 🔥 검색 관련 내용만 간단히 제거
-                clean_lines = []
-                for line in concept_content.split('\n'):
-                    if not any(skip in line for skip in ['https://', '검색 사이트:', 'DBpia', 'RISS', 'Scholar']):
-                        clean_lines.append(line)
-                clean_content = '\n'.join(clean_lines).strip()
-                
-                if clean_content:
-                    pdf.add_paragraph(clean_content)
-                else:
-                    pdf.add_paragraph("개념 정의를 생성하는 중 오류가 발생했습니다.")
+                    concept_content = explanation[:800].strip()  
+                    pdf.add_paragraph(f"전체에서 추출: {concept_content[:500]}...")
             else:
-                print("⚠️ 개념 정의를 찾을 수 없음")
+                print("❌ 아무 데이터도 없음")
+                pdf.add_paragraph("데이터를 찾을 수 없습니다.")
             
             # 🎨 확장 가능한 탐구 아이디어 (독립 섹션)
             if sections.get('research_ideas'):
