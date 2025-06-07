@@ -263,7 +263,11 @@ class ImprovedKoreanPDF(FPDF):
                     'dbpia.co.kr' in paragraph_lower,
                     '이 키워드로 검색하면' in paragraph,
                     '연구들을 찾을 수 있' in paragraph,
-                    '최신논문검색' in paragraph
+                    '최신논문검색' in paragraph,
+                    'https://' in paragraph and ('scholar' in paragraph_lower or 'academic' in paragraph_lower),
+                    '네이버 학술정보' in paragraph,
+                    'RISS' in paragraph,
+                    'DBpia' in paragraph
                 ])
                 
                 if skip_paragraph:
@@ -494,7 +498,7 @@ class ImprovedKoreanPDF(FPDF):
         except Exception as e:
             print(f"참고문헌 가이드 오류: {e}")
     
-def clean_text(self, text):
+    def clean_text(self, text):
         """개선된 텍스트 정리 - 검색 관련 내용 제거"""
         try:
             if not text:
@@ -521,7 +525,10 @@ def clean_text(self, text):
                     'https://' in line_lower and ('scholar' in line_lower or 'academic' in line_lower or 'riss' in line_lower or 'dbpia' in line_lower),
                     line.strip().startswith('키워드 조합'),
                     '이 키워드로 검색하면' in line,
-                    '연구들을 찾을 수 있' in line
+                    '연구들을 찾을 수 있' in line,
+                    '네이버 학술정보' in line,
+                    'RISS' in line,
+                    'DBpia' in line
                 ])
                 
                 if not skip_line and line.strip():
@@ -742,7 +749,7 @@ def generate_pdf(content, filename="research_report.pdf"):
         if os.path.exists(output_path):
             file_size = os.path.getsize(output_path)
             if file_size > 2000:
-                print(f"✅ 웹 내용 구조화된 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
+                print(f"✅ 검색 내용 제거된 PDF 생성 성공: {output_path} ({file_size:,} bytes)")
                 return output_path
         
         # 실패시 텍스트 파일
