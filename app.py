@@ -1,12 +1,15 @@
-# app.py 수정본 (정보 설명을 사이드바로 이동 + DB 초기화 추가 + 틈새주제 선택 기능 추가)
+# app.py 수정본 (Google Sheets 기반 인증 시스템으로 변경)
 import streamlit as st
 import time
 import re
 import logging
 import os
 import json
+import gspread
+import pandas as pd
 from datetime import datetime, timedelta
-from pathlib import Path  # ← 이 줄 추가!
+from pathlib import Path
+from google.oauth2.service_account import Credentials
 from utils.layout import load_css
 from utils.search_db import search_similar_titles, initialize_db
 from utils.search_arxiv import search_arxiv
@@ -21,181 +24,212 @@ logger = logging.getLogger(__name__)
 # 앱 시작 시 DB 초기화 (성능 최적화)
 initialize_db()
 
-# ==================== 🔥 강화된 이용권 시스템 ====================
+# ==================== 🔥 Google Sheets 기반 이용권 시스템 ====================
 
-# 절대 경로 설정
-def get_session_file_path():
-    """세션 파일의 절대 경로 반환"""
-    # 현재 스크립트가 있는 디렉토리에 세션 파일 저장
-    current_dir = Path(__file__).parent.absolute()
-    session_dir = current_dir / "data"  # data 폴더에 저장
-    session_dir.mkdir(exist_ok=True)  # 폴더가 없으면 생성
-    return session_dir / "user_sessions.json"
-
-def load_user_sessions():
-    """사용자 세션 데이터 로드 - 강화된 버전"""
-    session_file = get_session_file_path()
-    
-    # 디버깅 정보 출력
-    print(f"🔍 세션 파일 로드 시도: {session_file}")
-    print(f"   - 파일 존재: {session_file.exists()}")
-    
+# Google Sheets 연결 설정
+@st.cache_resource
+def connect_google_sheets():
+    """Google Sheets에 연결 (캐시됨)"""
     try:
-        if session_file.exists():
-            # 파일 크기 확인
-            file_size = session_file.stat().st_size
-            print(f"   - 파일 크기: {file_size} bytes")
-            
-            if file_size == 0:
-                print("   - 경고: 파일이 비어있음!")
-                return {}
-            
-            with open(session_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                print(f"   - 로드 성공: {len(data)}개 세션")
-                
-                # 각 세션의 키와 만료 정보 출력
-                for key, session in data.items():
-                    license_type = session.get('license_type', 'Unknown')
-                    first_used = session.get('first_used', 'Unknown')
-                    print(f"     * {key}: {license_type} (시작: {first_used})")
-                
-                return data
-        else:
-            print("   - 파일이 존재하지 않음 (최초 실행)")
-            return {}
-            
-    except json.JSONDecodeError as e:
-        print(f"   - JSON 파싱 오류: {e}")
-        # 백업 파일 생성
-        backup_file = session_file.with_suffix('.json.backup')
-        if session_file.exists():
-            session_file.rename(backup_file)
-            print(f"   - 손상된 파일을 백업으로 이동: {backup_file}")
-        return {}
+        # Streamlit secrets에서 Google 서비스 계정 정보 가져오기
+        google_credentials = st.secrets["google_service_account"]
+        
+        # 인증 정보 설정
+        credentials = Credentials.from_service_account_info(
+            google_credentials,
+            scopes=[
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive"
+            ]
+        )
+        
+        # gspread 클라이언트 생성
+        gc = gspread.authorize(credentials)
+        
+        # 스프레드시트 열기
+        sheet_url = st.secrets["general"]["sheet_url"]
+        worksheet = gc.open_by_url(sheet_url).sheet1
+        
+        print("✅ Google Sheets 연결 성공")
+        return worksheet
+    except Exception as e:
+        print(f"❌ Google Sheets 연결 실패: {e}")
+        st.error(f"Google Sheets 연결 실패: {e}")
+        return None
+
+def get_license_from_sheets(user_key):
+    """Google Sheets에서 이용권 정보 조회"""
+    try:
+        worksheet = connect_google_sheets()
+        if not worksheet:
+            return None
+        
+        # 모든 데이터 가져오기
+        all_values = worksheet.get_all_values()
+        
+        # 첫 번째 행은 헤더이므로 제외
+        headers = all_values[0]  # ['코드', '타입', '이용기간_일수', '이용기간_분수', '첫사용날짜', '마지막사용날짜', '상태']
+        data_rows = all_values[1:]
+        
+        print(f"🔍 전체 데이터 행 수: {len(data_rows)}")
+        print(f"🔍 검색 코드: {user_key}")
+        
+        # 해당 코드 찾기
+        for i, row in enumerate(data_rows):
+            if len(row) > 0 and row[0] == user_key:  # A열이 코드
+                print(f"✅ 코드 발견: 행 {i+2}")
+                return {
+                    'row_index': i + 2,  # 실제 시트에서의 행 번호 (헤더 포함)
+                    'code': row[0],
+                    'type': row[1] if len(row) > 1 else '',
+                    'duration_days': int(row[2]) if len(row) > 2 and row[2] else None,
+                    'duration_minutes': int(row[3]) if len(row) > 3 and row[3] else None,
+                    'first_used': row[4] if len(row) > 4 else '',
+                    'last_used': row[5] if len(row) > 5 else '',
+                    'status': row[6] if len(row) > 6 else ''
+                }
+        
+        print(f"❌ 코드를 찾지 못함")
+        return None  # 코드를 찾지 못함
         
     except Exception as e:
-        print(f"   - 기타 오류: {e}")
-        logger.error(f"세션 로드 오류: {e}")
-        return {}
+        print(f"❌ Sheets 조회 오류: {e}")
+        return None
 
-def save_user_sessions(sessions):
-    """사용자 세션 데이터 저장 - 강화된 버전"""
-    session_file = get_session_file_path()
-    
+def update_license_in_sheets(user_key, first_used_date=None, last_used_date=None, status=None):
+    """Google Sheets에서 이용권 정보 업데이트"""
     try:
-        # 임시 파일에 먼저 저장 (원자성 보장)
-        temp_file = session_file.with_suffix('.json.tmp')
+        worksheet = connect_google_sheets()
+        if not worksheet:
+            return False
         
-        with open(temp_file, 'w', encoding='utf-8') as f:
-            json.dump(sessions, f, ensure_ascii=False, indent=2)
+        # 해당 코드의 행 정보 가져오기
+        license_info = get_license_from_sheets(user_key)
+        if not license_info:
+            return False
         
-        # 임시 파일을 실제 파일로 이동 (원자성 보장)
-        temp_file.replace(session_file)
+        row_index = license_info['row_index']
+        print(f"📝 업데이트 대상: 행 {row_index}")
         
-        print(f"✅ 세션 저장 성공: {session_file}")
-        print(f"   - 저장된 세션: {len(sessions)}개")
+        # 개별 셀 업데이트 (더 안전한 방식)
+        if first_used_date:
+            # E열 (첫사용날짜) 업데이트
+            worksheet.update(f'E{row_index}', first_used_date)
+            print(f"   - E{row_index}: {first_used_date}")
         
-        # 저장 검증
-        if session_file.exists():
-            file_size = session_file.stat().st_size
-            print(f"   - 파일 크기: {file_size} bytes")
-            
-            # 즉시 다시 읽어서 검증
-            with open(session_file, 'r', encoding='utf-8') as f:
-                verified_data = json.load(f)
-                if len(verified_data) == len(sessions):
-                    print("   - 저장 검증 성공!")
-                else:
-                    print(f"   - 저장 검증 실패! 원본: {len(sessions)}, 검증: {len(verified_data)}")
+        if last_used_date:
+            # F열 (마지막사용날짜) 업데이트  
+            worksheet.update(f'F{row_index}', last_used_date)
+            print(f"   - F{row_index}: {last_used_date}")
+        
+        if status:
+            # G열 (상태) 업데이트
+            worksheet.update(f'G{row_index}', status)
+            print(f"   - G{row_index}: {status}")
+        
+        print("✅ Sheets 업데이트 완료")
+        return True
         
     except Exception as e:
-        print(f"❌ 세션 저장 실패: {e}")
-        logger.error(f"세션 저장 오류: {e}")
-        
-        # 임시 파일 정리
-        temp_file = session_file.with_suffix('.json.tmp')
-        if temp_file.exists():
-            temp_file.unlink()
+        print(f"❌ Sheets 업데이트 오류: {e}")
+        return False
 
 def check_license_validity(user_key):
-    """이용권 유효성 체크 - 강화된 버전"""
-    ACCESS_KEYS = st.secrets["general"]["access_keys"]
+    """Google Sheets 기반 이용권 유효성 체크"""
+    print(f"\n🔑 Sheets 이용권 체크 시작: {user_key}")
     
-    print(f"\n🔑 이용권 체크 시작: {user_key}")
+    # 1. Google Sheets에서 코드 정보 가져오기
+    license_info = get_license_from_sheets(user_key)
     
-    # 1. 코드가 존재하는지 확인
-    if user_key not in ACCESS_KEYS:
+    if not license_info:
         print(f"   - 결과: 잘못된 키")
         return False, "잘못된 인증 키입니다."
     
-    # 2. 세션 데이터 로드
-    sessions = load_user_sessions()
+    print(f"   - 찾은 이용권: {license_info}")
+    
     current_time = datetime.now()
+    current_time_str = current_time.strftime('%Y-%m-%d %H:%M:%S')
     
-    print(f"   - 현재 시간: {current_time}")
-    print(f"   - 전체 세션 수: {len(sessions)}")
+    # 2. 상태 체크
+    if license_info['status'] == '만료됨':
+        print(f"   - 결과: 이미 만료된 키")
+        return False, "이미 만료된 인증 키입니다."
     
-    # 3. 이용권 정보 가져오기
-    license_info = ACCESS_KEYS[user_key]
-    print(f"   - 이용권 타입: {license_info}")
-    
-    # 4. 최초 사용인지 확인
-    if user_key not in sessions:
+    # 3. 최초 사용인지 확인
+    if not license_info['first_used']:
         print(f"   - 최초 사용자 감지")
-        # 최초 사용 - 활성화 시간 기록
-        sessions[user_key] = {
-            'first_used': current_time.isoformat(),
-            'license_type': license_info['type'],
-            'duration_days': license_info.get('duration_days'),
-            'duration_minutes': license_info.get('duration_minutes')
-        }
-        save_user_sessions(sessions)
-        print(f"   - 새 세션 저장 완료")
-        return True, f"이용권이 활성화되었습니다! ({license_info['type']})"
+        # 최초 사용 - 시작일 기록
+        update_success = update_license_in_sheets(
+            user_key, 
+            first_used_date=current_time_str,
+            last_used_date=current_time_str,
+            status='사용중'
+        )
+        
+        if update_success:
+            print(f"   - 최초 사용 정보 업데이트 완료")
+            return True, f"이용권이 활성화되었습니다! ({license_info['type']})"
+        else:
+            return False, "이용권 활성화 중 오류가 발생했습니다."
     
-    # 5. 기존 사용자 - 만료 체크
-    session_data = sessions[user_key]
-    first_used = datetime.fromisoformat(session_data['first_used'])
+    # 4. 기존 사용자 - 만료 체크
+    try:
+        first_used = datetime.strptime(license_info['first_used'], '%Y-%m-%d %H:%M:%S')
+    except:
+        try:
+            first_used = datetime.strptime(license_info['first_used'], '%Y-%m-%d')
+        except:
+            return False, "이용권 정보가 올바르지 않습니다."
     
     print(f"   - 기존 사용자")
     print(f"   - 최초 사용: {first_used}")
     
-    # 6. 만료 시간 계산
-    if session_data.get('duration_days'):
-        expire_time = first_used + timedelta(days=session_data['duration_days'])
-    elif session_data.get('duration_minutes'):
-        expire_time = first_used + timedelta(minutes=session_data['duration_minutes'])
+    # 5. 만료 시간 계산
+    if license_info['duration_days']:
+        expire_time = first_used + timedelta(days=license_info['duration_days'])
+    elif license_info['duration_minutes']:
+        expire_time = first_used + timedelta(minutes=license_info['duration_minutes'])
     else:
         print(f"   - 오류: 이용권 정보 없음")
         return False, "이용권 정보가 올바르지 않습니다."
     
     print(f"   - 만료 시간: {expire_time}")
     
-    # 7. 만료 여부 확인
+    # 6. 만료 여부 확인
     if current_time > expire_time:
         print(f"   - 결과: 만료됨")
+        # Sheets에 만료 상태 업데이트
+        update_license_in_sheets(user_key, status='만료됨')
         return False, f"이용권이 만료되었습니다. (만료일: {expire_time.strftime('%Y-%m-%d %H:%M')})"
+    
+    # 7. 마지막 사용 시간 업데이트
+    update_license_in_sheets(user_key, last_used_date=current_time_str)
     
     time_left = expire_time - current_time
     print(f"   - 결과: 유효 (남은 시간: {time_left})")
     return True, "유효한 이용권입니다."
 
 def get_license_info(user_key):
-    """현재 사용자의 이용권 정보 반환 - 강화된 버전"""
-    sessions = load_user_sessions()
-    if user_key not in sessions:
+    """Google Sheets 기반 이용권 정보 반환"""
+    license_info = get_license_from_sheets(user_key)
+    if not license_info or not license_info['first_used']:
         return None
     
-    session_data = sessions[user_key]
-    first_used = datetime.fromisoformat(session_data['first_used'])
+    try:
+        first_used = datetime.strptime(license_info['first_used'], '%Y-%m-%d %H:%M:%S')
+    except:
+        try:
+            first_used = datetime.strptime(license_info['first_used'], '%Y-%m-%d')
+        except:
+            return None
+    
     current_time = datetime.now()
     
     # 만료 시간 계산
-    if session_data.get('duration_days'):
-        expire_time = first_used + timedelta(days=session_data['duration_days'])
-    elif session_data.get('duration_minutes'):
-        expire_time = first_used + timedelta(minutes=session_data['duration_minutes'])
+    if license_info['duration_days']:
+        expire_time = first_used + timedelta(days=license_info['duration_days'])
+    elif license_info['duration_minutes']:
+        expire_time = first_used + timedelta(minutes=license_info['duration_minutes'])
     else:
         return None
     
@@ -203,11 +237,12 @@ def get_license_info(user_key):
     time_left = expire_time - current_time
     
     return {
-        'license_type': session_data['license_type'],
+        'license_type': license_info['type'],
         'first_used': first_used,
         'expire_time': expire_time,
         'time_left': time_left,
-        'is_expired': time_left.total_seconds() <= 0
+        'is_expired': time_left.total_seconds() <= 0,
+        'status': license_info['status']
     }
 
 def format_time_left(time_left):
@@ -226,7 +261,7 @@ def format_time_left(time_left):
     else:
         return f"{minutes}분"
 
-# ==================== 🔥 강화된 이용권 시스템 끝 ====================
+# ==================== 🔥 Google Sheets 이용권 시스템 끝 ====================
 
 # 틈새주제 파싱 함수 (수정된 버전)
 def parse_niche_topics(explanation_lines):
@@ -394,7 +429,7 @@ section.main > div.block-container {
 </style>
 """, unsafe_allow_html=True)
 
-# 🔥 인증 시스템 (이용권 시스템으로 교체)
+# 🔥 Google Sheets 기반 인증 시스템
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "user_license_key" not in st.session_state:
@@ -466,6 +501,9 @@ if license_info:
             st.rerun()
         st.stop()
 
+# 나머지 코드는 기존과 동일...
+# (사이드바, 메인 UI, 검색 로직 등은 그대로 유지)
+
 # 사이드바
 st.sidebar.title("🧭 탐색 단계")
 st.sidebar.markdown("""
@@ -476,6 +514,7 @@ st.sidebar.markdown("""
 5. 논문 형식 작성
 6. PDF 저장
 """)
+
 # 🔥 바로 여기에 서비스 가이드 추가!
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📖 서비스 가이드")
@@ -554,7 +593,7 @@ if not topic:
     <p><strong>⚠️ 주의:</strong> 연관성 있는 과학 개념을 조합해주세요. 동떨어진 주제를 검색시 엉뚱한 결과가 나올 수 있습니다.</p>
     </div>
     """, unsafe_allow_html=True)
-    
+
 # 🔥 주제가 입력된 경우 (캐싱 로직 적용)
 if topic:
    
@@ -846,7 +885,6 @@ if topic:
             
             if st.session_state.generated_paper:
                 st.success("📄 논문이 성공적으로 생성되었습니다!")
-                # st.rerun() 
             else:
                 st.error("논문 생성에 실패했습니다. 다시 시도해주세요.")
     
