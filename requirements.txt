@@ -1,3 +1,4 @@
+# 핵심 패키지들
 streamlit
 openai>=1.0.0
 fpdf
@@ -7,5 +8,14 @@ feedparser
 openpyxl
 deep-translator
 anthropic
+
+# Google Sheets 연동 (새로 추가)
 gspread==5.12.0
 google-auth==2.23.4
+
+# 추가 필요 패키지들 (기존 utils 기능용)
+numpy
+requests
+beautifulsoup4
+sentence-transformers
+faiss-cpu
